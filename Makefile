@@ -111,7 +111,7 @@ clean-pr:
 	@git checkout main
 	@git pull origin main
 	@echo "✅ Branche main à jour"
-	@git checkout -b bmad
+	@git checkout bmad || git checkout -b bmad
 	@git merge --no-commit bmad-dev || true
 	@echo "⚠️  Nettoyage des fichiers parasites BMAD..."
 	@git reset HEAD -- bmad/ || true
