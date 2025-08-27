@@ -4,3 +4,9 @@ __pycache__
 .claude/settings.local.json
 PRPs/local
 /logs/
+
+# Fichiers/dossiers générés par BMAD
+bmad/
+*.bmad
+*.log
+.cache/
