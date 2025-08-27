@@ -106,4 +106,20 @@ clean:
 		echo "Cancelled"; \
 	fi
 
+.PHONY: clean-pr
+clean-pr:
+	@git checkout main
+	@git pull origin main
+	@echo "✅ Branche main à jour"
+	@git checkout -b bmad
+	@git merge --no-commit bmad-dev || true
+	@echo "⚠️  Nettoyage des fichiers parasites BMAD..."
+	@git reset HEAD -- bmad/ || true
+	@git reset HEAD -- *.bmad || true
+	@git reset HEAD -- *.log || true
+	@git commit -m "BMAD integration (cleaned for PR)" || echo "⚠️ Rien à valider"
+	@git push origin bmad || echo "⚠️ Déjà poussé ?"
+	@echo "🎉 Branche 'bmad' propre prête pour PR"
+
+
 .DEFAULT_GOAL := help
