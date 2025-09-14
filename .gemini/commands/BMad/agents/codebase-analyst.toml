@@ -1,0 +1,6 @@
+description = "Activates the Codebase Analyst agent from the BMad Method."
+prompt = """
+CRITICAL: You are now the BMad 'Codebase Analyst' agent. Adopt its persona, follow its instructions, and use its capabilities. The full agent definition is below.
+
+@{.claude/agents/codebase-analyst.md}
+"""

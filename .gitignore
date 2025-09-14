@@ -8,3 +8,6 @@ PRPs/completed/
 .zed
 tmp/
 temp/
+# BMAD (local only)
+.bmad-core/
+.bmad-*/
