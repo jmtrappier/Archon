@@ -5,6 +5,7 @@
 #   docker compose up                        # Starts server, mcp, frontend (agents disabled)
 #   docker compose --profile agents up -d    # Also starts archon-agents
 
+name: archon-traxis
 services:
   # Server Service (FastAPI + Socket.IO + Crawling)
   archon-server:
@@ -34,28 +35,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock # Docker socket for MCP container control
       - ./python/src:/app/src # Mount source code for hot reload
       - ./python/tests:/app/tests # Mount tests for UI test execution
+      - ./migration:/app/migration # Mount migration files for TRAXIS
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    command:
-      [
-        "python",
-        "-m",
-        "uvicorn",
-        "src.server.main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "${ARCHON_SERVER_PORT:-8181}",
-        "--reload",
-      ]
+    command: [ "python", "-m", "uvicorn", "src.server.main:app", "--host", "0.0.0.0", "--port", "${ARCHON_SERVER_PORT:-8181}", "--reload" ]
     healthcheck:
-      test:
-        [
-          "CMD",
-          "sh",
-          "-c",
-          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:${ARCHON_SERVER_PORT:-8181}/health'')"',
-        ]
+      test: [ "CMD", "sh", "-c", 'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:${ARCHON_SERVER_PORT:-8181}/health'')"' ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -91,17 +76,11 @@ services:
     depends_on:
       archon-server:
         condition: service_healthy
-      
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test:
-        [
-          "CMD",
-          "sh",
-          "-c",
-          'python -c "import socket; s=socket.socket(); s.connect((''localhost'', ${ARCHON_MCP_PORT:-8051})); s.close()"',
-        ]
+      test: [ "CMD", "sh", "-c", 'python -c "import socket; s=socket.socket(); s.connect((''localhost'', ${ARCHON_MCP_PORT:-8051})); s.close()"' ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -110,7 +89,7 @@ services:
   # AI Agents Service (ML/Reranking)
   archon-agents:
     profiles:
-      - agents  # Only starts when explicitly using --profile agents
+      - agents # Only starts when explicitly using --profile agents
     build:
       context: ./python
       dockerfile: Dockerfile.agents
@@ -132,13 +111,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test:
-        [
-          "CMD",
-          "sh",
-          "-c",
-          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:${ARCHON_AGENTS_PORT:-8052}/health'')"',
-        ]
+      test: [ "CMD", "sh", "-c", 'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:${ARCHON_AGENTS_PORT:-8052}/health'')"' ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -161,7 +134,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3737"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3737" ]
       interval: 30s
       timeout: 10s
       retries: 3

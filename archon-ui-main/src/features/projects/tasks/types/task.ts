@@ -9,7 +9,7 @@ import type { TaskPriority } from "./priority";
 export type { TaskPriority };
 
 // Database status enum - using database values directly
-export type DatabaseTaskStatus = "todo" | "doing" | "review" | "done";
+export type DatabaseTaskStatus = "todo" | "doing" | "review" | "waiting" | "done";
 
 // Assignee type - simplified to predefined options
 export type Assignee = "User" | "Archon" | "AI IDE Agent";
@@ -19,6 +19,7 @@ export interface TaskCounts {
   todo: number;
   doing: number;
   review: number;
+  waiting: number;
   done: number;
 }
 
@@ -43,6 +44,8 @@ export type TaskCodeExample =
 export interface Task {
   id: string;
   project_id: string;
+  parent_task_id?: string;
+  story_id?: string;
   title: string;
   description: string;
   status: DatabaseTaskStatus;
@@ -67,6 +70,8 @@ export interface Task {
 // Request types
 export interface CreateTaskRequest {
   project_id: string;
+  parent_task_id?: string;
+  story_id?: string;
   title: string;
   description: string;
   status?: DatabaseTaskStatus;
@@ -80,6 +85,8 @@ export interface CreateTaskRequest {
 }
 
 export interface UpdateTaskRequest {
+  parent_task_id?: string;
+  story_id?: string;
   title?: string;
   description?: string;
   status?: DatabaseTaskStatus;

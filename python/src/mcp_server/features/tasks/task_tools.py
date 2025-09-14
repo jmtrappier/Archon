@@ -195,6 +195,8 @@ def register_task_tools(mcp: FastMCP):
         action: str,  # "create" | "update" | "delete"
         task_id: str | None = None,
         project_id: str | None = None,
+        parent_task_id: str | None = None,  # For subtasks
+        story_id: str | None = None,  # For BMAD hierarchy
         title: str | None = None,
         description: str | None = None,
         status: str | None = None,
@@ -204,23 +206,26 @@ def register_task_tools(mcp: FastMCP):
     ) -> str:
         """
         Manage tasks (consolidated: create/update/delete).
-        
+
         Args:
             action: "create" | "update" | "delete"
             task_id: Task UUID for update/delete
             project_id: Project UUID for create
+            parent_task_id: Parent task UUID for creating subtasks
+            story_id: Story UUID for BMAD hierarchy
             title: Task title text
             description: Detailed task description
-            status: "todo" | "doing" | "review" | "done"
+            status: "todo" | "doing" | "review" | "waiting" | "done"
             assignee: "User" | "Archon" | "AI IDE Agent"
             task_order: Priority 0-100 (higher = more priority)
             feature: Feature label for grouping
-        
+
         Examples:
           manage_task("create", project_id="p-1", title="Fix auth bug")
+          manage_task("create", project_id="p-1", parent_task_id="t-1", title="Subtask")
           manage_task("update", task_id="t-1", status="doing")
           manage_task("delete", task_id="t-1")
-        
+
         Returns: {success: bool, task?: object, message: string}
         """
         try:
@@ -236,18 +241,29 @@ def register_task_tools(mcp: FastMCP):
                             suggestion="Provide both project_id and title"
                         )
                     
+                    task_payload = {
+                        "project_id": project_id,
+                        "title": title,
+                        "description": description or "",
+                        "assignee": assignee or "User",
+                        "task_order": task_order or 0,
+                        "sources": [],
+                        "code_examples": [],
+                    }
+
+                    # Add optional fields if provided
+                    if parent_task_id:
+                        task_payload["parent_task_id"] = parent_task_id
+                    if story_id:
+                        task_payload["story_id"] = story_id
+                    if feature:
+                        task_payload["feature"] = feature
+                    if status:
+                        task_payload["status"] = status
+
                     response = await client.post(
                         urljoin(api_url, "/api/tasks"),
-                        json={
-                            "project_id": project_id,
-                            "title": title,
-                            "description": description or "",
-                            "assignee": assignee or "User",
-                            "task_order": task_order or 0,
-                            "feature": feature,
-                            "sources": [],
-                            "code_examples": [],
-                        },
+                        json=task_payload,
                     )
                     
                     if response.status_code == 200:
@@ -289,6 +305,10 @@ def register_task_tools(mcp: FastMCP):
                         update_fields["task_order"] = task_order
                     if feature is not None:
                         update_fields["feature"] = feature
+                    if parent_task_id is not None:
+                        update_fields["parent_task_id"] = parent_task_id
+                    if story_id is not None:
+                        update_fields["story_id"] = story_id
                     
                     if not update_fields:
                         return MCPErrorFormatter.format_error(
@@ -353,3 +373,239 @@ def register_task_tools(mcp: FastMCP):
         except Exception as e:
             logger.error(f"Error managing task ({action}): {e}", exc_info=True)
             return MCPErrorFormatter.from_exception(e, f"{action} task")
+
+    @mcp.tool()
+    async def find_subtasks(
+        ctx: Context,
+        parent_task_id: str,
+        recursive: bool = False,
+        include_archived: bool = False
+    ) -> str:
+        """
+        Find subtasks by parent task ID.
+
+        Args:
+            parent_task_id: Parent task UUID to find subtasks for
+            recursive: If True, get all subtasks recursively (default: False for direct children only)
+            include_archived: Include archived subtasks in results
+
+        Returns:
+            JSON with subtasks array and hierarchy information
+        """
+        try:
+            from src.server.services.projects.task_service import TaskService
+
+            task_service = TaskService()
+
+            if recursive:
+                # Get recursive subtasks using database function
+                success, result = task_service.get_task_subtasks_recursive(parent_task_id)
+            else:
+                # Get direct subtasks only
+                success, result = task_service.get_subtasks_by_parent(parent_task_id, include_archived)
+
+            if success:
+                # Optimize subtasks responses
+                if "subtasks" in result:
+                    result["subtasks"] = [optimize_task_response(subtask) for subtask in result["subtasks"]]
+
+                return json.dumps({
+                    "success": True,
+                    **result
+                })
+            else:
+                return MCPErrorFormatter.format_error(
+                    error_type="operation_failed",
+                    message=result.get("error", "Failed to get subtasks"),
+                    suggestion="Verify the parent task ID exists"
+                )
+
+        except Exception as e:
+            logger.error(f"Error finding subtasks: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "find subtasks")
+
+    @mcp.tool()
+    async def get_task_hierarchy(
+        ctx: Context,
+        task_id: str
+    ) -> str:
+        """
+        Get the complete hierarchy path for a task (from root to current).
+
+        Args:
+            task_id: Task UUID to get hierarchy for
+
+        Returns:
+            JSON with hierarchy path showing parent relationships
+        """
+        try:
+            from src.server.services.projects.task_service import TaskService
+
+            task_service = TaskService()
+            success, result = task_service.get_task_hierarchy_path(task_id)
+
+            if success:
+                return json.dumps({
+                    "success": True,
+                    **result
+                })
+            else:
+                return MCPErrorFormatter.format_error(
+                    error_type="operation_failed",
+                    message=result.get("error", "Failed to get task hierarchy"),
+                    suggestion="Verify the task ID exists"
+                )
+
+        except Exception as e:
+            logger.error(f"Error getting task hierarchy: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "get task hierarchy")
+
+    @mcp.tool()
+    async def manage_subtask(
+        ctx: Context,
+        action: str,  # "create" | "update" | "delete"
+        parent_task_id: str | None = None,  # Required for create
+        subtask_id: str | None = None,  # Required for update/delete
+        title: str | None = None,
+        description: str | None = None,
+        status: str | None = None,
+        assignee: str | None = None,
+        task_order: int | None = None,
+        feature: str | None = None
+    ) -> str:
+        """
+        Manage subtasks specifically (create/update/delete).
+
+        Args:
+            action: "create" | "update" | "delete"
+            parent_task_id: Parent task UUID (required for create)
+            subtask_id: Subtask UUID (required for update/delete)
+            title: Subtask title
+            description: Subtask description
+            status: "todo" | "doing" | "review" | "waiting" | "done"
+            assignee: "User" | "Archon" | "AI IDE Agent"
+            task_order: Priority order within subtasks
+            feature: Feature label (inherited from parent if not provided)
+
+        Examples:
+          manage_subtask("create", parent_task_id="t-1", title="Fix bug details")
+          manage_subtask("update", subtask_id="st-1", status="doing")
+          manage_subtask("delete", subtask_id="st-1")
+
+        Returns: {success: bool, subtask?: object, message: string}
+        """
+        try:
+            from src.server.services.projects.task_service import TaskService
+
+            task_service = TaskService()
+
+            if action == "create":
+                if not parent_task_id or not title:
+                    return MCPErrorFormatter.format_error(
+                        "validation_error",
+                        "parent_task_id and title required for create",
+                        suggestion="Provide both parent_task_id and title"
+                    )
+
+                success, result = await task_service.create_subtask(
+                    parent_task_id=parent_task_id,
+                    title=title,
+                    description=description or "",
+                    assignee=assignee or "User",
+                    task_order=task_order or 0,
+                    feature=feature,
+                )
+
+                if success:
+                    subtask = result.get("subtask")
+                    if subtask:
+                        subtask = optimize_task_response(subtask)
+
+                    return json.dumps({
+                        "success": True,
+                        "subtask": subtask,
+                        "message": "Subtask created successfully"
+                    })
+                else:
+                    return MCPErrorFormatter.format_error(
+                        error_type="operation_failed",
+                        message=result.get("error", "Failed to create subtask"),
+                        suggestion="Check parent task exists and is not archived"
+                    )
+
+            elif action in ["update", "delete"]:
+                if not subtask_id:
+                    return MCPErrorFormatter.format_error(
+                        "validation_error",
+                        "subtask_id required for update/delete",
+                        suggestion="Provide the subtask_id to modify"
+                    )
+
+                if action == "update":
+                    update_fields = {}
+                    if title is not None:
+                        update_fields["title"] = title
+                    if description is not None:
+                        update_fields["description"] = description
+                    if status is not None:
+                        update_fields["status"] = status
+                    if assignee is not None:
+                        update_fields["assignee"] = assignee
+                    if task_order is not None:
+                        update_fields["task_order"] = task_order
+                    if feature is not None:
+                        update_fields["feature"] = feature
+
+                    if not update_fields:
+                        return MCPErrorFormatter.format_error(
+                            error_type="validation_error",
+                            message="No fields to update",
+                            suggestion="Provide at least one field to update",
+                        )
+
+                    success, result = await task_service.update_task(subtask_id, update_fields)
+
+                    if success:
+                        subtask = result.get("task")
+                        if subtask:
+                            subtask = optimize_task_response(subtask)
+
+                        return json.dumps({
+                            "success": True,
+                            "subtask": subtask,
+                            "message": result.get("message", "Subtask updated successfully")
+                        })
+                    else:
+                        return MCPErrorFormatter.format_error(
+                            error_type="operation_failed",
+                            message=result.get("error", "Failed to update subtask"),
+                            suggestion="Verify the subtask ID exists"
+                        )
+
+                elif action == "delete":
+                    # For subtasks, use the enhanced archive method
+                    success, result = await task_service.archive_task_with_subtasks(subtask_id)
+
+                    if success:
+                        return json.dumps({
+                            "success": True,
+                            "message": result.get("message", "Subtask archived successfully"),
+                            "total_archived": result.get("total_archived", 1)
+                        })
+                    else:
+                        return MCPErrorFormatter.format_error(
+                            error_type="operation_failed",
+                            message=result.get("error", "Failed to archive subtask"),
+                            suggestion="Verify the subtask ID exists"
+                        )
+
+            else:
+                return MCPErrorFormatter.format_error(
+                    "validation_error",
+                    f"Invalid action: {action}",
+                    suggestion="Use 'create', 'update', or 'delete'"
+                )
+
+        except Exception as e:
+            logger.error(f"Error managing subtask ({action}): {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, f"{action} subtask")

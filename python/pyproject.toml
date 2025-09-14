@@ -42,6 +42,7 @@ server = [
     "crawl4ai==0.6.2",
     # Database and storage
     "supabase==2.15.1",
+    "psycopg2-binary>=2.9.9",  # For direct database migrations
     "asyncpg>=0.29.0",
     # AI/ML libraries
     "openai==1.71.0",

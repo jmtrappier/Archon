@@ -85,6 +85,15 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Credentials initialized")
         api_logger.info("🔥 Logfire initialized for backend")
 
+        # Run database migrations for TRAXIS
+        try:
+            from .migrations.migration_runner import run_migrations_on_startup
+            logger.info("🔄 Checking for pending database migrations...")
+            run_migrations_on_startup()
+        except Exception as e:
+            logger.warning(f"Migration check skipped or failed: {e}")
+            # Don't fail startup if migrations can't run - allow manual intervention
+
         # Initialize crawling context
         try:
             await initialize_crawler()

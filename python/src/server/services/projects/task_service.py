@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 class TaskService:
     """Service class for task operations"""
 
-    VALID_STATUSES = ["todo", "doing", "review", "done"]
+    VALID_STATUSES = ["todo", "doing", "review", "waiting", "done"]
 
     def __init__(self, supabase_client=None):
         """Initialize with optional supabase client"""
@@ -52,6 +52,7 @@ class TaskService:
         feature: str | None = None,
         sources: list[dict[str, Any]] = None,
         code_examples: list[dict[str, Any]] = None,
+        story_id: str | None = None,
     ) -> tuple[bool, dict[str, Any]]:
         """
         Create a new task under a project with automatic reordering.
@@ -112,6 +113,9 @@ class TaskService:
 
             if feature:
                 task_data["feature"] = feature
+
+            if story_id:
+                task_data["story_id"] = story_id
 
             response = self.supabase_client.table("archon_tasks").insert(task_data).execute()
 
@@ -377,6 +381,12 @@ class TaskService:
             if "feature" in update_fields:
                 update_data["feature"] = update_fields["feature"]
 
+            if "story_id" in update_fields:
+                update_data["story_id"] = update_fields["story_id"]
+
+            if "parent_task_id" in update_fields:
+                update_data["parent_task_id"] = update_fields["parent_task_id"]
+
             # Update task
             response = (
                 self.supabase_client.table("archon_tasks")
@@ -499,3 +509,301 @@ class TaskService:
         except Exception as e:
             logger.error(f"Error fetching task counts: {e}")
             return False, {"error": f"Error fetching task counts: {str(e)}"}
+
+    async def create_subtask(
+        self,
+        parent_task_id: str,
+        title: str,
+        description: str = "",
+        assignee: str = "User",
+        task_order: int = 0,
+        feature: str | None = None,
+        sources: list[dict[str, Any]] = None,
+        code_examples: list[dict[str, Any]] = None,
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Create a new subtask under a parent task.
+        Inherits project_id and story_id from parent task.
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            # Get parent task to inherit project_id and story_id
+            parent_response = (
+                self.supabase_client.table("archon_tasks")
+                .select("project_id, story_id, archived")
+                .eq("id", parent_task_id)
+                .execute()
+            )
+
+            if not parent_response.data:
+                return False, {"error": f"Parent task with ID {parent_task_id} not found"}
+
+            parent_task = parent_response.data[0]
+            if parent_task.get("archived") is True:
+                return False, {"error": f"Cannot create subtask under archived parent task {parent_task_id}"}
+
+            # Validate inputs
+            if not title or not isinstance(title, str) or len(title.strip()) == 0:
+                return False, {"error": "Subtask title is required and must be a non-empty string"}
+
+            # Validate assignee
+            is_valid, error_msg = self.validate_assignee(assignee)
+            if not is_valid:
+                return False, {"error": error_msg}
+
+            # Inherit from parent task
+            project_id = parent_task["project_id"]
+            story_id = parent_task.get("story_id")
+
+            subtask_data = {
+                "project_id": project_id,
+                "parent_task_id": parent_task_id,
+                "title": title,
+                "description": description,
+                "status": "todo",
+                "assignee": assignee,
+                "task_order": task_order,
+                "sources": sources or [],
+                "code_examples": code_examples or [],
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+            }
+
+            if story_id:
+                subtask_data["story_id"] = story_id
+
+            if feature:
+                subtask_data["feature"] = feature
+
+            response = self.supabase_client.table("archon_tasks").insert(subtask_data).execute()
+
+            if response.data:
+                subtask = response.data[0]
+                logger.info(f"Subtask created: {subtask['id']} under parent {parent_task_id}")
+
+                return True, {
+                    "subtask": {
+                        "id": subtask["id"],
+                        "project_id": subtask["project_id"],
+                        "parent_task_id": subtask["parent_task_id"],
+                        "story_id": subtask.get("story_id"),
+                        "title": subtask["title"],
+                        "description": subtask["description"],
+                        "status": subtask["status"],
+                        "assignee": subtask["assignee"],
+                        "task_order": subtask["task_order"],
+                        "created_at": subtask["created_at"],
+                    }
+                }
+            else:
+                return False, {"error": "Failed to create subtask"}
+
+        except Exception as e:
+            logger.error(f"Error creating subtask: {e}")
+            return False, {"error": f"Error creating subtask: {str(e)}"}
+
+    def get_subtasks_by_parent(
+        self,
+        parent_task_id: str,
+        include_archived: bool = False
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Get direct subtasks of a parent task (non-recursive).
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            query = (
+                self.supabase_client.table("archon_tasks")
+                .select("*")
+                .eq("parent_task_id", parent_task_id)
+            )
+
+            if not include_archived:
+                query = query.or_("archived.is.null,archived.is.false")
+
+            response = query.order("task_order", desc=False).execute()
+
+            subtasks = []
+            for subtask in response.data:
+                subtask_data = {
+                    "id": subtask["id"],
+                    "project_id": subtask["project_id"],
+                    "parent_task_id": subtask["parent_task_id"],
+                    "story_id": subtask.get("story_id"),
+                    "title": subtask["title"],
+                    "description": subtask["description"],
+                    "status": subtask["status"],
+                    "assignee": subtask.get("assignee", "User"),
+                    "task_order": subtask.get("task_order", 0),
+                    "feature": subtask.get("feature"),
+                    "created_at": subtask["created_at"],
+                    "updated_at": subtask["updated_at"],
+                    "archived": subtask.get("archived", False),
+                }
+                subtasks.append(subtask_data)
+
+            return True, {
+                "subtasks": subtasks,
+                "parent_task_id": parent_task_id,
+                "total_count": len(subtasks),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting subtasks for parent {parent_task_id}: {e}")
+            return False, {"error": f"Error getting subtasks: {str(e)}"}
+
+    def get_task_subtasks_recursive(
+        self,
+        task_id: str
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Get all subtasks of a task recursively using the database function.
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            # Use the recursive database function created in the migration
+            response = (
+                self.supabase_client.rpc(
+                    "get_task_subtasks_recursive",
+                    {"task_uuid": task_id}
+                ).execute()
+            )
+
+            if response.data is not None:
+                subtasks = []
+                for subtask in response.data:
+                    subtask_data = {
+                        "id": subtask["id"],
+                        "title": subtask["title"],
+                        "description": subtask["description"],
+                        "status": subtask["status"],
+                        "assignee": subtask["assignee"],
+                        "task_order": subtask["task_order"],
+                        "depth": subtask["depth"],
+                    }
+                    subtasks.append(subtask_data)
+
+                return True, {
+                    "subtasks": subtasks,
+                    "root_task_id": task_id,
+                    "total_count": len(subtasks),
+                }
+            else:
+                return False, {"error": "Failed to get recursive subtasks"}
+
+        except Exception as e:
+            logger.error(f"Error getting recursive subtasks for task {task_id}: {e}")
+            return False, {"error": f"Error getting recursive subtasks: {str(e)}"}
+
+    def get_task_hierarchy_path(
+        self,
+        task_id: str
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Get the hierarchy path of a task using the database function.
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            # Use the hierarchy path database function created in the migration
+            response = (
+                self.supabase_client.rpc(
+                    "get_task_hierarchy_path",
+                    {"task_uuid": task_id}
+                ).execute()
+            )
+
+            if response.data is not None:
+                hierarchy = []
+                for level in response.data:
+                    level_data = {
+                        "level_name": level["level_name"],
+                        "id": level["id"],
+                        "title": level["title"],
+                    }
+                    hierarchy.append(level_data)
+
+                return True, {
+                    "hierarchy": hierarchy,
+                    "task_id": task_id,
+                    "levels_count": len(hierarchy),
+                }
+            else:
+                return False, {"error": "Failed to get task hierarchy path"}
+
+        except Exception as e:
+            logger.error(f"Error getting hierarchy path for task {task_id}: {e}")
+            return False, {"error": f"Error getting task hierarchy path: {str(e)}"}
+
+    async def archive_task_with_subtasks(
+        self,
+        task_id: str,
+        archived_by: str = "mcp"
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Archive a task and all its subtasks recursively (soft delete).
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            # First, get all subtasks recursively
+            success, subtasks_result = self.get_task_subtasks_recursive(task_id)
+            if not success:
+                return False, {"error": f"Failed to get subtasks: {subtasks_result.get('error')}"}
+
+            archive_data = {
+                "archived": True,
+                "archived_at": datetime.now().isoformat(),
+                "archived_by": archived_by,
+                "updated_at": datetime.now().isoformat(),
+            }
+
+            archived_tasks = []
+
+            # Archive the main task
+            main_response = (
+                self.supabase_client.table("archon_tasks")
+                .update(archive_data)
+                .eq("id", task_id)
+                .execute()
+            )
+
+            if main_response.data:
+                archived_tasks.append({"id": task_id, "type": "main_task"})
+
+            # Archive all subtasks
+            for subtask in subtasks_result.get("subtasks", []):
+                subtask_response = (
+                    self.supabase_client.table("archon_tasks")
+                    .update(archive_data)
+                    .eq("id", subtask["id"])
+                    .execute()
+                )
+
+                if subtask_response.data:
+                    archived_tasks.append({
+                        "id": subtask["id"],
+                        "type": "subtask",
+                        "depth": subtask["depth"]
+                    })
+
+            logger.info(f"Archived task {task_id} with {len(archived_tasks)-1} subtasks")
+
+            return True, {
+                "archived_tasks": archived_tasks,
+                "main_task_id": task_id,
+                "total_archived": len(archived_tasks),
+                "message": f"Task and {len(archived_tasks)-1} subtasks archived successfully"
+            }
+
+        except Exception as e:
+            logger.error(f"Error archiving task with subtasks: {e}")
+            return False, {"error": f"Error archiving task with subtasks: {str(e)}"}
