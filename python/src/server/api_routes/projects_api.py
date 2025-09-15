@@ -31,6 +31,8 @@ from ..services.projects import (
     SourceLinkingService,
     TaskService,
 )
+from ..services.projects.epic_service import EpicService
+from ..services.projects.story_service import StoryService
 from ..services.projects.document_service import DocumentService
 from ..services.projects.versioning_service import VersioningService
 
@@ -71,6 +73,45 @@ class CreateTaskRequest(BaseModel):
     assignee: str | None = "User"
     task_order: int | None = 0
     feature: str | None = None
+    story_id: str | None = None  # Support for hierarchy
+
+
+class CreateEpicRequest(BaseModel):
+    title: str
+    description: str | None = None
+    status: str | None = "todo"
+    priority: str | None = "medium"
+    # mvp_flag: bool | None = False  # Not in TRAXIS schema
+    business_value: dict[str, Any] | None = None
+
+
+class UpdateEpicRequest(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    # mvp_flag: bool | None = None  # Not in TRAXIS schema
+    business_value: dict[str, Any] | None = None
+
+
+class CreateStoryRequest(BaseModel):
+    title: str
+    description: str | None = None
+    status: str | None = "todo"
+    priority: str | None = "medium"
+    story_points: int | None = None
+    acceptance_criteria: dict[str, Any] | None = None
+    # mvp_flag: bool | None = False  # Not in TRAXIS schema
+
+
+class UpdateStoryRequest(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    story_points: int | None = None
+    acceptance_criteria: dict[str, Any] | None = None
+    # mvp_flag: bool | None = None  # Not in TRAXIS schema
 
 
 @router.get("/projects")
@@ -546,6 +587,564 @@ async def get_project_features(project_id: str):
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
+# ==================== EPIC MANAGEMENT ENDPOINTS ====================
+
+
+@router.get("/projects/{project_id}/epics")
+async def list_project_epics(
+    project_id: str,
+    request: Request,
+    response: Response,
+    status: str | None = None,
+    if_none_match: str | None = Header(None)
+):
+    """List all epics for a specific project with ETag support and optional filtering."""
+    try:
+        logfire.debug(
+            f"Listing project epics | project_id={project_id} | status={status} | etag={if_none_match}"
+        )
+
+        # Use EpicService to list epics
+        epic_service = EpicService()
+        success, result = await epic_service.list_epics(
+            project_id=project_id,
+            status=status
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail=result)
+
+        epics = result.get("epics", [])
+
+        # Generate ETag from epic data (excluding timestamps for consistency)
+        etag_data = {
+            "epics": [{
+                "id": epic.get("id"),
+                "title": epic.get("title"),
+                "status": epic.get("status"),
+                "priority": epic.get("priority"),
+                # "mvp_flag": epic.get("mvp_flag")  # Not in TRAXIS schema
+            } for epic in epics],
+            "project_id": project_id,
+            "count": len(epics)
+        }
+        current_etag = generate_etag(etag_data)
+
+        # Check if client's ETag matches (304 Not Modified)
+        if check_etag(if_none_match, current_etag):
+            response.status_code = 304
+            response.headers["ETag"] = current_etag
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            response.headers["Last-Modified"] = datetime.utcnow().isoformat()
+            logfire.debug(f"Epics unchanged, returning 304 | project_id={project_id} | etag={current_etag}")
+            return None
+
+        # Set ETag headers for successful response
+        response.headers["ETag"] = current_etag
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        response.headers["Last-Modified"] = datetime.utcnow().isoformat()
+
+        logfire.debug(
+            f"Project epics retrieved | project_id={project_id} | epic_count={len(epics)} | etag={current_etag}"
+        )
+
+        return epics
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to list project epics | error={str(e)} | project_id={project_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.post("/projects/{project_id}/epics")
+async def create_project_epic(project_id: str, request: CreateEpicRequest):
+    """Create a new epic for a project."""
+    try:
+        logfire.info(
+            f"Creating epic for project | project_id={project_id} | title={request.title}"
+        )
+
+        # Use EpicService to create epic
+        epic_service = EpicService()
+        success, result = await epic_service.create_epic(
+            project_id=project_id,
+            title=request.title,
+            description=request.description or "",
+            status=request.status or "todo",
+            priority=request.priority or "medium",
+            # mvp_flag=request.mvp_flag or False,  # Not in TRAXIS schema
+            business_value=request.business_value,
+        )
+
+        if not success:
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=result.get("error"))
+            else:
+                raise HTTPException(status_code=400, detail=result)
+
+        logfire.info(
+            f"Epic created successfully | project_id={project_id} | epic_id={result['epic']['id']}"
+        )
+
+        return {"message": "Epic created successfully", "epic": result["epic"]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to create epic | error={str(e)} | project_id={project_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.get("/epics/{epic_id}")
+async def get_epic(epic_id: str):
+    """Get a specific epic by ID."""
+    try:
+        logfire.info(f"Getting epic | epic_id={epic_id}")
+
+        # Use EpicService to get the epic
+        epic_service = EpicService()
+        success, result = await epic_service.get_epic(epic_id)
+
+        if not success:
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=result.get("error"))
+            else:
+                raise HTTPException(status_code=500, detail=result)
+
+        epic = result["epic"]
+
+        logfire.info(
+            f"Epic retrieved successfully | epic_id={epic_id} | project_id={epic.get('project_id')}"
+        )
+
+        return epic
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to get epic | error={str(e)} | epic_id={epic_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.put("/epics/{epic_id}")
+async def update_epic(epic_id: str, request: UpdateEpicRequest):
+    """Update an epic."""
+    try:
+        logfire.info(f"Updating epic | epic_id={epic_id}")
+
+        # Build update fields dictionary
+        update_fields = {}
+        if request.title is not None:
+            update_fields["title"] = request.title
+        if request.description is not None:
+            update_fields["description"] = request.description
+        if request.status is not None:
+            update_fields["status"] = request.status
+        if request.priority is not None:
+            update_fields["priority"] = request.priority
+        # if request.mvp_flag is not None:  # Not in TRAXIS schema
+        #     update_fields["mvp_flag"] = request.mvp_flag
+        if request.business_value is not None:
+            update_fields["business_value"] = request.business_value
+
+        # Use EpicService to update the epic
+        epic_service = EpicService()
+        success, result = await epic_service.update_epic(epic_id, **update_fields)
+
+        if not success:
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=result.get("error"))
+            else:
+                raise HTTPException(status_code=500, detail=result)
+
+        updated_epic = result["epic"]
+
+        logfire.info(
+            f"Epic updated successfully | epic_id={epic_id} | project_id={updated_epic.get('project_id')} | updated_fields={list(update_fields.keys())}"
+        )
+
+        return {"message": "Epic updated successfully", "epic": updated_epic}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to update epic | error={str(e)} | epic_id={epic_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.delete("/epics/{epic_id}")
+async def delete_epic(epic_id: str):
+    """Delete an epic (soft delete)."""
+    try:
+        logfire.info(f"Deleting epic | epic_id={epic_id}")
+
+        # Use EpicService to delete the epic
+        epic_service = EpicService()
+        success, result = await epic_service.delete_epic(epic_id)
+
+        if not success:
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=result.get("error"))
+            elif "already archived" in result.get("error", "").lower():
+                raise HTTPException(status_code=409, detail=result.get("error"))
+            else:
+                raise HTTPException(status_code=500, detail=result)
+
+        logfire.info(f"Epic deleted successfully | epic_id={epic_id}")
+
+        return {"message": result.get("message", "Epic deleted successfully")}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to delete epic | error={str(e)} | epic_id={epic_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+# ==================== STORY MANAGEMENT ENDPOINTS ====================
+
+
+@router.get("/epics/{epic_id}/stories")
+async def list_epic_stories(
+    epic_id: str,
+    request: Request,
+    response: Response,
+    status: str | None = None,
+    if_none_match: str | None = Header(None)
+):
+    """List all stories for a specific epic with ETag support and optional filtering."""
+    try:
+        logfire.debug(
+            f"Listing epic stories | epic_id={epic_id} | status={status} | etag={if_none_match}"
+        )
+
+        # Use StoryService to list stories
+        story_service = StoryService()
+        success, result = await story_service.list_stories(
+            epic_id=epic_id,
+            status=status
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail=result)
+
+        stories = result.get("stories", [])
+
+        # Generate ETag from story data (excluding timestamps for consistency)
+        etag_data = {
+            "stories": [{
+                "id": story.get("id"),
+                "title": story.get("title"),
+                "status": story.get("status"),
+                "priority": story.get("priority"),
+                "story_points": story.get("story_points"),
+                # "mvp_flag": story.get("mvp_flag")  # Not in TRAXIS schema
+            } for story in stories],
+            "epic_id": epic_id,
+            "count": len(stories)
+        }
+        current_etag = generate_etag(etag_data)
+
+        # Check if client's ETag matches (304 Not Modified)
+        if check_etag(if_none_match, current_etag):
+            response.status_code = 304
+            response.headers["ETag"] = current_etag
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            response.headers["Last-Modified"] = datetime.utcnow().isoformat()
+            logfire.debug(f"Stories unchanged, returning 304 | epic_id={epic_id} | etag={current_etag}")
+            return None
+
+        # Set ETag headers for successful response
+        response.headers["ETag"] = current_etag
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        response.headers["Last-Modified"] = datetime.utcnow().isoformat()
+
+        logfire.debug(
+            f"Epic stories retrieved | epic_id={epic_id} | story_count={len(stories)} | etag={current_etag}"
+        )
+
+        return stories
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to list epic stories | error={str(e)} | epic_id={epic_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.post("/epics/{epic_id}/stories")
+async def create_epic_story(epic_id: str, request: CreateStoryRequest):
+    """Create a new story for an epic."""
+    try:
+        logfire.info(
+            f"Creating story for epic | epic_id={epic_id} | title={request.title}"
+        )
+
+        # Use StoryService to create story
+        story_service = StoryService()
+        success, result = await story_service.create_story(
+            epic_id=epic_id,
+            title=request.title,
+            description=request.description or "",
+            status=request.status or "todo",
+            priority=request.priority or "medium",
+            story_points=request.story_points,
+            acceptance_criteria=request.acceptance_criteria,
+            # mvp_flag=request.mvp_flag or False,  # Not in TRAXIS schema
+        )
+
+        if not success:
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=result.get("error"))
+            else:
+                raise HTTPException(status_code=400, detail=result)
+
+        logfire.info(
+            f"Story created successfully | epic_id={epic_id} | story_id={result['story']['id']}"
+        )
+
+        return {"message": "Story created successfully", "story": result["story"]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to create story | error={str(e)} | epic_id={epic_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.get("/stories/{story_id}")
+async def get_story(story_id: str):
+    """Get a specific story by ID."""
+    try:
+        logfire.info(f"Getting story | story_id={story_id}")
+
+        # Use StoryService to get the story
+        story_service = StoryService()
+        success, result = story_service.get_story(story_id)
+
+        if not success:
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=result.get("error"))
+            else:
+                raise HTTPException(status_code=500, detail=result)
+
+        story = result["story"]
+
+        logfire.info(
+            f"Story retrieved successfully | story_id={story_id} | epic_id={story.get('epic_id')}"
+        )
+
+        return story
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to get story | error={str(e)} | story_id={story_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.put("/stories/{story_id}")
+async def update_story(story_id: str, request: UpdateStoryRequest):
+    """Update a story."""
+    try:
+        logfire.info(f"Updating story | story_id={story_id}")
+
+        # Build update fields dictionary
+        update_fields = {}
+        if request.title is not None:
+            update_fields["title"] = request.title
+        if request.description is not None:
+            update_fields["description"] = request.description
+        if request.status is not None:
+            update_fields["status"] = request.status
+        if request.priority is not None:
+            update_fields["priority"] = request.priority
+        if request.story_points is not None:
+            update_fields["story_points"] = request.story_points
+        if request.acceptance_criteria is not None:
+            update_fields["acceptance_criteria"] = request.acceptance_criteria
+        # if request.mvp_flag is not None:  # Not in TRAXIS schema
+        #     update_fields["mvp_flag"] = request.mvp_flag
+
+        # Use StoryService to update the story
+        story_service = StoryService()
+        success, result = await story_service.update_story(story_id, update_fields)
+
+        if not success:
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=result.get("error"))
+            else:
+                raise HTTPException(status_code=500, detail=result)
+
+        updated_story = result["story"]
+
+        logfire.info(
+            f"Story updated successfully | story_id={story_id} | epic_id={updated_story.get('epic_id')} | updated_fields={list(update_fields.keys())}"
+        )
+
+        return {"message": "Story updated successfully", "story": updated_story}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to update story | error={str(e)} | story_id={story_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.delete("/stories/{story_id}")
+async def delete_story(story_id: str):
+    """Delete a story (soft delete)."""
+    try:
+        logfire.info(f"Deleting story | story_id={story_id}")
+
+        # Use StoryService to delete the story
+        story_service = StoryService()
+        success, result = await story_service.delete_story(story_id)
+
+        if not success:
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=result.get("error"))
+            elif "already archived" in result.get("error", "").lower():
+                raise HTTPException(status_code=409, detail=result.get("error"))
+            else:
+                raise HTTPException(status_code=500, detail=result)
+
+        logfire.info(f"Story deleted successfully | story_id={story_id}")
+
+        return {"message": result.get("message", "Story deleted successfully")}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to delete story | error={str(e)} | story_id={story_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+# ==================== HIERARCHY NAVIGATION ENDPOINTS ====================
+
+
+@router.get("/projects/{project_id}/hierarchy")
+async def get_project_hierarchy(
+    project_id: str,
+    request: Request,
+    response: Response,
+    include_tasks: bool = True,
+    include_archived: bool = False,
+    if_none_match: str | None = Header(None)
+):
+    """Get complete project hierarchy: Project > Epics > Stories > Tasks with ETag support."""
+    try:
+        logfire.debug(
+            f"Getting project hierarchy | project_id={project_id} | include_tasks={include_tasks} | include_archived={include_archived} | etag={if_none_match}"
+        )
+
+        # Get project
+        project_service = ProjectService()
+        project_success, project_result = project_service.get_project(project_id)
+
+        if not project_success:
+            if "not found" in project_result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=project_result.get("error"))
+            else:
+                raise HTTPException(status_code=500, detail=project_result)
+
+        project = project_result["project"]
+
+        # Get epics for this project
+        epic_service = EpicService()
+        epic_success, epic_result = await epic_service.list_epics(
+            project_id=project_id
+        )
+
+        if not epic_success:
+            raise HTTPException(status_code=500, detail=epic_result)
+
+        epics = epic_result.get("epics", [])
+
+        # For each epic, get its stories
+        story_service = StoryService()
+        for epic in epics:
+            story_success, story_result = await story_service.list_stories(
+                epic_id=epic["id"]
+            )
+            if story_success:
+                epic["stories"] = story_result.get("stories", [])
+
+                # For each story, get its tasks if requested
+                if include_tasks:
+                    task_service = TaskService()
+                    for story in epic["stories"]:
+                        task_success, task_result = task_service.list_tasks(
+                            story_id=story["id"],
+                            include_closed=True,
+                            include_archived=include_archived
+                        )
+                        if task_success:
+                            story["tasks"] = task_result.get("tasks", [])
+                        else:
+                            story["tasks"] = []
+            else:
+                epic["stories"] = []
+
+        # Build hierarchy response
+        hierarchy = {
+            "project": {
+                "id": project["id"],
+                "title": project["title"],
+                "description": project.get("description", ""),
+                "epics": epics
+            },
+            "metadata": {
+                "epic_count": len(epics),
+                "story_count": sum(len(epic.get("stories", [])) for epic in epics),
+                "task_count": sum(
+                    len(story.get("tasks", []))
+                    for epic in epics
+                    for story in epic.get("stories", [])
+                ) if include_tasks else 0,
+                "include_tasks": include_tasks,
+                "include_archived": include_archived
+            }
+        }
+
+        # Generate ETag from hierarchy structure
+        etag_data = {
+            "project_id": project_id,
+            "epic_count": len(epics),
+            "story_count": sum(len(epic.get("stories", [])) for epic in epics),
+            "include_tasks": include_tasks,
+            "include_archived": include_archived
+        }
+        current_etag = generate_etag(etag_data)
+
+        # Check if client's ETag matches (304 Not Modified)
+        if check_etag(if_none_match, current_etag):
+            response.status_code = 304
+            response.headers["ETag"] = current_etag
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            response.headers["Last-Modified"] = datetime.utcnow().isoformat()
+            logfire.debug(f"Hierarchy unchanged, returning 304 | project_id={project_id} | etag={current_etag}")
+            return None
+
+        # Set ETag headers for successful response
+        response.headers["ETag"] = current_etag
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        response.headers["Last-Modified"] = datetime.utcnow().isoformat()
+
+        logfire.debug(
+            f"Project hierarchy retrieved | project_id={project_id} | epic_count={len(epics)} | story_count={hierarchy['metadata']['story_count']} | etag={current_etag}"
+        )
+
+        return hierarchy
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to get project hierarchy | error={str(e)} | project_id={project_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
 @router.get("/projects/{project_id}/tasks")
 async def list_project_tasks(
     project_id: str,
@@ -635,6 +1234,7 @@ async def create_task(request: CreateTaskRequest):
             assignee=request.assignee or "User",
             task_order=request.task_order or 0,
             feature=request.feature,
+            story_id=request.story_id,  # Support for hierarchy
         )
 
         if not success:
@@ -659,16 +1259,18 @@ async def create_task(request: CreateTaskRequest):
 async def list_tasks(
     status: str | None = None,
     project_id: str | None = None,
+    epic_id: str | None = None,  # New hierarchy filter
+    story_id: str | None = None,  # New hierarchy filter
     include_closed: bool = True,
     page: int = 1,
     per_page: int = 10,
     exclude_large_fields: bool = False,
     q: str | None = None,  # Search query parameter
 ):
-    """List tasks with optional filters including status, project, and keyword search."""
+    """List tasks with optional filters including status, project, epic, story and keyword search."""
     try:
         logfire.info(
-            f"Listing tasks | status={status} | project_id={project_id} | include_closed={include_closed} | page={page} | per_page={per_page} | q={q}"
+            f"Listing tasks | status={status} | project_id={project_id} | epic_id={epic_id} | story_id={story_id} | include_closed={include_closed} | page={page} | per_page={per_page} | q={q}"
         )
 
         # Use TaskService to list tasks
@@ -676,6 +1278,8 @@ async def list_tasks(
         success, result = task_service.list_tasks(
             project_id=project_id,
             status=status,
+            epic_id=epic_id,  # Pass hierarchy filters
+            story_id=story_id,  # Pass hierarchy filters
             include_closed=include_closed,
             exclude_large_fields=exclude_large_fields,
             search_query=q,  # Pass search query to service

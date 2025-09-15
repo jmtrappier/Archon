@@ -21,6 +21,7 @@ class EpicService:
 
     VALID_STATUSES = ["todo", "doing", "review", "waiting", "done"]
     VALID_PRIORITIES = ["low", "medium", "high", "critical"]
+    PRIORITY_MAPPING = {"low": 25, "medium": 50, "high": 75, "critical": 100}
 
     def __init__(self, supabase_client=None):
         """Initialize with optional supabase client"""
@@ -51,7 +52,7 @@ class EpicService:
         description: str = "",
         status: str = "todo",
         priority: str = "medium",
-        mvp_flag: bool = False,
+        # mvp_flag: bool = False,  # Not in TRAXIS schema
         business_value: dict[str, Any] | None = None,
     ) -> tuple[bool, dict[str, Any]]:
         """
@@ -84,10 +85,10 @@ class EpicService:
                 "title": title.strip(),
                 "description": description.strip() if description else "",
                 "status": status,
-                "priority": priority,
-                "mvp_flag": mvp_flag,
+                "priority": self.PRIORITY_MAPPING[priority],
+                # "mvp_flag": mvp_flag,  # Not in TRAXIS schema
                 "business_value": business_value or {},
-                "progress": 0.0,
+                "progress_percentage": 0,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat(),
             }).execute()
@@ -135,11 +136,11 @@ class EpicService:
         description: str | None = None,
         status: str | None = None,
         priority: str | None = None,
-        mvp_flag: bool | None = None,
+        # mvp_flag: bool | None = None,  # Not in TRAXIS schema
         business_value: dict[str, Any] | None = None,
-        archived: bool | None = None,
-        archived_at: str | None = None,
-        archived_by: str | None = None,
+        # archived: bool | None = None,  # Not implemented in DB yet
+        # archived_at: str | None = None,  # Not implemented in DB yet
+        # archived_by: str | None = None,  # Not implemented in DB yet
     ) -> tuple[bool, dict[str, Any]]:
         """
         Update an epic.
@@ -169,19 +170,20 @@ class EpicService:
                 is_valid, error_msg = self.validate_priority(priority)
                 if not is_valid:
                     return False, {"error": error_msg}
-                update_data["priority"] = priority
+                update_data["priority"] = self.PRIORITY_MAPPING[priority]
 
-            if mvp_flag is not None:
-                update_data["mvp_flag"] = mvp_flag
+            # if mvp_flag is not None:  # Not in TRAXIS schema
+            #     update_data["mvp_flag"] = mvp_flag
 
             if business_value is not None:
                 update_data["business_value"] = business_value
 
-            if archived is not None:
-                update_data["archived"] = archived
-                if archived:
-                    update_data["archived_at"] = archived_at or datetime.now().isoformat()
-                    update_data["archived_by"] = archived_by or "system"
+            # Archiving not implemented in database schema yet
+            # if archived is not None:
+            #     update_data["archived"] = archived
+            #     if archived:
+            #         update_data["archived_at"] = archived_at or datetime.now().isoformat()
+            #         update_data["archived_by"] = archived_by or "system"
 
             # Update the epic
             response = (
@@ -251,31 +253,12 @@ class EpicService:
     ) -> tuple[bool, dict[str, Any]]:
         """
         Archive an epic (soft delete).
+        NOTE: Archiving functionality not implemented in database schema yet.
 
         Returns:
             Tuple of (success, result_dict)
         """
-        try:
-            # Check if epic exists and is not already archived
-            epic_result = await self.get_epic(epic_id)
-            if not epic_result[0]:
-                return epic_result
-
-            epic = epic_result[1]["epic"]
-            if epic.get("archived"):
-                return False, {"error": f"Epic with ID {epic_id} is already archived"}
-
-            # Archive the epic
-            return await self.update_epic(
-                epic_id=epic_id,
-                archived=True,
-                archived_at=datetime.now().isoformat(),
-                archived_by=archived_by,
-            )
-
-        except Exception as e:
-            logger.error(f"Error archiving epic: {str(e)}")
-            return False, {"error": f"Error archiving epic: {str(e)}"}
+        return False, {"error": "Archiving functionality not implemented yet"}
 
     async def list_epics(
         self,
@@ -307,11 +290,10 @@ class EpicService:
             if priority:
                 query = query.eq("priority", priority)
 
-            if mvp_only:
-                query = query.eq("mvp_flag", True)
+            # if mvp_only:  # Not in TRAXIS schema
+            #     query = query.eq("mvp_flag", True)
 
-            if not include_archived:
-                query = query.eq("archived", False)
+            # Note: archived functionality not yet implemented in database schema
 
             # Apply pagination and ordering
             query = query.order("created_at", desc=False)
@@ -344,7 +326,6 @@ class EpicService:
                 self.supabase_client.table("archon_stories")
                 .select("status")
                 .eq("epic_id", epic_id)
-                .eq("archived", False)
                 .execute()
             )
 
@@ -361,7 +342,7 @@ class EpicService:
             update_response = (
                 self.supabase_client.table("archon_epics")
                 .update({
-                    "progress": progress,
+                    "progress_percentage": int(progress),
                     "updated_at": datetime.now().isoformat(),
                 })
                 .eq("id", epic_id)
@@ -391,7 +372,6 @@ class EpicService:
                 self.supabase_client.table("archon_stories")
                 .select("status")
                 .eq("epic_id", epic_id)
-                .eq("archived", False)
                 .execute()
             )
 

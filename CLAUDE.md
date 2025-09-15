@@ -244,6 +244,93 @@ make lint               # Linters frontend + backend
 make test               # Tous les tests
 ```
 
+## Documents de Commit
+
+### Règles de Documentation des Commits
+**IMPORTANT** : Les fichiers de commit doivent être générés UNIQUEMENT à la demande explicite de l'utilisateur.
+
+#### Format et Nommage
+- **Nom de fichier** : `traxis/YYYY-MM-DD_HHhMM-commit.md`
+- **Langue** : ANGLAIS UNIQUEMENT (même si le développement se fait en français)
+- **Emplacement** : `/home/jmtrappier/Archon/traxis/` directory
+
+#### Structure Requise du Document
+```markdown
+# Commit TRAXIS - September 15, 2025, 10h42
+
+## 🎯 [STORY/EPIC] - [Title] COMPLETED
+
+### Executive Summary
+Brief description of what was accomplished
+
+---
+
+## ✅ DEVELOPMENT COMPLETED
+
+### 📁 New Files Created
+- List of new files with purpose
+
+### 🔧 Modified Existing Files
+- Critical changes with line numbers where relevant
+
+---
+
+## 🧪 TESTS AND QUALITY
+
+### Test Results
+- Test counts and pass rates
+- Technical fixes applied
+
+---
+
+## 🚀 DEPLOYMENT AND VALIDATION
+
+### Docker/Environment
+- Deployment status
+- Visual tests with Playwright if applicable
+
+---
+
+## 📊 PROJECT STATUS BMAD-TRAXIS
+
+### EPIC Status Overview
+- Current completion status
+- Next steps ready
+
+---
+
+## 🔬 TECHNICAL ARCHITECTURE
+
+### Implementation Details
+- Patterns used
+- Service integrations
+
+---
+
+## 🎯 NEXT STEPS
+
+### Ready for Next Development
+- What's ready to start
+- Dependencies satisfied
+
+---
+
+**Commit made on [Date] at [Time]**
+**Developer: Claude Code AI IDE Agent**
+**Branch: traxis**
+**Project: Archon BMAD Integration ([PROJECT_ID])**
+```
+
+#### Méthodologie de Création
+1. **Seulement à la demande** - Ne jamais créer spontanément
+2. **Résumé complet** - Toutes les modifications importantes documentées
+3. **Tests inclus** - Status des tests et corrections appliquées
+4. **Architecture** - Patterns et intégrations techniques
+5. **Statut projet** - Où en est le projet BMAD-TRAXIS complet
+6. **Prochaines étapes** - Ce qui est prêt à commencer
+7. **Détails techniques** - Numéros de ligne pour modifications critiques
+8. **Validation** - Tests visuels et API si effectués
+
 ## Outils MCP Disponibles
 
 ### Gestion des Connaissances
