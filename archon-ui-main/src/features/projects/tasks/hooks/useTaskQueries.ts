@@ -184,3 +184,265 @@ export function useDeleteTask(projectId: string) {
     },
   });
 }
+
+// ========================================
+// HIERARCHY INTEGRATION HOOKS
+// ========================================
+
+// Query keys for hierarchy operations
+export const taskHierarchyKeys = {
+  byStory: (storyId: string) => ["story", storyId, "tasks"] as const,
+  subtasks: (parentTaskId: string) => ["task", parentTaskId, "subtasks"] as const,
+  progress: (taskId: string) => ["task", taskId, "progress"] as const,
+  hierarchyPath: (taskId: string) => ["task", taskId, "hierarchy-path"] as const,
+};
+
+// Fetch tasks for a specific story
+export function useStoryTasks(storyId: string | undefined, enabled = true) {
+  const { refetchInterval } = useSmartPolling(5000);
+
+  return useQuery<Task[]>({
+    queryKey: storyId ? taskHierarchyKeys.byStory(storyId) : ["story-tasks-undefined"],
+    queryFn: async () => {
+      if (!storyId) throw new Error("No story ID");
+      return taskService.getTasksByStory(storyId);
+    },
+    enabled: !!storyId && enabled,
+    refetchInterval,
+    refetchOnWindowFocus: true,
+    staleTime: 10000,
+  });
+}
+
+// Fetch subtasks for a specific task
+export function useSubtasks(parentTaskId: string | undefined, enabled = true) {
+  const { refetchInterval } = useSmartPolling(5000);
+
+  return useQuery<Task[]>({
+    queryKey: parentTaskId ? taskHierarchyKeys.subtasks(parentTaskId) : ["subtasks-undefined"],
+    queryFn: async () => {
+      if (!parentTaskId) throw new Error("No parent task ID");
+      return taskService.getSubtasks(parentTaskId);
+    },
+    enabled: !!parentTaskId && enabled,
+    refetchInterval,
+    refetchOnWindowFocus: true,
+    staleTime: 10000,
+  });
+}
+
+// Fetch task progress
+export function useTaskProgress(taskId: string | undefined, enabled = true) {
+  const { refetchInterval } = useSmartPolling(10000);
+
+  return useQuery<number>({
+    queryKey: taskId ? taskHierarchyKeys.progress(taskId) : ["task-progress-undefined"],
+    queryFn: async () => {
+      if (!taskId) throw new Error("No task ID");
+      return taskService.calculateTaskProgress(taskId);
+    },
+    enabled: !!taskId && enabled,
+    refetchInterval,
+    refetchOnWindowFocus: true,
+    staleTime: 15000,
+  });
+}
+
+// Fetch task hierarchy path for breadcrumbs
+export function useTaskHierarchyPath(taskId: string | undefined, enabled = true) {
+  const { refetchInterval } = useSmartPolling(15000); // Slower refresh for paths
+
+  return useQuery<any>({
+    queryKey: taskId ? taskHierarchyKeys.hierarchyPath(taskId) : ["task-hierarchy-path-undefined"],
+    queryFn: async () => {
+      if (!taskId) throw new Error("No task ID");
+      return taskService.getTaskHierarchyPath(taskId);
+    },
+    enabled: !!taskId && enabled,
+    refetchInterval,
+    refetchOnWindowFocus: true,
+    staleTime: 30000, // Hierarchy paths change rarely
+  });
+}
+
+// Create subtask mutation
+export function useCreateSubtask(parentTaskId: string) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation({
+    mutationFn: (subtaskData: Omit<CreateTaskRequest, 'parent_task_id'>) =>
+      taskService.createSubtask(parentTaskId, subtaskData),
+    onMutate: async (newSubtaskData) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: taskHierarchyKeys.subtasks(parentTaskId) });
+
+      // Snapshot the previous value
+      const previousSubtasks = queryClient.getQueryData(taskHierarchyKeys.subtasks(parentTaskId));
+
+      // Create optimistic subtask with temporary ID
+      const tempId = `temp-subtask-${Date.now()}`;
+      const optimisticSubtask: Task = {
+        id: tempId,
+        ...newSubtaskData,
+        parent_task_id: parentTaskId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        // Ensure all required fields have defaults
+        task_order: newSubtaskData.task_order ?? 100,
+        status: newSubtaskData.status ?? "todo",
+        assignee: newSubtaskData.assignee ?? "User",
+      } as Task;
+
+      // Optimistically add the new subtask
+      queryClient.setQueryData(taskHierarchyKeys.subtasks(parentTaskId), (old: Task[] | undefined) => {
+        if (!old) return [optimisticSubtask];
+        return [...old, optimisticSubtask];
+      });
+
+      return { previousSubtasks, tempId };
+    },
+    onError: (error, variables, context) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Failed to create subtask:", error, { variables });
+      // Rollback on error
+      if (context?.previousSubtasks) {
+        queryClient.setQueryData(taskHierarchyKeys.subtasks(parentTaskId), context.previousSubtasks);
+      }
+      showToast(`Failed to create subtask: ${errorMessage}`, "error");
+    },
+    onSuccess: (data, variables, context) => {
+      // Replace optimistic subtask with real one from server
+      queryClient.setQueryData(taskHierarchyKeys.subtasks(parentTaskId), (old: Task[] | undefined) => {
+        if (!old) return [data];
+        return old
+          .map((task) => (task.id === context?.tempId ? data : task))
+          .filter((task, index, self) => index === self.findIndex((t) => t.id === task.id));
+      });
+      showToast("Subtask created successfully", "success");
+    },
+    onSettled: () => {
+      // Always refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: taskHierarchyKeys.subtasks(parentTaskId) });
+      queryClient.invalidateQueries({ queryKey: taskHierarchyKeys.progress(parentTaskId) });
+    },
+  });
+}
+
+// Move task to different story mutation
+export function useMoveTaskToStory() {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<Task, Error, { taskId: string; toStoryId: string; newTaskOrder?: number }>({
+    mutationFn: ({ taskId, toStoryId, newTaskOrder }) =>
+      taskService.moveTaskToStory(taskId, toStoryId, newTaskOrder),
+    onSuccess: (data, { toStoryId }) => {
+      // Invalidate relevant caches
+      queryClient.invalidateQueries({ queryKey: taskHierarchyKeys.byStory(toStoryId) });
+      showToast("Task moved to story successfully", "success");
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showToast(`Failed to move task: ${errorMessage}`, "error");
+    },
+  });
+}
+
+// Move subtask to different parent mutation
+export function useMoveSubtaskToParent() {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<Task, Error, { subtaskId: string; newParentTaskId: string; newTaskOrder?: number }>({
+    mutationFn: ({ subtaskId, newParentTaskId, newTaskOrder }) =>
+      taskService.moveSubtaskToParent(subtaskId, newParentTaskId, newTaskOrder),
+    onSuccess: (data, { newParentTaskId }) => {
+      // Invalidate relevant caches
+      queryClient.invalidateQueries({ queryKey: taskHierarchyKeys.subtasks(newParentTaskId) });
+      showToast("Subtask moved successfully", "success");
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showToast(`Failed to move subtask: ${errorMessage}`, "error");
+    },
+  });
+}
+
+// Reorder tasks in story mutation
+export function useReorderTasksInStory(storyId: string) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<Task[], Error, string[]>({
+    mutationFn: (orderedTaskIds: string[]) =>
+      taskService.reorderTasksInStory(storyId, orderedTaskIds),
+    onMutate: async (orderedTaskIds) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: taskHierarchyKeys.byStory(storyId) });
+
+      // Get current tasks
+      const previousTasks = queryClient.getQueryData<Task[]>(taskHierarchyKeys.byStory(storyId));
+
+      // Optimistically reorder
+      if (previousTasks) {
+        const reorderedTasks = orderedTaskIds
+          .map(id => previousTasks.find(task => task.id === id))
+          .filter(Boolean) as Task[];
+        queryClient.setQueryData(taskHierarchyKeys.byStory(storyId), reorderedTasks);
+      }
+
+      return { previousTasks };
+    },
+    onError: (error, variables, context) => {
+      console.error("Failed to reorder tasks:", error);
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData(taskHierarchyKeys.byStory(storyId), context.previousTasks);
+      }
+      showToast("Failed to reorder tasks", "error");
+    },
+    onSuccess: () => {
+      showToast("Tasks reordered successfully", "success");
+    },
+  });
+}
+
+// Reorder subtasks mutation
+export function useReorderSubtasks(parentTaskId: string) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation<Task[], Error, string[]>({
+    mutationFn: (orderedSubtaskIds: string[]) =>
+      taskService.reorderSubtasks(parentTaskId, orderedSubtaskIds),
+    onMutate: async (orderedSubtaskIds) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: taskHierarchyKeys.subtasks(parentTaskId) });
+
+      // Get current subtasks
+      const previousSubtasks = queryClient.getQueryData<Task[]>(taskHierarchyKeys.subtasks(parentTaskId));
+
+      // Optimistically reorder
+      if (previousSubtasks) {
+        const reorderedSubtasks = orderedSubtaskIds
+          .map(id => previousSubtasks.find(task => task.id === id))
+          .filter(Boolean) as Task[];
+        queryClient.setQueryData(taskHierarchyKeys.subtasks(parentTaskId), reorderedSubtasks);
+      }
+
+      return { previousSubtasks };
+    },
+    onError: (error, variables, context) => {
+      console.error("Failed to reorder subtasks:", error);
+      // Rollback on error
+      if (context?.previousSubtasks) {
+        queryClient.setQueryData(taskHierarchyKeys.subtasks(parentTaskId), context.previousSubtasks);
+      }
+      showToast("Failed to reorder subtasks", "error");
+    },
+    onSuccess: () => {
+      showToast("Subtasks reordered successfully", "success");
+    },
+  });
+}
