@@ -2,18 +2,61 @@
 Story Service Module for Archon-TRAXIS
 
 This module provides core business logic for story operations following
-the TaskService patterns for consistency.
+the BMAD standards defined in docs/backend/service-patterns.md.
+
+Compliant with:
+- Service patterns (docs/backend/service-patterns.md)
+- API design standards (docs/backend/api-design-standards.md)
+- Error handling (docs/backend/error-handling.md)
+- Testing strategy (docs/backend/testing-strategy.md)
 """
 
 from datetime import datetime
 from typing import Any, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
+import traceback
 
 from src.server.utils import get_supabase_client
-
 from ...config.logfire_config import get_logger
 
 logger = get_logger(__name__)
+
+
+# Custom Exceptions following docs/backend/error-handling.md
+class StoryServiceError(Exception):
+    """Base exception for StoryService errors"""
+    def __init__(self, message: str, error_code: str = "STORY_SERVICE_ERROR"):
+        self.message = message
+        self.error_code = error_code
+        super().__init__(self.message)
+
+
+class StoryNotFoundError(StoryServiceError):
+    """Story not found error"""
+    def __init__(self, story_id: str):
+        super().__init__(
+            f"Story with ID {story_id} not found",
+            "STORY_NOT_FOUND"
+        )
+
+
+class StoryValidationError(StoryServiceError):
+    """Story validation error"""
+    def __init__(self, field: str, message: str):
+        self.field = field
+        super().__init__(
+            f"Validation error for field '{field}': {message}",
+            "STORY_VALIDATION_ERROR"
+        )
+
+
+class ParentNotFoundError(StoryServiceError):
+    """Parent resource not found error"""
+    def __init__(self, parent_type: str, parent_id: str):
+        super().__init__(
+            f"{parent_type} with ID {parent_id} not found",
+            "PARENT_NOT_FOUND"
+        )
 
 
 class StoryService:
@@ -45,7 +88,7 @@ class StoryService:
         return True, ""
 
     def validate_acceptance_criteria(self, criteria: list[str]) -> tuple[bool, str]:
-        """Validate acceptance criteria format"""
+        """Validate acceptance criteria format - Returns (is_valid, error_message)"""
         if criteria is not None:
             if not isinstance(criteria, list):
                 return False, "Acceptance criteria must be a list of strings"
@@ -53,6 +96,40 @@ class StoryService:
                 if not isinstance(item, str) or len(item.strip()) == 0:
                     return False, "Each acceptance criterion must be a non-empty string"
         return True, ""
+
+    def validate_title(self, title: str) -> tuple[bool, str]:
+        """Validate story title - Returns (is_valid, error_message)"""
+        if not isinstance(title, str):
+            return False, "Title must be a string"
+        if not title or len(title.strip()) == 0:
+            return False, "Title is required and cannot be empty"
+        if len(title.strip()) > 200:
+            return False, "Title cannot exceed 200 characters"
+        return True, ""
+
+    def validate_business_value(self, business_value: dict[str, Any]) -> tuple[bool, str]:
+        """Validate business value format - Returns (is_valid, error_message)"""
+        if business_value is not None and not isinstance(business_value, dict):
+            return False, "Business value must be a dictionary"
+        return True, ""
+
+    async def _validate_epic_exists(self, epic_id: str) -> bool:
+        """Validate epic exists - Returns True if exists"""
+        try:
+            result = (
+                self.supabase_client.table("archon_epics")
+                .select("id, archived")
+                .eq("id", epic_id)
+                .execute()
+            )
+            if not result.data or len(result.data) == 0:
+                return False
+            # Check if epic is archived
+            epic = result.data[0]
+            return not epic.get("archived", False)
+        except Exception as e:
+            logger.error(f"Error validating epic existence: {str(e)}")
+            return False
 
     async def create_story(
         self,
@@ -65,54 +142,80 @@ class StoryService:
         acceptance_criteria: list[str] | None = None,
         business_value: dict[str, Any] | None = None,
         story_points: int | None = None,
-    ) -> tuple[bool, dict[str, Any]]:
+    ) -> dict[str, Any]:
         """
-        Create a new story under an epic.
+        Create a new story under an epic with comprehensive validation.
+
+        Args:
+            epic_id: UUID of the parent epic
+            title: Story title (1-200 characters)
+            description: Optional story description
+            status: Story status (todo, doing, review, waiting, done)
+            priority: Story priority (low, medium, high, critical)
+            mvp_flag: Whether story is part of MVP
+            acceptance_criteria: List of acceptance criteria
+            business_value: Optional business value metadata
+            story_points: Optional story point estimation
 
         Returns:
-            Tuple of (success, result_dict)
+            Created story data
+
+        Raises:
+            StoryValidationError: For validation failures
+            ParentNotFoundError: If epic doesn't exist
+            StoryServiceError: For database or unexpected errors
         """
         try:
-            # Validate inputs
-            if not title or not isinstance(title, str) or len(title.strip()) == 0:
-                return False, {"error": "Story title is required and must be a non-empty string"}
-
+            # Comprehensive input validation
             if not epic_id or not isinstance(epic_id, str):
-                return False, {"error": "Epic ID is required and must be a string"}
+                raise StoryValidationError("epic_id", "Epic ID is required and must be a string")
 
-            # Validate epic exists
+            # Validate title
+            is_valid, error_msg = self.validate_title(title)
+            if not is_valid:
+                raise StoryValidationError("title", error_msg)
+
+            # Validate status
+            is_valid, error_msg = self.validate_status(status)
+            if not is_valid:
+                raise StoryValidationError("status", error_msg)
+
+            # Validate priority
+            is_valid, error_msg = self.validate_priority(priority)
+            if not is_valid:
+                raise StoryValidationError("priority", error_msg)
+
+            # Validate acceptance criteria
+            is_valid, error_msg = self.validate_acceptance_criteria(acceptance_criteria)
+            if not is_valid:
+                raise StoryValidationError("acceptance_criteria", error_msg)
+
+            # Validate business_value
+            is_valid, error_msg = self.validate_business_value(business_value)
+            if not is_valid:
+                raise StoryValidationError("business_value", error_msg)
+
+            # Validate parent epic exists and is not archived
+            if not await self._validate_epic_exists(epic_id):
+                raise ParentNotFoundError("Epic", epic_id)
+
+            # Get epic details for project_id inheritance
             epic_response = (
                 self.supabase_client.table("archon_epics")
-                .select("id, project_id, archived")
+                .select("id, project_id")
                 .eq("id", epic_id)
                 .single()
                 .execute()
             )
 
             if not epic_response.data:
-                return False, {"error": f"Epic with ID {epic_id} not found"}
+                raise ParentNotFoundError("Epic", epic_id)
 
             epic = epic_response.data
-            if epic.get("archived"):
-                return False, {"error": f"Cannot create story under archived epic {epic_id}"}
+            logger.info(f"Creating story for epic {epic_id} in project {epic['project_id']}")
 
-            # Validate status
-            is_valid, error_msg = self.validate_status(status)
-            if not is_valid:
-                return False, {"error": error_msg}
-
-            # Validate priority
-            is_valid, error_msg = self.validate_priority(priority)
-            if not is_valid:
-                return False, {"error": error_msg}
-
-            # Validate acceptance criteria
-            is_valid, error_msg = self.validate_acceptance_criteria(acceptance_criteria)
-            if not is_valid:
-                return False, {"error": error_msg}
-
-            # Create the story
-            response = self.supabase_client.table("archon_stories").insert({
+            # Prepare story data
+            story_data = {
                 "epic_id": epic_id,
                 "project_id": epic["project_id"],  # Inherit from epic
                 "title": title.strip(),
@@ -126,24 +229,47 @@ class StoryService:
                 "progress": 0.0,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat(),
-            }).execute()
+            }
 
-            if response.data:
-                created_story = response.data[0]
-                logger.info(f"Story created successfully: {created_story['id']}")
+            # Database operation
+            result = (
+                self.supabase_client.table("archon_stories")
+                .insert(story_data)
+                .execute()
+            )
 
-                # Trigger epic progress recalculation
-                from src.server.services.projects.epic_service import EpicService
+            if result.data is None or len(result.data) == 0:
+                logger.error(f"Database error creating story: {result}")
+                raise StoryServiceError(
+                    "Failed to create story due to database error",
+                    "DATABASE_ERROR"
+                )
+
+            created_story = result.data[0]
+            logger.info(f"Story created successfully: {created_story['id']}")
+
+            # Trigger epic progress recalculation
+            try:
+                from .epic_service import EpicService
                 epic_service = EpicService(self.supabase_client)
                 await epic_service.calculate_epic_progress(epic_id)
+            except Exception as e:
+                logger.warning(f"Failed to update epic progress after story creation: {str(e)}")
+                # Don't fail the story creation for this
 
-                return True, {"story": created_story}
-            else:
-                return False, {"error": "Failed to create story"}
+            return created_story
 
+        except StoryServiceError:
+            # Re-raise our custom errors
+            raise
         except Exception as e:
-            logger.error(f"Error creating story: {str(e)}")
-            return False, {"error": f"Error creating story: {str(e)}"}
+            # Catch-all for unexpected errors
+            logger.error(f"Unexpected error creating story: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise StoryServiceError(
+                f"Unexpected error creating story: {str(e)}",
+                "UNEXPECTED_ERROR"
+            )
 
     async def get_story(self, story_id: str) -> tuple[bool, dict[str, Any]]:
         """
