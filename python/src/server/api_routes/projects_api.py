@@ -607,15 +607,14 @@ async def list_project_epics(
 
         # Use EpicService to list epics
         epic_service = EpicService()
-        success, result = await epic_service.list_epics(
-            project_id=project_id,
-            status=status
-        )
-
-        if not success:
-            raise HTTPException(status_code=500, detail=result)
-
-        epics = result.get("epics", [])
+        try:
+            epics = await epic_service.list_epics(
+                project_id=project_id,
+                status=status
+            )
+        except Exception as e:
+            logger.error(f"Failed to list project epics | error={str(e)} | project_id={project_id}")
+            raise HTTPException(status_code=500, detail={"error": str(e)})
 
         # Generate ETag from epic data (excluding timestamps for consistency)
         etag_data = {
@@ -1052,13 +1051,18 @@ async def list_all_epics(
 
         # Use project-specific listing if project_id provided
         if project_id:
-            success, result = await epic_service.list_epics(
-                project_id=project_id,
-                status=status,
-                include_archived=include_closed,
-                limit=per_page,
-                offset=(page - 1) * per_page
-            )
+            try:
+                epics = await epic_service.list_epics(
+                    project_id=project_id,
+                    status=status,
+                    include_archived=include_closed,
+                    limit=per_page,
+                    offset=(page - 1) * per_page
+                )
+                total_count = len(epics)  # For now, basic count
+            except Exception as e:
+                logger.error(f"Failed to list epics | error={str(e)}")
+                raise HTTPException(status_code=500, detail={"error": str(e)})
         else:
             # This would need a new method in EpicService to list across all projects
             # For now, return empty result with appropriate message
@@ -1068,26 +1072,22 @@ async def list_all_epics(
                 "message": "Cross-project epic listing not yet implemented. Use project_id parameter."
             }
 
-        if success:
-            epics = result.get("epics", [])
-            total_count = result.get("total_count", 0)
+        # Apply search filter if provided (basic implementation)
+        if q:
+            q_lower = q.lower()
+            filtered_epics = []
+            for epic in epics:
+                if (q_lower in epic.get("title", "").lower() or
+                    q_lower in epic.get("description", "").lower()):
+                    filtered_epics.append(epic)
+            epics = filtered_epics
+            total_count = len(epics)  # Update count after filtering
 
-            # Apply search filter if provided (basic implementation)
-            if q:
-                q_lower = q.lower()
-                filtered_epics = []
-                for epic in epics:
-                    if (q_lower in epic.get("title", "").lower() or
-                        q_lower in epic.get("description", "").lower()):
-                        filtered_epics.append(epic)
-                epics = filtered_epics
-                total_count = len(epics)  # Update count after filtering
-
-            # Exclude large fields for MCP optimization
-            if exclude_large_fields:
-                for epic in epics:
-                    if "description" in epic and len(epic["description"]) > 1000:
-                        epic["description"] = epic["description"][:1000] + "..."
+        # Exclude large fields for MCP optimization
+        if exclude_large_fields:
+            for epic in epics:
+                if "description" in epic and len(epic["description"]) > 1000:
+                    epic["description"] = epic["description"][:1000] + "..."
 
             return {
                 "epics": epics,
@@ -1354,14 +1354,13 @@ async def get_project_hierarchy(
 
         # Get epics for this project
         epic_service = EpicService()
-        epic_success, epic_result = await epic_service.list_epics(
-            project_id=project_id
-        )
-
-        if not epic_success:
-            raise HTTPException(status_code=500, detail=epic_result)
-
-        epics = epic_result.get("epics", [])
+        try:
+            epics = await epic_service.list_epics(
+                project_id=project_id
+            )
+        except Exception as e:
+            logger.error(f"Failed to list epics for project dashboard | error={str(e)} | project_id={project_id}")
+            raise HTTPException(status_code=500, detail={"error": str(e)})
 
         # For each epic, get its stories
         story_service = StoryService()

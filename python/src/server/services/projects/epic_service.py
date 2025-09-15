@@ -173,7 +173,7 @@ class EpicService:
         status: str = "todo",
         priority: str = "medium",
         business_value: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> tuple[bool, dict[str, Any]]:
         """
         Create a new epic under a project with comprehensive validation.
 
@@ -256,7 +256,7 @@ class EpicService:
 
             created_epic = result.data[0]
             logger.info(f"Epic created successfully: {created_epic['id']}")
-            return created_epic
+            return True, {"epic": created_epic}
 
         except EpicServiceError:
             # Re-raise our custom errors

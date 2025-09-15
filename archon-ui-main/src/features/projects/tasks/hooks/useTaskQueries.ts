@@ -8,6 +8,7 @@ import type { CreateTaskRequest, Task, UpdateTaskRequest } from "../types";
 // Query keys factory for tasks
 export const taskKeys = {
   all: (projectId: string) => ["projects", projectId, "tasks"] as const,
+  detail: (taskId: string) => ["tasks", taskId] as const,
 };
 
 // Fetch tasks for a specific project
@@ -24,6 +25,23 @@ export function useProjectTasks(projectId: string | undefined, enabled = true) {
     refetchInterval, // Smart interval based on page visibility/focus
     refetchOnWindowFocus: true, // Refetch immediately when tab gains focus (ETag makes this cheap)
     staleTime: 10000, // Consider data stale after 10 seconds
+  });
+}
+
+// Fetch a single task by ID
+export function useTask(taskId: string | undefined, enabled = true) {
+  const { refetchInterval } = useSmartPolling(5000);
+
+  return useQuery<Task>({
+    queryKey: taskId ? taskKeys.detail(taskId) : ["task-undefined"],
+    queryFn: async () => {
+      if (!taskId) throw new Error("No task ID");
+      return taskService.getTask(taskId);
+    },
+    enabled: !!taskId && enabled,
+    refetchInterval,
+    refetchOnWindowFocus: true,
+    staleTime: 10000,
   });
 }
 

@@ -17,6 +17,10 @@ import {
   useUpdateProject,
 } from "../hooks/useProjectQueries";
 import { TasksTab } from "../tasks/TasksTab";
+import { ProjectDashboard } from "./ProjectDashboard";
+import { EpicDetailView } from "../epics/views/EpicDetailView";
+import { StoryDetailView } from "../stories/views/StoryDetailView";
+import { TaskDetailView } from "../tasks/views/TaskDetailView";
 import type { Project } from "../types";
 
 interface ProjectsViewProps {
@@ -42,9 +46,18 @@ const itemVariants = {
 };
 
 export function ProjectsView({ className = "", "data-id": dataId }: ProjectsViewProps) {
-  const { projectId } = useParams();
+  const { projectId, epicId, storyId, taskId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Determine which view to show based on URL params
+  const currentView = useMemo(() => {
+    if (taskId) return "task";
+    if (storyId) return "story";
+    if (epicId) return "epic";
+    if (projectId) return "project";
+    return "list";
+  }, [projectId, epicId, storyId, taskId]);
 
   // State management
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -165,6 +178,24 @@ export function ProjectsView({ className = "", "data-id": dataId }: ProjectsView
   // Staggered entrance animation
   const isVisible = useStaggeredEntrance([1, 2, 3], 0.15);
 
+  // Render hierarchical views based on current URL
+  if (currentView === "task" && taskId) {
+    return <TaskDetailView />;
+  }
+
+  if (currentView === "story" && storyId) {
+    return <StoryDetailView />;
+  }
+
+  if (currentView === "epic" && epicId) {
+    return <EpicDetailView />;
+  }
+
+  if (currentView === "project" && projectId && !epicId && !storyId && !taskId) {
+    return <ProjectDashboard />;
+  }
+
+  // Default project list view
   return (
     <motion.div
       initial="hidden"

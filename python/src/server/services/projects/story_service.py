@@ -62,7 +62,7 @@ class ParentNotFoundError(StoryServiceError):
 class StoryService:
     """Service class for story operations"""
 
-    VALID_STATUSES = ["todo", "doing", "review", "waiting", "done"]
+    VALID_STATUSES = ["backlog", "todo", "doing", "review", "waiting", "done"]
     VALID_PRIORITIES = ["low", "medium", "high", "critical"]
 
     def __init__(self, supabase_client=None):
@@ -78,13 +78,12 @@ class StoryService:
             )
         return True, ""
 
-    def validate_priority(self, priority: str) -> tuple[bool, str]:
-        """Validate story priority"""
-        if priority not in self.VALID_PRIORITIES:
-            return (
-                False,
-                f"Invalid priority '{priority}'. Must be one of: {', '.join(self.VALID_PRIORITIES)}",
-            )
+    def validate_priority(self, priority: int) -> tuple[bool, str]:
+        """Validate story priority (numeric 1-100)"""
+        if not isinstance(priority, int):
+            return False, "Priority must be an integer"
+        if priority < 1 or priority > 100:
+            return False, "Priority must be between 1 and 100"
         return True, ""
 
     def validate_acceptance_criteria(self, criteria: list[str]) -> tuple[bool, str]:
@@ -107,26 +106,20 @@ class StoryService:
             return False, "Title cannot exceed 200 characters"
         return True, ""
 
-    def validate_business_value(self, business_value: dict[str, Any]) -> tuple[bool, str]:
-        """Validate business value format - Returns (is_valid, error_message)"""
-        if business_value is not None and not isinstance(business_value, dict):
-            return False, "Business value must be a dictionary"
-        return True, ""
 
     async def _validate_epic_exists(self, epic_id: str) -> bool:
         """Validate epic exists - Returns True if exists"""
         try:
             result = (
                 self.supabase_client.table("archon_epics")
-                .select("id, archived")
+                .select("id")
                 .eq("id", epic_id)
                 .execute()
             )
             if not result.data or len(result.data) == 0:
                 return False
-            # Check if epic is archived
-            epic = result.data[0]
-            return not epic.get("archived", False)
+            # Epic exists and is valid
+            return True
         except Exception as e:
             logger.error(f"Error validating epic existence: {str(e)}")
             return False
@@ -136,11 +129,9 @@ class StoryService:
         epic_id: str,
         title: str,
         description: str = "",
-        status: str = "todo",
-        priority: str = "medium",
-        mvp_flag: bool = False,
+        status: str = "backlog",
+        priority: int = 50,
         acceptance_criteria: list[str] | None = None,
-        business_value: dict[str, Any] | None = None,
         story_points: int | None = None,
     ) -> dict[str, Any]:
         """
@@ -154,7 +145,6 @@ class StoryService:
             priority: Story priority (low, medium, high, critical)
             mvp_flag: Whether story is part of MVP
             acceptance_criteria: List of acceptance criteria
-            business_value: Optional business value metadata
             story_points: Optional story point estimation
 
         Returns:
@@ -190,10 +180,6 @@ class StoryService:
             if not is_valid:
                 raise StoryValidationError("acceptance_criteria", error_msg)
 
-            # Validate business_value
-            is_valid, error_msg = self.validate_business_value(business_value)
-            if not is_valid:
-                raise StoryValidationError("business_value", error_msg)
 
             # Validate parent epic exists and is not archived
             if not await self._validate_epic_exists(epic_id):
@@ -214,7 +200,7 @@ class StoryService:
             epic = epic_response.data
             logger.info(f"Creating story for epic {epic_id} in project {epic['project_id']}")
 
-            # Prepare story data
+            # Prepare story data (matching current database schema)
             story_data = {
                 "epic_id": epic_id,
                 "project_id": epic["project_id"],  # Inherit from epic
@@ -222,13 +208,8 @@ class StoryService:
                 "description": description.strip() if description else "",
                 "status": status,
                 "priority": priority,
-                "mvp_flag": mvp_flag,
                 "acceptance_criteria": acceptance_criteria or [],
-                "business_value": business_value or {},
                 "story_points": story_points,
-                "progress": 0.0,
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat(),
             }
 
             # Database operation
@@ -305,7 +286,6 @@ class StoryService:
         priority: str | None = None,
         mvp_flag: bool | None = None,
         acceptance_criteria: list[str] | None = None,
-        business_value: dict[str, Any] | None = None,
         story_points: int | None = None,
         archived: bool | None = None,
         archived_at: str | None = None,
@@ -359,8 +339,6 @@ class StoryService:
                     return False, {"error": error_msg}
                 update_data["acceptance_criteria"] = acceptance_criteria
 
-            if business_value is not None:
-                update_data["business_value"] = business_value
 
             if story_points is not None:
                 update_data["story_points"] = story_points
@@ -516,11 +494,13 @@ class StoryService:
             if priority:
                 query = query.eq("priority", priority)
 
-            if mvp_only:
-                query = query.eq("mvp_flag", True)
+            # Note: mvp_flag column doesn't exist in current schema
+            # if mvp_only:
+            #     query = query.eq("mvp_flag", True)
 
-            if not include_archived:
-                query = query.eq("archived", False)
+            # Note: archived column doesn't exist in current schema
+            # if not include_archived:
+            #     query = query.eq("archived", False)
 
             # Apply pagination and ordering
             query = query.order("created_at", desc=False)
@@ -553,7 +533,7 @@ class StoryService:
                 self.supabase_client.table("archon_tasks")
                 .select("status")
                 .eq("story_id", story_id)
-                .eq("archived", False)
+                # .eq("archived", False)  # Column doesn't exist in current schema
                 .execute()
             )
 
@@ -566,22 +546,20 @@ class StoryService:
                 done_tasks = sum(1 for t in tasks_response.data if t["status"] == "done")
                 progress = (done_tasks / total_tasks) * 100 if total_tasks > 0 else 0.0
 
-            # Update story progress
-            update_response = (
-                self.supabase_client.table("archon_stories")
-                .update({
-                    "progress": progress,
-                    "updated_at": datetime.now().isoformat(),
-                })
-                .eq("id", story_id)
-                .execute()
-            )
+            # Update story progress (progress column doesn't exist in current schema)
+            # update_response = (
+            #     self.supabase_client.table("archon_stories")
+            #     .update({
+            #         "progress": progress,
+            #         "updated_at": datetime.now().isoformat(),
+            #     })
+            #     .eq("id", story_id)
+            #     .execute()
+            # )
 
-            if update_response.data:
-                logger.info(f"Story {story_id} progress updated to {progress:.1f}%")
-                return True, {"progress": progress, "story_id": story_id}
-            else:
-                return False, {"error": f"Failed to update progress for story {story_id}"}
+            # For now, just return the calculated progress without storing it
+            logger.info(f"Story {story_id} progress calculated as {progress:.1f}% (not stored - progress column doesn't exist)")
+            return True, {"progress": progress, "story_id": story_id}
 
         except Exception as e:
             logger.error(f"Error calculating story progress: {str(e)}")
@@ -600,7 +578,7 @@ class StoryService:
                 self.supabase_client.table("archon_tasks")
                 .select("status")
                 .eq("story_id", story_id)
-                .eq("archived", False)
+                # .eq("archived", False)  # Column doesn't exist in current schema
                 .execute()
             )
 

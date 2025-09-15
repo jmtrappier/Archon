@@ -12,6 +12,36 @@ Ce fichier fournit les directives pour Claude Code lors du travail sur le projet
 
 **VIOLATION** : Si vous utilisez TodoWrite en premier, vous violez cette règle. Arrêtez et recommencez avec Archon.
 
+## Localisation des Informations Projet
+
+### Répertoire Principal de Documentation
+**IMPORTANT** : Toutes les informations relatives au projet se trouvent dans le dossier `/traxis` et ses sous-dossiers :
+
+- `/traxis/PRPs/` - Documents de planification et spécifications
+- `/traxis/architecture/` - Documentation architecture technique
+- `/traxis/brainstorming/` - Sessions de brainstorming et idées
+- `/traxis/migration/` - Scripts et plans de migration
+- `/traxis/tests/` - Plans de tests et validations
+
+### Sources d'Information Critiques
+
+#### MCP Archon - Gestion Projet et Tâches
+- **État d'avancement** : Tasks, EPICs, Stories avec statuts
+- **Documentation technique** : Documents attachés aux projets
+- **Planification** : Roadmap et priorités
+- **Historique** : Versions et changements
+
+#### MCP Serena - Codebase et Mémoires
+- **Structure codebase** : Architecture et patterns de code
+- **Mémoires techniques** : Informations stockées sur le projet
+- **Analyse de code** : Patterns et conventions découverts
+
+#### Signaler Documentation Manquante
+Si une documentation technique importante manque dans Archon, **TOUJOURS** :
+1. Le signaler explicitement à l'utilisateur
+2. Suggérer de l'ajouter à Archon via `manage_document`
+3. Proposer de créer la documentation manquante
+
 ## Identification du Projet Archon
 
 ### Variables Critiques à Maintenir
