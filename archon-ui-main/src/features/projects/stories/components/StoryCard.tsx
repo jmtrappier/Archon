@@ -5,6 +5,13 @@ import { useDrag, useDrop } from "react-dnd";
 import { Badge } from "../../../ui/primitives/badge";
 import { Button } from "../../../ui/primitives/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
+import {
+  HierarchicalDropZone,
+  HierarchicalDragWrapper,
+  HierarchicalItemTypes,
+  type DraggedTask,
+  useHierarchicalDragDrop
+} from "../../tasks/components/HierarchicalDragDrop";
 import { useUpdateStoryStatus } from "../hooks/useStoryQueries";
 import type { Story, StoryWithEpic, HierarchyStatus, Priority } from "../types";
 import {
@@ -84,10 +91,26 @@ export const StoryCard: React.FC<StoryCardProps> = ({
     updateStoryStatus.mutate({ storyId: story.id, status: newStatus });
   }, [updateStoryStatus, story.id]);
 
+  // Hierarchical drag & drop functionality
+  const { moveTaskToStory } = useHierarchicalDragDrop();
+
+  // Handle task drop on story
+  const handleTaskDrop = useCallback(async (draggedItem: DraggedTask, targetId: string) => {
+    if (draggedItem.type === HierarchicalItemTypes.TASK) {
+      await moveTaskToStory(draggedItem.id, targetId);
+    }
+  }, [moveTaskToStory]);
+
   // Drag and Drop
   const [{ isDragging }, drag] = useDrag({
-    type: StoryItemTypes.STORY,
-    item: { id: story.id, status: story.status, index },
+    type: HierarchicalItemTypes.STORY,
+    item: {
+      type: HierarchicalItemTypes.STORY,
+      id: story.id,
+      title: story.title,
+      epicId: epicId,
+      projectId: story.project_id
+    },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
@@ -160,10 +183,26 @@ export const StoryCard: React.FC<StoryCardProps> = ({
 
   return (
     <TooltipProvider>
-      <div
-        ref={(node) => drag(drop(node))}
-        role="button"
-        tabIndex={0}
+      <HierarchicalDropZone
+        type="story"
+        targetId={story.id}
+        onDrop={handleTaskDrop}
+        acceptedTypes={[HierarchicalItemTypes.TASK]}
+        className="relative"
+      >
+        <HierarchicalDragWrapper
+          item={{
+            type: HierarchicalItemTypes.STORY,
+            id: story.id,
+            title: story.title,
+            epicId: epicId,
+            projectId: story.project_id
+          }}
+        >
+          <div
+            ref={(node) => drag(drop(node))}
+            role="button"
+            tabIndex={0}
         className={`w-full ${sizeClass} cursor-move relative ${
           isDragging ? "opacity-60 scale-95" : "scale-100 opacity-100"
         } ${transitionStyles} group`}
@@ -370,6 +409,8 @@ export const StoryCard: React.FC<StoryCardProps> = ({
           </div>
         </div>
       </div>
+        </HierarchicalDragWrapper>
+      </HierarchicalDropZone>
     </TooltipProvider>
   );
 };

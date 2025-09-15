@@ -5,6 +5,12 @@ import { useDrag, useDrop } from "react-dnd";
 import { Badge } from "../../../ui/primitives/badge";
 import { Button } from "../../../ui/primitives/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
+import {
+  HierarchicalDropZone,
+  HierarchicalItemTypes,
+  type DraggedStory,
+  useHierarchicalDragDrop
+} from "../../tasks/components/HierarchicalDragDrop";
 import { useUpdateEpicStatus } from "../hooks/useEpicQueries";
 import type { Epic, HierarchyStatus, Priority } from "../types";
 import { getEpicStatusColor, getEpicPriorityColor, ItemTypes } from "../utils/epic-styles";
@@ -65,6 +71,16 @@ export const EpicCard: React.FC<EpicCardProps> = ({
   const handleStatusChange = useCallback((newStatus: HierarchyStatus) => {
     updateEpicStatus.mutate({ epicId: epic.id, status: newStatus });
   }, [updateEpicStatus, epic.id]);
+
+  // Hierarchical drag & drop functionality
+  const { moveStoryToEpic } = useHierarchicalDragDrop();
+
+  // Handle story drop on epic
+  const handleStoryDrop = useCallback(async (draggedItem: DraggedStory, targetId: string) => {
+    if (draggedItem.type === HierarchicalItemTypes.STORY) {
+      await moveStoryToEpic(draggedItem.id, targetId);
+    }
+  }, [moveStoryToEpic]);
 
   // Drag and Drop
   const [{ isDragging }, drag] = useDrag({
@@ -138,16 +154,23 @@ export const EpicCard: React.FC<EpicCardProps> = ({
 
   return (
     <TooltipProvider>
-      <div
-        ref={(node) => drag(drop(node))}
-        role="button"
-        tabIndex={0}
-        className={`w-full min-h-[180px] cursor-move relative ${
-          isDragging ? "opacity-60 scale-95" : "scale-100 opacity-100"
-        } ${transitionStyles} group`}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onClick={handleEpicClick}
+      <HierarchicalDropZone
+        type="epic"
+        targetId={epic.id}
+        onDrop={handleStoryDrop}
+        acceptedTypes={[HierarchicalItemTypes.STORY]}
+        className="relative"
+      >
+        <div
+          ref={(node) => drag(drop(node))}
+          role="button"
+          tabIndex={0}
+          className={`w-full min-h-[180px] cursor-move relative ${
+            isDragging ? "opacity-60 scale-95" : "scale-100 opacity-100"
+          } ${transitionStyles} group`}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onClick={handleEpicClick}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -316,6 +339,7 @@ export const EpicCard: React.FC<EpicCardProps> = ({
           </div>
         </div>
       </div>
+      </HierarchicalDropZone>
     </TooltipProvider>
   );
 };

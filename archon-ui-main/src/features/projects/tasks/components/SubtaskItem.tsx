@@ -6,6 +6,7 @@ import { Button } from "../../../ui/primitives";
 import { useTaskActions } from "../hooks";
 import type { Assignee, Task } from "../types";
 import { getOrderColor, getOrderGlow, ItemTypes } from "../utils/task-styles";
+import { HierarchicalItemTypes } from "./HierarchicalDragDrop";
 import { TaskAssignee } from "./TaskAssignee";
 import { TaskCardActions } from "./TaskCardActions";
 
@@ -65,28 +66,35 @@ export const SubtaskItem: React.FC<SubtaskItemProps> = ({
 
   // Drag and drop for subtask reordering
   const [{ isDragging }, drag] = useDrag({
-    type: ItemTypes.TASK,
-    item: { id: subtask.id, index, type: "subtask", parentId: parentTaskId },
+    type: HierarchicalItemTypes.SUBTASK,
+    item: {
+      type: HierarchicalItemTypes.SUBTASK,
+      id: subtask.id,
+      title: subtask.title,
+      parentTaskId: parentTaskId,
+      index,
+      projectId: projectId
+    },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
   });
 
   const [, drop] = useDrop({
-    accept: ItemTypes.TASK,
+    accept: HierarchicalItemTypes.SUBTASK,
     hover: (
       draggedItem: {
+        type: string;
         id: string;
         index: number;
-        type: string;
-        parentId: string;
+        parentTaskId: string;
       },
       monitor
     ) => {
       if (!monitor.isOver({ shallow: true })) return;
       if (draggedItem.id === subtask.id) return;
-      if (draggedItem.type !== "subtask") return;
-      if (draggedItem.parentId !== parentTaskId) return;
+      if (draggedItem.type !== HierarchicalItemTypes.SUBTASK) return;
+      if (draggedItem.parentTaskId !== parentTaskId) return;
 
       const draggedIndex = draggedItem.index;
       const hoveredIndex = index;
