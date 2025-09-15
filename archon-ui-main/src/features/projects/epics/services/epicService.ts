@@ -192,7 +192,7 @@ export const epicService = {
    */
   async getEpicStories(epicId: string): Promise<any[]> {
     try {
-      // This will delegate to story service once it's implemented
+      // Delegate to story service
       const stories = await callAPIWithETag<any[]>(`/api/epics/${epicId}/stories`);
       return stories;
     } catch (error) {

@@ -6,6 +6,7 @@ import { storyService } from "../services/storyService";
 import type {
   CreateStoryRequest,
   Story,
+  StoryWithEpic,
   UpdateStoryRequest,
   StoryQueryParams,
   MoveStoryBetweenEpicsRequest,
@@ -38,11 +39,11 @@ export function useEpicStories(epicId: string | undefined, params?: StoryQueryPa
   });
 }
 
-// Fetch stories for a project (across all epics)
+// Fetch stories for a project (across all epics) with Epic context
 export function useProjectStories(projectId: string | undefined, params?: StoryQueryParams, enabled = true) {
   const { refetchInterval } = useSmartPolling(5000);
 
-  return useQuery<Story[]>({
+  return useQuery<StoryWithEpic[]>({
     queryKey: projectId ? storyKeys.byProject(projectId) : ["project-stories-undefined"],
     queryFn: async () => {
       if (!projectId) throw new Error("No project ID");
@@ -55,11 +56,11 @@ export function useProjectStories(projectId: string | undefined, params?: StoryQ
   });
 }
 
-// Fetch a specific story
+// Fetch a specific story with Epic context
 export function useStory(storyId: string | undefined, enabled = true) {
   const { refetchInterval } = useSmartPolling(10000); // Longer interval for individual story
 
-  return useQuery<Story>({
+  return useQuery<StoryWithEpic>({
     queryKey: storyId ? storyKeys.detail(storyId) : ["story-undefined"],
     queryFn: async () => {
       if (!storyId) throw new Error("No story ID");

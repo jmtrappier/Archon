@@ -58,6 +58,37 @@ export interface StoryQueryParams extends QueryOptions {
   include_metrics?: boolean;
 }
 
+// Story with Epic context for navigation
+export interface StoryWithEpic extends Story {
+  epic: {
+    id: string;
+    title: string;
+    project_id: string;
+  };
+}
+
+// Story item types for drag and drop
+export const StoryItemTypes = {
+  STORY: 'story',
+} as const;
+
+// Story with Tasks relationship
+export interface StoryWithTasks extends Story {
+  tasks: {
+    id: string;
+    title: string;
+    status: HierarchyStatus;
+    assignee: string;
+  }[];
+}
+
+// Epic selector type for Story creation/editing
+export interface EpicSelector {
+  id: string;
+  title: string;
+  project_id: string;
+}
+
 // Move story request type
 export interface MoveStoryBetweenEpicsRequest {
   story_id: string;

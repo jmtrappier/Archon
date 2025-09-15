@@ -8,12 +8,14 @@ import { callAPIWithETag, invalidateETagCache } from "../../shared/apiWithEtag";
 import { validateCreateStory, validateUpdateStory, validateMoveStory } from "../schemas";
 import type {
   Story,
+  StoryWithEpic,
   CreateStoryRequest,
   UpdateStoryRequest,
   StoryCounts,
   StoryQueryParams,
   MoveStoryBetweenEpicsRequest,
-  HierarchyStatus
+  HierarchyStatus,
+  ListResponse
 } from "../types";
 
 export const storyService = {
@@ -43,9 +45,9 @@ export const storyService = {
   },
 
   /**
-   * Get all stories for a project (across all epics)
+   * Get all stories for a project (across all epics) with Epic context
    */
-  async getStoriesByProject(projectId: string, params?: StoryQueryParams): Promise<Story[]> {
+  async getStoriesByProject(projectId: string, params?: StoryQueryParams): Promise<StoryWithEpic[]> {
     try {
       const queryParams = new URLSearchParams();
       if (params?.search) queryParams.append('search', params.search);
@@ -59,7 +61,7 @@ export const storyService = {
       const queryString = queryParams.toString();
       const url = `/api/projects/${projectId}/stories${queryString ? `?${queryString}` : ''}`;
 
-      const stories = await callAPIWithETag<Story[]>(url);
+      const stories = await callAPIWithETag<StoryWithEpic[]>(url);
       return stories;
     } catch (error) {
       console.error(`Failed to get stories for project ${projectId}:`, error);
@@ -68,11 +70,11 @@ export const storyService = {
   },
 
   /**
-   * Get a specific story by ID
+   * Get a specific story by ID with Epic context
    */
-  async getStory(storyId: string): Promise<Story> {
+  async getStory(storyId: string): Promise<StoryWithEpic> {
     try {
-      const story = await callAPIWithETag<Story>(`/api/stories/${storyId}`);
+      const story = await callAPIWithETag<StoryWithEpic>(`/api/stories/${storyId}`);
       return story;
     } catch (error) {
       console.error(`Failed to get story ${storyId}:`, error);
@@ -272,6 +274,19 @@ export const storyService = {
       return story;
     } catch (error) {
       console.error(`Failed to ${archive ? 'archive' : 'unarchive'} story ${storyId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Toggle MVP flag for a story
+   */
+  async toggleStoryMvpFlag(storyId: string, mvpFlag: boolean): Promise<Story> {
+    try {
+      const story = await this.updateStory(storyId, { mvp_flag: mvpFlag });
+      return story;
+    } catch (error) {
+      console.error(`Failed to toggle MVP flag for story ${storyId}:`, error);
       throw error;
     }
   },

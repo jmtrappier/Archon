@@ -35,6 +35,15 @@ export const StorySchema = z.object({
   archived_by: z.string().optional(),
 });
 
+// Story with Epic context schema
+export const StoryWithEpicSchema = StorySchema.extend({
+  epic: z.object({
+    id: z.string().uuid(),
+    title: z.string(),
+    project_id: z.string().uuid(),
+  }),
+});
+
 // Query schemas
 export const StoryQuerySchema = z.object({
   search: z.string().optional(),
@@ -81,6 +90,10 @@ export function validateUpdateStory(data: unknown) {
   return UpdateStorySchema.safeParse(data);
 }
 
+export function validateStoryWithEpic(data: unknown) {
+  return StoryWithEpicSchema.safeParse(data);
+}
+
 export function validateStoryQuery(data: unknown) {
   return StoryQuerySchema.safeParse(data);
 }
@@ -101,6 +114,7 @@ export function validateMoveStory(data: unknown) {
 export type CreateStoryInput = z.infer<typeof CreateStorySchema>;
 export type UpdateStoryInput = z.infer<typeof UpdateStorySchema>;
 export type StoryInput = z.infer<typeof StorySchema>;
+export type StoryWithEpicInput = z.infer<typeof StoryWithEpicSchema>;
 export type StoryQueryInput = z.infer<typeof StoryQuerySchema>;
 export type StoryFiltersInput = z.infer<typeof StoryFiltersSchema>;
 export type StorySortInput = z.infer<typeof StorySortSchema>;
