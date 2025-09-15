@@ -257,21 +257,29 @@ Project and task management system with AI-powered project generation. Currently
 **Key Features:**
 
 - Project CRUD operations
-- Task management with drag-and-drop ordering
+- **NEW**: Epic management (BMAD hierarchy level 1)
+- **NEW**: Story management (BMAD hierarchy level 2)
+- Task management with drag-and-drop ordering (BMAD hierarchy level 3)
+- **NEW**: Subtask management via parent_task_id (BMAD hierarchy level 4)
+- **NEW**: Cross-level dependency management (blocks, depends_on, related_to, precedes, follows)
 - Document management with versioning
 - AI-powered project generation
 - Integration with knowledge base sources
 
 ### MCP Server Module (`src/mcp_server/`)
 
-Model Context Protocol server that exposes Archon functionality to IDEs like Cursor and Windsurf.
+Model Context Protocol server that exposes Archon functionality to IDEs like Cursor and Windsurf. **Extended in Epic 3** to support full BMAD hierarchy navigation.
 
 **Key Features:**
 
 - Tool-based API for IDE integration
-- Project and task management tools
+- **NEW**: Hierarchical tools (find_epics, manage_epic, find_stories, manage_story, find_subtasks, manage_subtask)
+- **NEW**: Navigation tools (get_hierarchy for complete project traversal)
+- **NEW**: Dependency management (manage_dependencies for cross-level relationships)
+- Project and task management tools (existing)
 - Document operations
 - Async operation support
+- Performance optimized (<120ms response times)
 
 ### Agents Module (`src/agents/`)
 
@@ -345,7 +353,10 @@ code_examples
 
 -- Projects context tables
 archon_projects
-archon_tasks
+archon_epics          -- NEW: Epic level hierarchy (BMAD)
+archon_stories        -- NEW: Story level hierarchy (BMAD)
+archon_tasks          -- EXTENDED: Task level with story_id relationship
+archon_dependencies   -- NEW: Cross-level dependencies (Epic 3)
 archon_document_versions
 
 -- Cross-context junction tables
@@ -365,8 +376,13 @@ Each feature exposes its own API routes:
 
 /api/projects/
   /projects        # Project CRUD
-  /tasks           # Task management
+  /epics           # Epic management (NEW - Epic 3)
+  /stories         # Story management (NEW - Epic 3)
+  /tasks           # Task management (EXTENDED with story_id)
   /tasks/reorder   # Task ordering
+  /subtasks        # Subtask management via parent_task_id (NEW - Epic 3)
+  /dependencies    # Cross-level dependency management (NEW - Epic 3)
+  /hierarchy       # Hierarchy navigation (NEW - Epic 3)
   /documents       # Document management
   /generate        # AI generation
 ```
