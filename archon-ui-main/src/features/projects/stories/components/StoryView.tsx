@@ -6,7 +6,10 @@ import { Button } from "../../../ui/primitives/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../ui/primitives/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../ui/primitives/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
+import { HierarchyBreadcrumb } from "../../../ui/components/navigation";
+import { useHierarchyContext } from "../../../../contexts/HierarchyContext";
 import { useToast } from "../../../ui/hooks/useToast";
+import { useProject } from "../../hooks/useProjectQueries";
 import { useEpic } from "../../epics/hooks/useEpicQueries";
 import { useEpicStories, useDeleteStory } from "../hooks/useStoryQueries";
 import type { Story, StoryWithEpic } from "../types";
@@ -33,6 +36,9 @@ export const StoryView: React.FC<StoryViewProps> = ({
   const epicId = propEpicId || params.epicId;
   const projectId = propProjectId || params.projectId;
 
+  // Hierarchy context
+  const { setProjectContext, setEpicContext, clearFromLevel } = useHierarchyContext();
+
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [compactMode, setCompactMode] = useState(false);
@@ -41,9 +47,36 @@ export const StoryView: React.FC<StoryViewProps> = ({
   const [selectedStory, setSelectedStory] = useState<Story | StoryWithEpic | null>(null);
 
   // Fetch data
+  const { data: project } = useProject(projectId);
   const { data: epic, isLoading: epicLoading, error: epicError } = useEpic(epicId);
   const { data: stories = [], isLoading: storiesLoading, error: storiesError } = useEpicStories(epicId);
   const deleteStory = useDeleteStory(epicId!);
+
+  // Set hierarchy context when component mounts or data changes
+  useEffect(() => {
+    if (project) {
+      setProjectContext({
+        id: project.id,
+        title: project.title,
+      });
+    }
+  }, [project, setProjectContext]);
+
+  useEffect(() => {
+    if (epic) {
+      const completedStories = stories.filter(s => s.status === 'done').length;
+      const totalStories = stories.length;
+      const progress = totalStories > 0 ? Math.round((completedStories / totalStories) * 100) : 0;
+
+      setEpicContext({
+        id: epic.id,
+        title: epic.title,
+        progress,
+      });
+      // Clear any story/task context since we're at the story list level
+      clearFromLevel('story');
+    }
+  }, [epic, stories, setEpicContext, clearFromLevel]);
 
   // Navigation
   const handleBackToEpics = useCallback(() => {
@@ -146,33 +179,17 @@ export const StoryView: React.FC<StoryViewProps> = ({
   return (
     <TooltipProvider>
       <div className={`space-y-6 ${className}`}>
+        {/* Hierarchy Breadcrumb */}
+        <HierarchyBreadcrumb
+          showHome={true}
+          compact={false}
+          showProgress={true}
+          showIcons={true}
+          enableKeyboardNavigation={true}
+        />
+
         {/* Header Section */}
         <div className="space-y-4">
-          {/* Breadcrumb Navigation */}
-          <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBackToProject}
-              className="gap-2 hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Project
-            </Button>
-            <span>/</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBackToEpics}
-              className="hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              Epics
-            </Button>
-            <span>/</span>
-            <span className="font-medium text-gray-900 dark:text-white">
-              {epic.title}
-            </span>
-          </div>
 
           {/* Epic Info and Controls */}
           <div className="flex items-start justify-between">

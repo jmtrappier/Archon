@@ -30,6 +30,19 @@ export function useProjects() {
   });
 }
 
+// Fetch a single project by ID (derived from projects list)
+export function useProject(projectId: string | undefined) {
+  const { data: projects = [], isLoading, error } = useProjects();
+
+  const project = projectId ? projects.find(p => p.id === projectId) : undefined;
+
+  return {
+    data: project,
+    isLoading,
+    error,
+  };
+}
+
 // Fetch task counts for all projects
 export function useTaskCounts() {
   return useQuery<Awaited<ReturnType<typeof taskService.getTaskCountsForAllProjects>>>({

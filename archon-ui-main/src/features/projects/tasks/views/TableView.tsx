@@ -234,6 +234,7 @@ export const TableView = ({
       todo: [],
       doing: [],
       review: [],
+      waiting: [],
       done: [],
     };
 

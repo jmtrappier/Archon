@@ -8,6 +8,7 @@ import { MCPPage } from './pages/MCPPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { MainLayout } from './components/layout/MainLayout';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ToastProvider } from './features/ui/components/ToastProvider';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { TooltipProvider } from './features/ui/primitives/tooltip';
@@ -53,6 +54,13 @@ const AppRoutes = () => {
         <>
           <Route path="/projects" element={<ProjectPage />} />
           <Route path="/projects/:projectId" element={<ProjectPage />} />
+          {/* Hierarchy routes for the BMAD navigation system */}
+          <Route path="/projects/:projectId/epics" element={<ProjectPage />} />
+          <Route path="/projects/:projectId/epics/:epicId" element={<ProjectPage />} />
+          <Route path="/projects/:projectId/epics/:epicId/stories" element={<ProjectPage />} />
+          <Route path="/projects/:projectId/epics/:epicId/stories/:storyId" element={<ProjectPage />} />
+          <Route path="/projects/:projectId/epics/:epicId/stories/:storyId/tasks" element={<ProjectPage />} />
+          <Route path="/projects/:projectId/epics/:epicId/stories/:storyId/tasks/:taskId" element={<ProjectPage />} />
         </>
       ) : (
         <Route path="/projects" element={<Navigate to="/" replace />} />
@@ -107,18 +115,20 @@ const AppContent = () => {
   return (
     <>
       <Router>
-        <ErrorBoundaryWithBugReport>
-          <MainLayout>
-            {/* Migration Banner - shows when backend is up but DB schema needs work */}
-            {migrationStatus.migrationRequired && !migrationBannerDismissed && (
-              <MigrationBanner
-                message={migrationStatus.message || "Database migration required"}
-                onDismiss={() => setMigrationBannerDismissed(true)}
-              />
-            )}
-            <AppRoutes />
-          </MainLayout>
-        </ErrorBoundaryWithBugReport>
+        <HierarchyProvider>
+          <ErrorBoundaryWithBugReport>
+            <MainLayout>
+              {/* Migration Banner - shows when backend is up but DB schema needs work */}
+              {migrationStatus.migrationRequired && !migrationBannerDismissed && (
+                <MigrationBanner
+                  message={migrationStatus.message || "Database migration required"}
+                  onDismiss={() => setMigrationBannerDismissed(true)}
+                />
+              )}
+              <AppRoutes />
+            </MainLayout>
+          </ErrorBoundaryWithBugReport>
+        </HierarchyProvider>
       </Router>
       <DisconnectScreenOverlay
         isActive={disconnectScreenActive && disconnectScreenSettings.enabled}

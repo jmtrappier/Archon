@@ -1,10 +1,11 @@
-import { Tag } from "lucide-react";
+import { Tag, CheckSquare } from "lucide-react";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { useTaskActions } from "../hooks";
 import type { Assignee, Task } from "../types";
 import { getOrderColor, getOrderGlow, ItemTypes } from "../utils/task-styles";
+import { getProgressColor, getProgressTextColor } from "../utils";
 import { TaskAssignee } from "./TaskAssignee";
 import { TaskCardActions } from "./TaskCardActions";
 import { type Priority, TaskPriority } from "./TaskPriority";
@@ -213,6 +214,32 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
           {/* Spacer when no description */}
           {!task.description && <div className="flex-1"></div>}
+
+          {/* Subtasks progress indicator */}
+          {(task.subtask_count ?? 0) > 0 && (
+            <div className="pl-1.5 pr-3 mb-2">
+              <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                <CheckSquare className="w-3 h-3" />
+                <span>
+                  {task.completed_subtasks || 0}/{task.subtask_count} subtasks
+                </span>
+
+                {/* Progress bar */}
+                <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${getProgressColor(
+                      task.progress || 0
+                    )}`}
+                    style={{ width: `${task.progress || 0}%` }}
+                  />
+                </div>
+
+                <span className={`font-medium ${getProgressTextColor(task.progress || 0)}`}>
+                  {task.progress || 0}%
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Footer with assignee - glassmorphism styling */}
           <div className="flex items-center justify-between mt-auto pt-2 pl-1.5 pr-3">

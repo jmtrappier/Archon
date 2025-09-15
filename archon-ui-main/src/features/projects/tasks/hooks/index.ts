@@ -13,7 +13,10 @@ export { useTaskEditor } from "./useTaskEditor";
 export {
   taskKeys,
   useCreateTask,
+  useCreateSubtask,
   useDeleteTask,
   useProjectTasks,
+  useReorderSubtasks,
   useUpdateTask,
+  useSubtasks,
 } from "./useTaskQueries";

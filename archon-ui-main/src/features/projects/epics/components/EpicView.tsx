@@ -1,10 +1,13 @@
 import { Grid, List, Plus, Settings } from "lucide-react";
 import type React from "react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "../../../ui/primitives/button";
 import { ToggleGroup, ToggleGroupItem } from "../../../ui/primitives/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
+import { HierarchyBreadcrumb } from "../../../ui/components/navigation";
+import { useHierarchyContext } from "../../../../contexts/HierarchyContext";
 import { useCreateEpic, useProjectEpics, useDeleteEpic } from "../hooks/useEpicQueries";
+import { useProject } from "../../hooks/useProjectQueries";
 import type { Epic, CreateEpicRequest } from "../types";
 import { EpicList } from "./EpicList";
 import { EpicModal } from "./EpicModal";
@@ -30,7 +33,11 @@ export const EpicView: React.FC<EpicViewProps> = ({
   const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
   const [deletingEpic, setDeletingEpic] = useState<Epic | null>(null);
 
+  // Hierarchy context
+  const { setProjectContext, clearFromLevel } = useHierarchyContext();
+
   // React Query hooks
+  const { data: project } = useProject(projectId);
   const {
     data: epics = [],
     isLoading,
@@ -39,6 +46,18 @@ export const EpicView: React.FC<EpicViewProps> = ({
 
   const createEpic = useCreateEpic();
   const deleteEpic = useDeleteEpic(projectId);
+
+  // Set project context when component mounts or project data changes
+  useEffect(() => {
+    if (project) {
+      setProjectContext({
+        id: project.id,
+        title: project.title,
+      });
+      // Clear any epic/story/task context since we're at the epic list level
+      clearFromLevel('epic');
+    }
+  }, [project, setProjectContext, clearFromLevel]);
 
   // Event handlers
   const handleCreateEpic = useCallback(() => {
@@ -151,6 +170,15 @@ export const EpicView: React.FC<EpicViewProps> = ({
   return (
     <TooltipProvider>
       <div className={`space-y-6 ${className}`}>
+        {/* Hierarchy Breadcrumb */}
+        <HierarchyBreadcrumb
+          showHome={true}
+          compact={false}
+          showProgress={true}
+          showIcons={true}
+          enableKeyboardNavigation={true}
+        />
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">

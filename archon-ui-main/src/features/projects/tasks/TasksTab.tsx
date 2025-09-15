@@ -5,7 +5,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { DeleteConfirmModal } from "../../ui/components/DeleteConfirmModal";
 import { Button } from "../../ui/primitives";
 import { cn, glassmorphism } from "../../ui/primitives/styles";
-import { TaskEditModal } from "./components/TaskEditModal";
+import { TaskEditModal, TaskView } from "./components";
 import { useDeleteTask, useProjectTasks, useUpdateTask } from "./hooks";
 import type { Task } from "./types";
 import { getReorderTaskOrder, ORDER_INCREMENT, validateTaskOrder } from "./utils";
@@ -21,6 +21,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null); // For detailed task view
 
   // Fetch tasks using TanStack Query
   const { data: tasks = [], isLoading: isLoadingTasks } = useProjectTasks(projectId);
@@ -33,6 +34,14 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
   const openEditModal = (task: Task) => {
     setEditingTask(task);
     setIsModalOpen(true);
+  };
+
+  const openTaskView = (task: Task) => {
+    setViewingTask(task);
+  };
+
+  const closeTaskView = () => {
+    setViewingTask(null);
   };
 
   const openCreateModal = () => {
@@ -182,7 +191,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
             <TableView
               tasks={tasks as Task[]}
               projectId={projectId}
-              onTaskView={openEditModal}
+              onTaskView={openTaskView} // Changed to use detailed task view
               onTaskComplete={completeTask}
               onTaskDelete={openDeleteModal}
               onTaskReorder={handleTaskReorder}
@@ -194,7 +203,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
               projectId={projectId}
               onTaskMove={moveTask}
               onTaskReorder={handleTaskReorder}
-              onTaskEdit={openEditModal}
+              onTaskEdit={openTaskView} // Changed to use detailed task view
               onTaskDelete={openDeleteModal}
             />
           )}
@@ -216,6 +225,18 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
           type="task"
           size="compact"
         />
+
+        {/* Detailed Task View */}
+        {viewingTask && (
+          <TaskView
+            task={viewingTask}
+            projectId={projectId}
+            onClose={closeTaskView}
+            onTaskUpdate={updateTaskInline}
+            onTaskDelete={openDeleteModal}
+            isModal={true}
+          />
+        )}
       </div>
     </DndProvider>
   );

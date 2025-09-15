@@ -13,6 +13,7 @@ export {
   projectKeys,
   useCreateProject,
   useDeleteProject,
+  useProject,
   useProjectFeatures,
   useProjects,
   useTaskCounts,

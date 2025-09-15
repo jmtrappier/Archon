@@ -65,6 +65,12 @@ export interface Task {
   // Extended UI properties
   featureColor?: string;
   priority?: TaskPriority;
+
+  // Subtask integration fields (populated by frontend)
+  subtasks?: Task[];
+  progress?: number; // Calculated from subtasks completion
+  subtask_count?: number; // Count of subtasks
+  completed_subtasks?: number; // Count of completed subtasks
 }
 
 // Request types
