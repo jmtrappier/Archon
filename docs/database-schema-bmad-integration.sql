@@ -470,3 +470,5 @@ COMMENT ON COLUMN archon_tasks.progress_percentage IS 'Pourcentage d''avancement
 -- FIN DU SCHÉMA
 -- =====================================================
 
+
+

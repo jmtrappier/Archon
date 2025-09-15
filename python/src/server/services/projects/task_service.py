@@ -149,7 +149,9 @@ class TaskService:
         include_closed: bool = False,
         exclude_large_fields: bool = False,
         include_archived: bool = False,
-        search_query: str = None
+        search_query: str = None,
+        story_id: str = None,
+        epic_id: str = None
     ) -> tuple[bool, dict[str, Any]]:
         """
         List tasks with various filters.
@@ -161,6 +163,8 @@ class TaskService:
             exclude_large_fields: If True, excludes sources and code_examples fields
             include_archived: If True, includes archived tasks
             search_query: Keyword search in title, description, and feature fields
+            story_id: Filter by story ID (BMAD hierarchy)
+            epic_id: Filter by epic ID (via story relationship)
 
         Returns:
             Tuple of (success, result_dict)
@@ -185,6 +189,16 @@ class TaskService:
             if project_id:
                 query = query.eq("project_id", project_id)
                 filters_applied.append(f"project_id={project_id}")
+
+            # BMAD Hierarchy filters
+            if story_id:
+                query = query.eq("story_id", story_id)
+                filters_applied.append(f"story_id={story_id}")
+
+            # For epic_id filtering, we need to use the enriched method
+            # But for performance, we'll handle it after the initial query
+            if epic_id:
+                filters_applied.append(f"epic_id={epic_id}")
 
             if status:
                 # Validate status
@@ -278,6 +292,7 @@ class TaskService:
                 task_data = {
                     "id": task["id"],
                     "project_id": task["project_id"],
+                    "story_id": task.get("story_id"),
                     "title": task["title"],
                     "description": task["description"],
                     "status": task["status"],
@@ -302,9 +317,30 @@ class TaskService:
 
                 tasks.append(task_data)
 
+            # Apply epic_id filtering if specified (post-query filtering)
+            if epic_id:
+                filtered_tasks = []
+                for task in tasks:
+                    # Check if task has story_id, then get story's epic_id
+                    if task.get("story_id"):
+                        story_response = (
+                            self.supabase_client.table("archon_stories")
+                            .select("epic_id")
+                            .eq("id", task["story_id"])
+                            .single()
+                            .execute()
+                        )
+                        if story_response.data and story_response.data.get("epic_id") == epic_id:
+                            filtered_tasks.append(task)
+                tasks = filtered_tasks
+
             filter_info = []
             if project_id:
                 filter_info.append(f"project_id={project_id}")
+            if story_id:
+                filter_info.append(f"story_id={story_id}")
+            if epic_id:
+                filter_info.append(f"epic_id={epic_id}")
             if status:
                 filter_info.append(f"status={status}")
             if not include_closed:
@@ -807,3 +843,511 @@ class TaskService:
         except Exception as e:
             logger.error(f"Error archiving task with subtasks: {e}")
             return False, {"error": f"Error archiving task with subtasks: {str(e)}"}
+
+    # ============================================================
+    # NEW HIERARCHICAL METHODS FOR BMAD-TRAXIS INTEGRATION
+    # ============================================================
+
+    async def get_tasks_by_story(
+        self,
+        story_id: str,
+        include_subtasks: bool = True,
+        exclude_large_fields: bool = False,
+        include_archived: bool = False,
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Get all tasks for a specific story with optional subtasks.
+
+        Args:
+            story_id: Story ID to filter by
+            include_subtasks: Include all subtasks recursively
+            exclude_large_fields: Exclude sources and code_examples
+            include_archived: Include archived tasks
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            # Validate story exists
+            story_response = (
+                self.supabase_client.table("archon_stories")
+                .select("id, title, epic_id")
+                .eq("id", story_id)
+                .single()
+                .execute()
+            )
+
+            if not story_response.data:
+                return False, {"error": f"Story with ID {story_id} not found"}
+
+            story = story_response.data
+
+            # Get main tasks (tasks directly under the story)
+            if exclude_large_fields:
+                query = self.supabase_client.table("archon_tasks").select(
+                    "id, project_id, parent_task_id, story_id, title, description, "
+                    "status, assignee, task_order, feature, archived, "
+                    "archived_at, archived_by, created_at, updated_at"
+                )
+            else:
+                query = self.supabase_client.table("archon_tasks").select("*")
+
+            query = query.eq("story_id", story_id)
+
+            if not include_archived:
+                query = query.eq("archived", False)
+
+            # Order by task_order
+            query = query.order("task_order", desc=False)
+
+            tasks_response = query.execute()
+
+            if tasks_response.data is None:
+                return True, {
+                    "story": story,
+                    "tasks": [],
+                    "total_count": 0,
+                }
+
+            tasks = tasks_response.data
+
+            # If include_subtasks is True, fetch all subtasks recursively
+            if include_subtasks:
+                all_tasks = []
+                for task in tasks:
+                    all_tasks.append(task)
+
+                    # Get all subtasks for this task
+                    subtasks_result = await self.get_task_subtasks_recursive(task["id"])
+                    if subtasks_result[0]:  # success
+                        subtasks = subtasks_result[1].get("subtasks", [])
+                        all_tasks.extend(subtasks)
+
+                tasks = all_tasks
+
+            return True, {
+                "story": story,
+                "tasks": tasks,
+                "total_count": len(tasks),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting tasks by story: {str(e)}")
+            return False, {"error": f"Error getting tasks by story: {str(e)}"}
+
+    async def get_subtasks_by_task(
+        self,
+        task_id: str,
+        max_depth: int = 10,
+        exclude_large_fields: bool = False,
+        include_archived: bool = False,
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Get all subtasks for a specific task with depth tracking.
+
+        Args:
+            task_id: Parent task ID
+            max_depth: Maximum depth to traverse (default: 10)
+            exclude_large_fields: Exclude sources and code_examples
+            include_archived: Include archived tasks
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            # Validate parent task exists
+            parent_task_response = (
+                self.supabase_client.table("archon_tasks")
+                .select("id, title, story_id, project_id")
+                .eq("id", task_id)
+                .single()
+                .execute()
+            )
+
+            if not parent_task_response.data:
+                return False, {"error": f"Task with ID {task_id} not found"}
+
+            parent_task = parent_task_response.data
+
+            # Get subtasks recursively
+            subtasks_result = await self.get_task_subtasks_recursive(
+                task_id,
+                max_depth=max_depth,
+                exclude_large_fields=exclude_large_fields,
+                include_archived=include_archived
+            )
+
+            if not subtasks_result[0]:
+                return subtasks_result
+
+            return True, {
+                "parent_task": parent_task,
+                "subtasks": subtasks_result[1].get("subtasks", []),
+                "total_count": len(subtasks_result[1].get("subtasks", [])),
+                "max_depth_reached": subtasks_result[1].get("levels_count", 0),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting subtasks by task: {str(e)}")
+            return False, {"error": f"Error getting subtasks by task: {str(e)}"}
+
+    async def get_task_hierarchy(
+        self,
+        task_id: str,
+        include_siblings: bool = False,
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Get complete hierarchy for a task (path from root + subtasks).
+
+        Args:
+            task_id: Task ID to get hierarchy for
+            include_siblings: Include sibling tasks at each level
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            # Get the hierarchy path (from root to this task)
+            path_result = await self.get_task_hierarchy_path(task_id)
+            if not path_result[0]:
+                return path_result
+
+            hierarchy_path = path_result[1].get("hierarchy", [])
+
+            # Get all subtasks
+            subtasks_result = await self.get_subtasks_by_task(task_id)
+            if not subtasks_result[0]:
+                return subtasks_result
+
+            subtasks = subtasks_result[1].get("subtasks", [])
+
+            # If include_siblings, get siblings for each level in the path
+            siblings_by_level = {}
+            if include_siblings:
+                for level_task in hierarchy_path:
+                    parent_id = level_task.get("parent_task_id")
+                    if parent_id:
+                        siblings_result = await self.get_subtasks_by_task(parent_id)
+                        if siblings_result[0]:
+                            siblings = siblings_result[1].get("subtasks", [])
+                            # Filter out the current task from siblings
+                            siblings = [s for s in siblings if s["id"] != level_task["id"]]
+                            siblings_by_level[level_task["id"]] = siblings
+
+            return True, {
+                "task_id": task_id,
+                "hierarchy_path": hierarchy_path,
+                "subtasks": subtasks,
+                "siblings_by_level": siblings_by_level if include_siblings else {},
+                "path_depth": len(hierarchy_path),
+                "subtasks_count": len(subtasks),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting task hierarchy: {str(e)}")
+            return False, {"error": f"Error getting task hierarchy: {str(e)}"}
+
+    async def validate_hierarchy_consistency(
+        self,
+        task_id: str,
+        parent_task_id: str | None = None,
+        story_id: str | None = None,
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Validate hierarchy consistency and detect cycles.
+
+        Args:
+            task_id: Task ID to validate
+            parent_task_id: New parent task ID (for updates)
+            story_id: Story ID (for consistency checks)
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            validation_errors = []
+
+            # 1. Check for cycles if parent_task_id is provided
+            if parent_task_id:
+                # Get hierarchy path for the proposed parent
+                parent_path_result = await self.get_task_hierarchy_path(parent_task_id)
+                if parent_path_result[0]:
+                    parent_hierarchy = parent_path_result[1].get("hierarchy", [])
+                    # Check if task_id is in the parent's hierarchy (would create cycle)
+                    parent_task_ids = [t["id"] for t in parent_hierarchy]
+                    if task_id in parent_task_ids:
+                        validation_errors.append({
+                            "type": "cycle_detected",
+                            "message": f"Setting parent {parent_task_id} would create a cycle",
+                            "cycle_path": parent_task_ids + [task_id]
+                        })
+
+            # 2. Check maximum depth
+            if parent_task_id:
+                parent_path_result = await self.get_task_hierarchy_path(parent_task_id)
+                if parent_path_result[0]:
+                    parent_depth = len(parent_path_result[1].get("hierarchy", []))
+                    if parent_depth >= 10:  # Max depth limit
+                        validation_errors.append({
+                            "type": "max_depth_exceeded",
+                            "message": f"Parent task is already at depth {parent_depth}, maximum is 10",
+                            "current_depth": parent_depth
+                        })
+
+            # 3. Check story consistency if story_id is provided
+            if story_id and parent_task_id:
+                # Get parent task's story_id
+                parent_response = (
+                    self.supabase_client.table("archon_tasks")
+                    .select("story_id, project_id")
+                    .eq("id", parent_task_id)
+                    .single()
+                    .execute()
+                )
+
+                if parent_response.data:
+                    parent_story_id = parent_response.data.get("story_id")
+                    if parent_story_id and parent_story_id != story_id:
+                        validation_errors.append({
+                            "type": "story_mismatch",
+                            "message": f"Parent task belongs to story {parent_story_id}, but task belongs to {story_id}",
+                            "parent_story_id": parent_story_id,
+                            "task_story_id": story_id
+                        })
+
+            # Return results
+            is_valid = len(validation_errors) == 0
+
+            return True, {
+                "is_valid": is_valid,
+                "validation_errors": validation_errors,
+                "task_id": task_id,
+                "parent_task_id": parent_task_id,
+                "story_id": story_id,
+            }
+
+        except Exception as e:
+            logger.error(f"Error validating hierarchy consistency: {str(e)}")
+            return False, {"error": f"Error validating hierarchy consistency: {str(e)}"}
+
+    async def get_tasks_with_epic_story_info(
+        self,
+        project_id: str | None = None,
+        epic_id: str | None = None,
+        story_id: str | None = None,
+        status: str | None = None,
+        include_archived: bool = False,
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Get tasks with full hierarchical context (Epic -> Story -> Task).
+
+        Args:
+            project_id: Filter by project
+            epic_id: Filter by epic
+            story_id: Filter by story
+            status: Filter by task status
+            include_archived: Include archived tasks
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            # Build the query with JOINs to get epic and story information
+            query = """
+            SELECT
+                t.*,
+                s.id as story_id_resolved,
+                s.title as story_title,
+                s.epic_id,
+                e.id as epic_id_resolved,
+                e.title as epic_title,
+                e.project_id as epic_project_id
+            FROM archon_tasks t
+            LEFT JOIN archon_stories s ON t.story_id = s.id
+            LEFT JOIN archon_epics e ON s.epic_id = e.id
+            WHERE 1=1
+            """
+
+            params = []
+
+            if project_id:
+                query += " AND t.project_id = %s"
+                params.append(project_id)
+
+            if epic_id:
+                query += " AND e.id = %s"
+                params.append(epic_id)
+
+            if story_id:
+                query += " AND t.story_id = %s"
+                params.append(story_id)
+
+            if status:
+                # Validate status first
+                is_valid, error_msg = self.validate_status(status)
+                if not is_valid:
+                    return False, {"error": error_msg}
+                query += " AND t.status = %s"
+                params.append(status)
+
+            if not include_archived:
+                query += " AND t.archived = FALSE"
+
+            query += " ORDER BY t.task_order ASC, t.created_at ASC"
+
+            # Execute raw query (note: this is a simplified example,
+            # in a real implementation you'd use Supabase's query builder
+            # or a proper ORM for complex joins)
+
+            # For now, let's implement this using separate queries
+            # and join the data in Python (less efficient but works with Supabase)
+
+            # Get tasks first
+            task_query = self.supabase_client.table("archon_tasks").select("*")
+
+            if project_id:
+                task_query = task_query.eq("project_id", project_id)
+            if story_id:
+                task_query = task_query.eq("story_id", story_id)
+            if status:
+                task_query = task_query.eq("status", status)
+            if not include_archived:
+                task_query = task_query.eq("archived", False)
+
+            task_query = task_query.order("task_order", desc=False)
+            tasks_response = task_query.execute()
+
+            if not tasks_response.data:
+                return True, {"tasks": [], "total_count": 0}
+
+            tasks = tasks_response.data
+            enriched_tasks = []
+
+            for task in tasks:
+                enriched_task = dict(task)
+
+                # Get story information if story_id exists
+                if task.get("story_id"):
+                    story_response = (
+                        self.supabase_client.table("archon_stories")
+                        .select("id, title, epic_id")
+                        .eq("id", task["story_id"])
+                        .single()
+                        .execute()
+                    )
+
+                    if story_response.data:
+                        story = story_response.data
+                        enriched_task["story_info"] = story
+
+                        # Get epic information if epic_id exists
+                        if story.get("epic_id"):
+                            epic_response = (
+                                self.supabase_client.table("archon_epics")
+                                .select("id, title, project_id")
+                                .eq("id", story["epic_id"])
+                                .single()
+                                .execute()
+                            )
+
+                            if epic_response.data:
+                                enriched_task["epic_info"] = epic_response.data
+
+                # Filter by epic_id if specified and we have epic info
+                if epic_id and enriched_task.get("epic_info", {}).get("id") != epic_id:
+                    continue
+
+                enriched_tasks.append(enriched_task)
+
+            return True, {
+                "tasks": enriched_tasks,
+                "total_count": len(enriched_tasks),
+                "filters_applied": {
+                    "project_id": project_id,
+                    "epic_id": epic_id,
+                    "story_id": story_id,
+                    "status": status,
+                    "include_archived": include_archived,
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting tasks with epic/story info: {str(e)}")
+            return False, {"error": f"Error getting tasks with epic/story info: {str(e)}"}
+
+    async def update_task_with_hierarchy_validation(
+        self,
+        task_id: str,
+        parent_task_id: str | None = None,
+        story_id: str | None = None,
+        **kwargs
+    ) -> tuple[bool, dict[str, Any]]:
+        """
+        Update task with hierarchy validation to prevent cycles and inconsistencies.
+
+        Args:
+            task_id: Task ID to update
+            parent_task_id: New parent task ID
+            story_id: New story ID
+            **kwargs: Other update fields
+
+        Returns:
+            Tuple of (success, result_dict)
+        """
+        try:
+            # Validate hierarchy consistency first
+            validation_result = await self.validate_hierarchy_consistency(
+                task_id=task_id,
+                parent_task_id=parent_task_id,
+                story_id=story_id,
+            )
+
+            if not validation_result[0]:
+                return validation_result
+
+            validation_data = validation_result[1]
+            if not validation_data["is_valid"]:
+                return False, {
+                    "error": "Hierarchy validation failed",
+                    "validation_errors": validation_data["validation_errors"]
+                }
+
+            # Proceed with normal update if validation passes
+            update_data = {"updated_at": datetime.now().isoformat()}
+
+            if parent_task_id is not None:
+                update_data["parent_task_id"] = parent_task_id
+
+            if story_id is not None:
+                update_data["story_id"] = story_id
+
+            # Add other fields from kwargs
+            for key, value in kwargs.items():
+                if key not in ["task_id", "parent_task_id", "story_id"]:
+                    update_data[key] = value
+
+            # Update the task
+            response = (
+                self.supabase_client.table("archon_tasks")
+                .update(update_data)
+                .eq("id", task_id)
+                .execute()
+            )
+
+            if response.data:
+                updated_task = response.data[0]
+                logger.info(f"Task updated with hierarchy validation: {task_id}")
+
+                # Trigger progress recalculation if story changed
+                if story_id is not None:
+                    from src.server.services.projects.story_service import StoryService
+                    story_service = StoryService(self.supabase_client)
+                    await story_service.calculate_story_progress(story_id)
+
+                return True, {"task": updated_task}
+            else:
+                return False, {"error": f"Task with ID {task_id} not found"}
+
+        except Exception as e:
+            logger.error(f"Error updating task with hierarchy validation: {str(e)}")
+            return False, {"error": f"Error updating task with hierarchy validation: {str(e)}"}

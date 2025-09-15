@@ -16,9 +16,10 @@ Ce fichier fournit les directives pour Claude Code lors du travail sur le projet
 
 ### Variables Critiques à Maintenir
 ```
-PROJECT_NAME: "Archon BMAD Integration"
-PROJECT_ID: [À définir lors de la première session]
-GITHUB_REPO: "https://github.com/user/archon-bmad-fork"
+PROJECT_NAME: "Archon - TRAXIS"
+PROJECT_ID: a37b53ff-e647-44a4-998b-e920582ed376
+GITHUB_REPO: "https://github.com/jmtrappier/Archon"
+BRANCH="traxis"
 ```
 
 **IMPÉRATIF** : Ces informations doivent être connues et utilisées dans CHAQUE session.
@@ -39,9 +40,10 @@ archon:find_projects(query="Archon BMAD Integration")
 # 1. Créer ou identifier le projet Archon
 archon:manage_project(
   action="create",
-  title="Archon BMAD Integration",
+  title="Archon - TRAXIS",
   description="Fork d'Archon pour implémenter la hiérarchie PROJET > EPIC > STORY > TASK > SUBTASK",
-  github_repo="https://github.com/user/archon-bmad-fork"
+  github_repo="https://github.com/jmtrappier/Archon.git",
+  branch="traxis"
 )
 
 # 2. Sauvegarder PROJECT_ID pour usage futur
