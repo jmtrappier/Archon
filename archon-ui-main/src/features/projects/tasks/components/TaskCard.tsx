@@ -5,7 +5,7 @@ import { useDrag, useDrop } from "react-dnd";
 import { useTaskActions } from "../hooks";
 import type { Assignee, Task } from "../types";
 import { getOrderColor, getOrderGlow, ItemTypes } from "../utils/task-styles";
-import { HierarchicalItemTypes, HierarchicalDragWrapper } from "./HierarchicalDragDrop";
+import { HierarchicalItemTypes, HierarchicalDragWrapper, type DraggedTask } from "./HierarchicalDragDrop";
 import { getProgressColor, getProgressTextColor } from "../utils";
 import { TaskAssignee } from "./TaskAssignee";
 import { TaskCardActions } from "./TaskCardActions";
@@ -81,7 +81,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       title: task.title,
       storyId: task.story_id || 'unknown',
       status: task.status,
-      projectId: projectId
+      projectId: projectId,
+      index: index
     },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
@@ -89,8 +90,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   });
 
   const [, drop] = useDrop({
-    accept: ItemTypes.TASK,
-    hover: (draggedItem: { id: string; status: Task["status"]; index: number }, monitor) => {
+    accept: HierarchicalItemTypes.TASK,
+    hover: (draggedItem: DraggedTask & { index: number }, monitor) => {
       if (!monitor.isOver({ shallow: true })) return;
       if (draggedItem.id === task.id) return;
       if (draggedItem.status !== task.status) return;

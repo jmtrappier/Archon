@@ -2,11 +2,11 @@ import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { Button } from "../../../ui/primitives";
-import { useCreateSubtask, useReorderSubtasks, useSubtasks } from "../hooks";
-import type { CreateTaskRequest, Task } from "../types";
+import { useReorderSubtasks, useSubtasks } from "../hooks";
+import type { Task } from "../types";
 import { getProgressColor, getProgressTextColor } from "../utils";
 import { SubtaskItem } from "./SubtaskItem";
-import { TaskEditModal } from "./TaskEditModal";
+import { SubtaskEditModal } from "./SubtaskEditModal";
 
 export interface SubtaskListProps {
   parentTask: Task;
@@ -29,7 +29,6 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
 
   // Hooks for subtask operations
   const { data: subtasks = [], isLoading, error } = useSubtasks(parentTask.id);
-  const createSubtaskMutation = useCreateSubtask(parentTask.id);
   const reorderSubtasksMutation = useReorderSubtasks(parentTask.id);
 
   // Calculate progress
@@ -46,21 +45,6 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
     setIsExpanded(true); // Auto-expand when adding
   }, []);
 
-  const handleCreateSubtask = useCallback(
-    async (subtaskData: Omit<CreateTaskRequest, "project_id" | "parent_task_id">) => {
-      try {
-        await createSubtaskMutation.mutateAsync({
-          ...subtaskData,
-          project_id: projectId,
-        });
-        setIsAddingSubtask(false);
-      } catch (error) {
-        console.error("Failed to create subtask:", error);
-        // Error handling is done by the mutation hook
-      }
-    },
-    [createSubtaskMutation, projectId]
-  );
 
   const handleSubtaskReorder = useCallback(
     (subtaskId: string, targetIndex: number) => {
@@ -170,7 +154,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
           )}
 
           {/* Subtasks list */}
-          {subtasks.map((subtask, index) => (
+          {Array.isArray(subtasks) && subtasks.map((subtask, index) => (
             <SubtaskItem
               key={subtask.id}
               subtask={subtask}
@@ -187,7 +171,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
           ))}
 
           {/* Empty state */}
-          {!isLoading && !error && subtasks.length === 0 && (
+          {!isLoading && !error && Array.isArray(subtasks) && subtasks.length === 0 && (
             <div className="pl-6 py-4 text-center">
               <p className="text-sm text-gray-500 mb-2">No subtasks yet</p>
               <Button
@@ -206,12 +190,13 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
 
       {/* Add subtask modal */}
       {isAddingSubtask && (
-        <TaskEditModal
+        <SubtaskEditModal
           isOpen={isAddingSubtask}
-          onClose={() => setIsAddingSubtask(false)}
-          onSubmit={handleCreateSubtask}
+          parentTaskId={parentTask.id}
           projectId={projectId}
-          title="Add Subtask"
+          editingSubtask={null}
+          onClose={() => setIsAddingSubtask(false)}
+          onSaved={() => setIsAddingSubtask(false)}
         />
       )}
     </div>

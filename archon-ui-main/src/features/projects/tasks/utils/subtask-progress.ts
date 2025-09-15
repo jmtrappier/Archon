@@ -10,7 +10,8 @@ import type { Task } from "../types";
  * @returns Progress percentage (0-100)
  */
 export function calculateTaskProgress(subtasks: Task[]): number {
-  if (!subtasks || subtasks.length === 0) {
+  // Add extra safety checks for non-array subtasks
+  if (!subtasks || !Array.isArray(subtasks) || subtasks.length === 0) {
     return 0;
   }
 
@@ -30,7 +31,8 @@ export function getSubtaskCounts(subtasks: Task[]): {
   total: number;
   completed: number;
 } {
-  if (!subtasks || subtasks.length === 0) {
+  // Add extra safety checks for non-array subtasks
+  if (!subtasks || !Array.isArray(subtasks) || subtasks.length === 0) {
     return { total: 0, completed: 0 };
   }
 

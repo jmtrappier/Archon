@@ -74,6 +74,7 @@ class CreateTaskRequest(BaseModel):
     task_order: int | None = 0
     feature: str | None = None
     story_id: str | None = None  # Support for hierarchy
+    parent_task_id: str | None = None  # Support for subtasks
 
 
 class CreateEpicRequest(BaseModel):
@@ -1523,30 +1524,54 @@ async def list_project_tasks(
 
 @router.post("/tasks")
 async def create_task(request: CreateTaskRequest):
-    """Create a new task with automatic reordering."""
+    """Create a new task or subtask with automatic reordering."""
     try:
-        # Use TaskService to create the task
         task_service = TaskService()
-        success, result = await task_service.create_task(
-            project_id=request.project_id,
-            title=request.title,
-            description=request.description or "",
-            assignee=request.assignee or "User",
-            task_order=request.task_order or 0,
-            feature=request.feature,
-            story_id=request.story_id,  # Support for hierarchy
-        )
 
-        if not success:
-            raise HTTPException(status_code=400, detail=result)
+        # If parent_task_id is provided, create a subtask
+        if request.parent_task_id:
+            success, result = await task_service.create_subtask(
+                parent_task_id=request.parent_task_id,
+                title=request.title,
+                description=request.description or "",
+                assignee=request.assignee or "User",
+                task_order=request.task_order or 0,
+                feature=request.feature,
+            )
 
-        created_task = result["task"]
+            if not success:
+                raise HTTPException(status_code=400, detail=result)
 
-        logfire.info(
-            f"Task created successfully | task_id={created_task['id']} | project_id={request.project_id}"
-        )
+            created_subtask = result["subtask"]
 
-        return {"message": "Task created successfully", "task": created_task}
+            logfire.info(
+                f"Subtask created successfully | subtask_id={created_subtask['id']} | parent_task_id={request.parent_task_id}"
+            )
+
+            return {"message": "Subtask created successfully", "task": created_subtask}
+
+        # Otherwise, create a regular task
+        else:
+            success, result = await task_service.create_task(
+                project_id=request.project_id,
+                title=request.title,
+                description=request.description or "",
+                assignee=request.assignee or "User",
+                task_order=request.task_order or 0,
+                feature=request.feature,
+                story_id=request.story_id,  # Support for hierarchy
+            )
+
+            if not success:
+                raise HTTPException(status_code=400, detail=result)
+
+            created_task = result["task"]
+
+            logfire.info(
+                f"Task created successfully | task_id={created_task['id']} | project_id={request.project_id}"
+            )
+
+            return {"message": "Task created successfully", "task": created_task}
 
     except HTTPException:
         raise
@@ -1666,6 +1691,34 @@ async def get_task(task_id: str):
         raise
     except Exception as e:
         logfire.error(f"Failed to get task | error={str(e)} | task_id={task_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.get("/tasks/{task_id}/subtasks")
+async def get_task_subtasks(task_id: str):
+    """Get all subtasks for a specific task."""
+    try:
+        # Use TaskService to get subtasks
+        task_service = TaskService()
+        success, result = task_service.get_subtasks_by_parent(task_id)
+
+        if not success:
+            if "not found" in result.get("error", "").lower():
+                raise HTTPException(status_code=404, detail=result.get("error"))
+            else:
+                raise HTTPException(status_code=500, detail=result)
+
+        logfire.info(
+            f"Subtasks retrieved successfully | task_id={task_id} | count={result.get('total_count', 0)}"
+        )
+
+        # Return just the subtasks array as expected by the frontend
+        return result.get("subtasks", [])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to get subtasks | error={str(e)} | task_id={task_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 

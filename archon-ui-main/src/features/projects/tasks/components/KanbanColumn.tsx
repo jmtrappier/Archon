@@ -3,6 +3,7 @@ import { useDrop } from "react-dnd";
 import { cn } from "../../../ui/primitives/styles";
 import type { Task } from "../types";
 import { getColumnColor, getColumnGlow, ItemTypes } from "../utils/task-styles";
+import { HierarchicalItemTypes } from "./HierarchicalDragDrop";
 import { TaskCard } from "./TaskCard";
 
 interface KanbanColumnProps {
@@ -33,7 +34,7 @@ export const KanbanColumn = ({
   const ref = useRef<HTMLDivElement>(null);
 
   const [{ isOver }, drop] = useDrop({
-    accept: ItemTypes.TASK,
+    accept: HierarchicalItemTypes.TASK,
     drop: (item: { id: string; status: Task["status"] }) => {
       if (item.status !== status) {
         onTaskMove(item.id, status);
