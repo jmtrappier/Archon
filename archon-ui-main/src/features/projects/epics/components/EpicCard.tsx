@@ -1,4 +1,5 @@
-import { BarChart3, ChevronRight, Flag, Users, MoreVertical, Edit, Trash2 } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+const { BarChart3, ChevronRight, Flag, Users, MoreVertical, Edit, Trash2 } = LucideIcons;
 import type React from "react";
 import { useCallback, useState } from "react";
 import { useDrag, useDrop } from "react-dnd";
@@ -282,7 +283,7 @@ export const EpicCard: React.FC<EpicCardProps> = ({
                     onClick={handleToggleExpand}
                     className="h-6 w-6 p-0 hover:bg-white/20 dark:hover:bg-white/10"
                   >
-                    <BarChart3 className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                    <span className="text-sm">📊</span>
                   </Button>
 
                   {/* Context menu with edit/delete options */}
@@ -293,15 +294,15 @@ export const EpicCard: React.FC<EpicCardProps> = ({
                           variant="ghost"
                           size="sm"
                           onClick={(e) => e.stopPropagation()}
-                          className="h-6 w-6 p-0 hover:bg-white/20 dark:hover:bg-white/10"
+                          className="h-7 w-7 p-0 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 flex items-center justify-center"
                         >
-                          <MoreVertical className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                          <span className="text-xs">⋮</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-32">
                         {onEdit && (
                           <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">
-                            <Edit className="w-4 h-4 mr-2" />
+                            <span className="text-xs mr-2">✏️</span>
                             Edit Epic
                           </DropdownMenuItem>
                         )}
@@ -311,7 +312,7 @@ export const EpicCard: React.FC<EpicCardProps> = ({
                             onClick={handleDelete}
                             className="cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
                           >
-                            <Trash2 className="w-4 h-4 mr-2" />
+                            <span className="text-xs mr-2">🗑️</span>
                             Delete Epic
                           </DropdownMenuItem>
                         )}
