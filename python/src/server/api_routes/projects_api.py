@@ -920,30 +920,42 @@ async def create_epic_story(epic_id: str, request: CreateStoryRequest):
             f"Creating story for epic | epic_id={epic_id} | title={request.title}"
         )
 
+        # Convert priority string to integer for service layer
+        def convert_priority_to_int(priority_str: str | None) -> int:
+            """Convert priority string to integer expected by service layer."""
+            priority_map = {
+                "low": 25,
+                "medium": 50,
+                "high": 75,
+                "critical": 100
+            }
+            return priority_map.get(priority_str or "medium", 50)
+
         # Use StoryService to create story
         story_service = StoryService()
-        success, result = await story_service.create_story(
+        result = await story_service.create_story(
             epic_id=epic_id,
             title=request.title,
             description=request.description or "",
             status=request.status or "todo",
-            priority=request.priority or "medium",
+            priority=convert_priority_to_int(request.priority),  # 🟢 FIXED: Convert to int
             story_points=request.story_points,
             acceptance_criteria=request.acceptance_criteria,
             # mvp_flag=request.mvp_flag or False,  # Not in TRAXIS schema
         )
 
-        if not success:
+        # Check if result indicates an error
+        if "error" in result:
             if "not found" in result.get("error", "").lower():
                 raise HTTPException(status_code=404, detail=result.get("error"))
             else:
-                raise HTTPException(status_code=400, detail=result)
+                raise HTTPException(status_code=400, detail=result.get("error"))
 
         logfire.info(
-            f"Story created successfully | epic_id={epic_id} | story_id={result['story']['id']}"
+            f"Story created successfully | epic_id={epic_id} | story_id={result.get('id', 'unknown')}"
         )
 
-        return {"message": "Story created successfully", "story": result["story"]}
+        return {"message": "Story created successfully", "story": result}
 
     except HTTPException:
         raise
@@ -998,7 +1010,17 @@ async def update_story(story_id: str, request: UpdateStoryRequest):
         if request.status is not None:
             update_fields["status"] = request.status
         if request.priority is not None:
-            update_fields["priority"] = request.priority
+            # Convert priority string to integer for service layer
+            def convert_priority_to_int(priority_str: str | None) -> int:
+                """Convert priority string to integer expected by service layer."""
+                priority_map = {
+                    "low": 25,
+                    "medium": 50,
+                    "high": 75,
+                    "critical": 100
+                }
+                return priority_map.get(priority_str or "medium", 50)
+            update_fields["priority"] = convert_priority_to_int(request.priority)
         if request.story_points is not None:
             update_fields["story_points"] = request.story_points
         if request.acceptance_criteria is not None:
@@ -1008,7 +1030,10 @@ async def update_story(story_id: str, request: UpdateStoryRequest):
 
         # Use StoryService to update the story
         story_service = StoryService()
-        success, result = await story_service.update_story(story_id, update_fields)
+        success, result = await story_service.update_story(
+            story_id=story_id,
+            **update_fields  # 🟢 FIXED: Unpack dict to individual parameters
+        )
 
         if not success:
             if "not found" in result.get("error", "").lower():
