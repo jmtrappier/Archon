@@ -16,13 +16,24 @@ export interface Epic {
   updated_at: string;
 }
 
+export interface EpicsResponse {
+  data: Epic[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    has_more: boolean;
+  };
+  filters_applied: Record<string, any>;
+}
+
 export const epicService = {
   async listEpics(projectId: string): Promise<Epic[]> {
     try {
-      const response = await callAPIWithETag<Epic[]>(
+      const response = await callAPIWithETag<EpicsResponse>(
         `/api/projects/${projectId}/epics`
       );
-      return response || [];
+      return response?.data || [];
     } catch (error) {
       console.error(`Failed to list epics for project ${projectId}:`, error);
       throw error;

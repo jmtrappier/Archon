@@ -597,36 +597,82 @@ async def list_project_epics(
     request: Request,
     response: Response,
     status: str | None = None,
+    priority: str | None = None,
+    search: str | None = None,
+    sort: str | None = "created_at",
+    order: str | None = "desc",
+    limit: int = 50,
+    offset: int = 0,
     if_none_match: str | None = Header(None)
 ):
-    """List all epics for a specific project with ETag support and optional filtering."""
+    """List all epics for a project with standardized pagination/filtering following API design standards."""
     try:
+        # Validate pagination parameters
+        limit = min(max(1, limit), 100)  # Between 1-100 as per standards
+        offset = max(0, offset)
+
         logfire.debug(
-            f"Listing project epics | project_id={project_id} | status={status} | etag={if_none_match}"
+            f"Listing project epics | project_id={project_id} | status={status} | search={search} | "
+            f"sort={sort} | order={order} | limit={limit} | offset={offset} | etag={if_none_match}"
         )
 
-        # Use EpicService to list epics
+        # Use EpicService with full filtering support
         epic_service = EpicService()
         try:
+            # Get total count for pagination
+            total_count = await epic_service.count_epics(
+                project_id=project_id,
+                status=status,
+                priority=priority,
+                search=search
+            )
+
+            # Get filtered and paginated epics
             epics = await epic_service.list_epics(
                 project_id=project_id,
-                status=status
+                status=status,
+                priority=priority,
+                search=search,
+                sort=sort,
+                order=order,
+                limit=limit,
+                offset=offset
             )
         except Exception as e:
             logger.error(f"Failed to list project epics | error={str(e)} | project_id={project_id}")
             raise HTTPException(status_code=500, detail={"error": str(e)})
 
-        # Generate ETag from epic data (excluding timestamps for consistency)
+        # Build standardized response with pagination
+        response_data = {
+            "data": epics,
+            "pagination": {
+                "total": total_count,
+                "limit": limit,
+                "offset": offset,
+                "has_more": (offset + limit) < total_count
+            },
+            "filters_applied": {}
+        }
+
+        # Add applied filters to response
+        if status:
+            response_data["filters_applied"]["status"] = status
+        if priority:
+            response_data["filters_applied"]["priority"] = priority
+        if search:
+            response_data["filters_applied"]["search"] = search
+        if sort != "created_at":
+            response_data["filters_applied"]["sort"] = sort
+        if order != "desc":
+            response_data["filters_applied"]["order"] = order
+
+        # Generate ETag from response data (excluding timestamps for consistency)
         etag_data = {
-            "epics": [{
-                "id": epic.get("id"),
-                "title": epic.get("title"),
-                "status": epic.get("status"),
-                "priority": epic.get("priority"),
-                # "mvp_flag": epic.get("mvp_flag")  # Not in TRAXIS schema
-            } for epic in epics],
+            "count": len(epics),
+            "total": total_count,
             "project_id": project_id,
-            "count": len(epics)
+            "filters": response_data["filters_applied"],
+            "pagination": {"limit": limit, "offset": offset}
         }
         current_etag = generate_etag(etag_data)
 
@@ -634,21 +680,22 @@ async def list_project_epics(
         if check_etag(if_none_match, current_etag):
             response.status_code = 304
             response.headers["ETag"] = current_etag
-            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            response.headers["Cache-Control"] = "private, must-revalidate"
             response.headers["Last-Modified"] = datetime.utcnow().isoformat()
             logfire.debug(f"Epics unchanged, returning 304 | project_id={project_id} | etag={current_etag}")
             return None
 
         # Set ETag headers for successful response
         response.headers["ETag"] = current_etag
-        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        response.headers["Cache-Control"] = "private, must-revalidate"
         response.headers["Last-Modified"] = datetime.utcnow().isoformat()
 
         logfire.debug(
-            f"Project epics retrieved | project_id={project_id} | epic_count={len(epics)} | etag={current_etag}"
+            f"Project epics retrieved | project_id={project_id} | epic_count={len(epics)} | "
+            f"total={total_count} | etag={current_etag}"
         )
 
-        return epics
+        return response_data
 
     except HTTPException:
         raise
@@ -704,15 +751,7 @@ async def get_epic(epic_id: str):
 
         # Use EpicService to get the epic
         epic_service = EpicService()
-        success, result = await epic_service.get_epic(epic_id)
-
-        if not success:
-            if "not found" in result.get("error", "").lower():
-                raise HTTPException(status_code=404, detail=result.get("error"))
-            else:
-                raise HTTPException(status_code=500, detail=result)
-
-        epic = result["epic"]
+        epic = await epic_service.get_epic(epic_id)
 
         logfire.info(
             f"Epic retrieved successfully | epic_id={epic_id} | project_id={epic.get('project_id')}"

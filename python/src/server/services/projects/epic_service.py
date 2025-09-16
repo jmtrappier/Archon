@@ -495,28 +495,110 @@ class EpicService:
         """
         return False, {"error": "Archiving functionality not implemented yet"}
 
-    async def list_epics(
+    async def count_epics(
         self,
         project_id: str,
         status: str | None = None,
         priority: str | None = None,
+        search: str | None = None,
         include_archived: bool = False,
-        limit: int = 100,
-        offset: int = 0,
-    ) -> list[dict[str, Any]]:
+    ) -> int:
         """
-        List epics for a project with optional filters and pagination.
+        Count epics for a project with optional filters.
 
         Args:
             project_id: UUID of the parent project
             status: Filter by status (optional)
             priority: Filter by priority (optional)
+            search: Text search in title/description (optional)
+            include_archived: Include archived epics (default: False)
+
+        Returns:
+            Total count of matching epics
+
+        Raises:
+            EpicValidationError: For invalid parameters
+            EpicServiceError: For database errors
+        """
+        try:
+            if not project_id or not isinstance(project_id, str):
+                raise EpicValidationError("project_id", "Project ID is required and must be a string")
+
+            # Validate filters
+            if status:
+                is_valid, error_msg = self.validate_status(status)
+                if not is_valid:
+                    raise EpicValidationError("status", error_msg)
+
+            if priority:
+                is_valid, error_msg = self.validate_priority(priority)
+                if not is_valid:
+                    raise EpicValidationError("priority", error_msg)
+
+            # Build base query
+            query = self.supabase_client.from_("archon_epics").select("id", count="exact")
+            query = query.eq("project_id", project_id)
+
+            # Apply archived filter (Note: archived functionality not yet implemented in database schema)
+            # if not include_archived:
+            #     query = query.eq("archived", False)
+
+            # Apply status filter
+            if status:
+                query = query.eq("status", status)
+
+            # Apply priority filter
+            if priority:
+                query = query.eq("priority", priority)
+
+            # Apply search filter
+            if search:
+                search_term = f"%{search.strip()}%"
+                query = query.or_(f"title.ilike.{search_term},description.ilike.{search_term}")
+
+            # Execute count query
+            response = query.execute()
+
+            if response.count is None:
+                raise EpicServiceError("Failed to get epic count", "COUNT_FAILED")
+
+            logger.debug(f"Epic count retrieved | project_id={project_id} | count={response.count}")
+            return response.count
+
+        except (EpicValidationError, EpicServiceError):
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error counting epics | error={str(e)} | project_id={project_id}")
+            raise EpicServiceError(f"Failed to count epics: {str(e)}", "COUNT_FAILED")
+
+    async def list_epics(
+        self,
+        project_id: str,
+        status: str | None = None,
+        priority: str | None = None,
+        search: str | None = None,
+        sort: str | None = "created_at",
+        order: str | None = "desc",
+        include_archived: bool = False,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        """
+        List epics for a project with optional filters, search, sorting and pagination.
+
+        Args:
+            project_id: UUID of the parent project
+            status: Filter by status (optional)
+            priority: Filter by priority (optional)
+            search: Text search in title/description (optional)
+            sort: Sort field (created_at, updated_at, title, priority, status)
+            order: Sort order (asc/desc, default: desc)
             include_archived: Include archived epics (default: False)
             limit: Maximum results to return (default: 100, max: 1000)
             offset: Pagination offset (default: 0)
 
         Returns:
-            List of epic data
+            List of epic data with hierarchical codes
 
         Raises:
             EpicValidationError: For invalid parameters
@@ -533,6 +615,15 @@ class EpicService:
             if priority and not self.validate_priority(priority)[0]:
                 raise EpicValidationError("priority", f"Invalid priority filter: {priority}")
 
+            # Validate sort parameters
+            valid_sort_fields = ["created_at", "updated_at", "title", "priority", "status", "code", "epic_order"]
+            if sort and sort not in valid_sort_fields:
+                raise EpicValidationError("sort", f"Invalid sort field '{sort}'. Must be one of: {', '.join(valid_sort_fields)}")
+
+            valid_orders = ["asc", "desc"]
+            if order and order not in valid_orders:
+                raise EpicValidationError("order", f"Invalid order '{order}'. Must be one of: {', '.join(valid_orders)}")
+
             # Validate pagination parameters
             if limit < 1 or limit > 1000:
                 raise EpicValidationError("limit", "Limit must be between 1 and 1000")
@@ -540,28 +631,36 @@ class EpicService:
             if offset < 0:
                 raise EpicValidationError("offset", "Offset must be non-negative")
 
+            # Build base query with all fields including hierarchical codes
             query = (
                 self.supabase_client.table("archon_epics")
                 .select("*", count="exact")
                 .eq("project_id", project_id)
             )
 
-            # Apply filters
+            # Apply status filter
             if status:
                 query = query.eq("status", status)
 
+            # Apply priority filter
             if priority:
-                # Convert priority name to numeric value for filtering
-                priority_value = self.PRIORITY_MAPPING.get(priority)
-                if priority_value:
-                    query = query.eq("priority", priority_value)
+                query = query.eq("priority", priority)
 
-            # Note: archived functionality not yet implemented in database schema
+            # Apply search filter
+            if search:
+                search_term = f"%{search.strip()}%"
+                query = query.or_(f"title.ilike.{search_term},description.ilike.{search_term}")
+
+            # Apply archived filter (Note: archived functionality not yet implemented in database schema)
             # if not include_archived:
             #     query = query.eq("archived", False)
 
-            # Apply ordering and pagination
-            query = query.order("created_at", desc=False)
+            # Apply sorting
+            sort_field = sort or "created_at"
+            sort_desc = (order or "desc") == "desc"
+            query = query.order(sort_field, desc=sort_desc)
+
+            # Apply pagination
             query = query.range(offset, offset + limit - 1)
 
             result = query.execute()
@@ -570,7 +669,7 @@ class EpicService:
                 logger.warning(f"No epics found for project {project_id}")
                 return []
 
-            logger.debug(f"Retrieved {len(result.data)} epics for project {project_id}")
+            logger.debug(f"Retrieved {len(result.data)} epics for project {project_id} | search={search} | sort={sort_field}")
             return result.data
 
         except EpicServiceError:
