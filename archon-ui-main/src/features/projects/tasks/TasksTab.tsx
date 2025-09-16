@@ -9,6 +9,9 @@ import { cn, glassmorphism } from "../../ui/primitives/styles";
 import { useProjectEpics } from "../epics/hooks/useEpicQueries";
 import type { Epic } from "../epics/types";
 import { EpicModal } from "../epics/components/EpicModal";
+import { useProjectStories } from "../stories/hooks/useStoryQueries";
+import type { Story } from "../stories/types";
+import { StoryModal } from "../stories/components/StoryModal";
 import { TaskEditModal, TaskView } from "./components";
 import { useDeleteTask, useProjectTasks, useUpdateTask } from "./hooks";
 import type { Task } from "./types";
@@ -19,7 +22,7 @@ interface TasksTabProps {
   projectId: string;
 }
 
-type ViewFilter = 'all' | 'epics' | 'tasks';
+type ViewFilter = 'all' | 'epics' | 'stories' | 'tasks';
 
 export const TasksTab = ({ projectId }: TasksTabProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,7 +38,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
       setViewMode(urlView);
     }
 
-    if (urlFilter === 'epics' || urlFilter === 'tasks' || urlFilter === 'all') {
+    if (urlFilter === 'epics' || urlFilter === 'stories' || urlFilter === 'tasks' || urlFilter === 'all') {
       setViewFilter(urlFilter);
     }
   }, [searchParams]);
@@ -68,9 +71,14 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
   const [isEpicModalOpen, setIsEpicModalOpen] = useState(false);
   const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
 
-  // Fetch tasks and epics using TanStack Query
+  // Story modal state
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+  const [selectedEpicForStory, setSelectedEpicForStory] = useState<string | null>(null);
+
+  // Fetch tasks, epics and stories using TanStack Query
   const { data: tasks = [], isLoading: isLoadingTasks } = useProjectTasks(projectId);
   const { data: epics = [], isLoading: isLoadingEpics } = useProjectEpics(projectId);
+  const { data: stories = [], isLoading: isLoadingStories } = useProjectStories(projectId);
 
   // Mutations for task operations
   const updateTaskMutation = useUpdateTask(projectId);
@@ -126,6 +134,23 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
     // For now, we'll just show the Epic edit modal - delete functionality can be added later
     console.log('Epic delete requested for:', epic.title);
     // TODO: Implement Epic delete functionality
+  };
+
+  // Story modal management functions
+  const openCreateStoryModal = () => {
+    // For Kanban usage, we don't pre-select an epic - let the modal handle it
+    setSelectedEpicForStory(null);
+    setIsStoryModalOpen(true);
+  };
+
+  const closeStoryModal = () => {
+    setSelectedEpicForStory(null);
+    setIsStoryModalOpen(false);
+  };
+
+  const handleStorySaved = () => {
+    setIsStoryModalOpen(false);
+    setSelectedEpicForStory(null);
   };
 
   // Delete modal management functions
@@ -253,17 +278,19 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
     switch (viewFilter) {
       case 'epics':
         return { items: epics, type: 'epics' as const };
+      case 'stories':
+        return { items: stories, type: 'stories' as const };
       case 'tasks':
         return { items: tasks, type: 'tasks' as const };
       case 'all':
       default:
-        return { items: [...(epics || []), ...(tasks || [])], type: 'mixed' as const };
+        return { items: [...(epics || []), ...(stories || []), ...(tasks || [])], type: 'mixed' as const };
     }
   };
 
   const { items: filteredItems, type: dataType } = getFilteredData();
 
-  if (isLoadingTasks || isLoadingEpics) {
+  if (isLoadingTasks || isLoadingEpics || isLoadingStories) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -312,6 +339,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
           onFilterChange={handleFilterChange}
           onAddTask={openCreateModal}
           onAddEpic={openCreateEpicModal}
+          onAddStory={openCreateStoryModal}
         />
 
         {/* Edit/Create Task Modal */}
@@ -348,6 +376,15 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
           onClose={closeEpicModal}
           onSaved={handleEpicSaved}
         />
+
+        {/* Story Modal */}
+        <StoryModal
+          isOpen={isStoryModalOpen}
+          epicId={selectedEpicForStory}
+          projectId={projectId}
+          onClose={closeStoryModal}
+          onSaved={handleStorySaved}
+        />
       </div>
     </DndProvider>
   );
@@ -361,12 +398,14 @@ interface ViewControlsProps {
   onFilterChange: (filter: ViewFilter) => void;
   onAddTask: () => void;
   onAddEpic: () => void;
+  onAddStory: () => void;
 }
 
-const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAddTask, onAddEpic }: ViewControlsProps) => {
+const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAddTask, onAddEpic, onAddStory }: ViewControlsProps) => {
   const filterOptions = [
     { value: 'all' as ViewFilter, label: 'All', icon: '🎯' },
     { value: 'epics' as ViewFilter, label: 'EPICs', icon: '📋' },
+    { value: 'stories' as ViewFilter, label: 'Stories', icon: '📖' },
     { value: 'tasks' as ViewFilter, label: 'Tasks', icon: '✅' },
   ];
   return (
@@ -440,6 +479,35 @@ const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAd
                   "bg-gradient-to-r from-transparent via-purple-500 to-transparent",
                   "shadow-[0_0_10px_2px_rgba(168,85,247,0.4)]",
                   "dark:shadow-[0_0_20px_5px_rgba(168,85,247,0.7)]",
+                )}
+              />
+            </Button>
+          )}
+
+          {/* Add Story Button - show for 'stories' or 'all' filter */}
+          {(viewFilter === 'stories' || viewFilter === 'all') && (
+            <Button
+              onClick={onAddStory}
+              variant="outline"
+              className={cn(
+                "pointer-events-auto relative",
+                glassmorphism.background.subtle,
+                glassmorphism.border.default,
+                glassmorphism.shadow.elevated,
+                "text-orange-600 dark:text-orange-400",
+                "hover:text-orange-700 dark:hover:text-orange-300",
+                "transition-all duration-300",
+              )}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              <span>Add Story</span>
+              {/* Glow effect */}
+              <span
+                className={cn(
+                  "absolute bottom-0 left-0 right-0 h-[2px]",
+                  "bg-gradient-to-r from-transparent via-orange-500 to-transparent",
+                  "shadow-[0_0_10px_2px_rgba(251,146,60,0.4)]",
+                  "dark:shadow-[0_0_20px_5px_rgba(251,146,60,0.7)]",
                 )}
               />
             </Button>

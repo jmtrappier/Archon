@@ -21,6 +21,7 @@ import { useTaskEditor } from "../hooks";
 import type { Assignee, Task } from "../types";
 import { FeatureSelect } from "./FeatureSelect";
 import type { Priority } from "./TaskPriority";
+import { useProjectStories } from "../../stories/hooks/useStoryQueries";
 
 interface TaskEditModalProps {
   isModalOpen: boolean;
@@ -40,12 +41,15 @@ export const TaskEditModal = memo(
     // Use business logic hook
     const { projectFeatures, saveTask, isLoadingFeatures, isSaving: isSavingTask } = useTaskEditor(projectId);
 
+    // Fetch project stories for STORY selection (CRITICAL: TASK must have STORY parent)
+    const { data: projectStories = [], isLoading: isLoadingStories } = useProjectStories(projectId);
+
     // Sync local state with editingTask when it changes
     useEffect(() => {
       if (editingTask) {
         setLocalTask(editingTask);
       } else {
-        // Reset for new task
+        // Reset for new task - CRITICAL: storyId is now REQUIRED
         setLocalTask({
           title: "",
           description: "",
@@ -53,6 +57,7 @@ export const TaskEditModal = memo(
           assignee: "User" as Assignee,
           feature: "",
           priority: "medium" as Priority, // Frontend-only priority
+          storyId: "", // MANDATORY: TASK must be linked to a STORY
         });
       }
     }, [editingTask]);
@@ -68,6 +73,10 @@ export const TaskEditModal = memo(
 
     const handleFeatureChange = useCallback((value: string) => {
       setLocalTask((prev) => (prev ? { ...prev, feature: value } : null));
+    }, []);
+
+    const handleStoryChange = useCallback((value: string) => {
+      setLocalTask((prev) => (prev ? { ...prev, storyId: value } : null));
     }, []);
 
     const handleSave = useCallback(() => {
@@ -97,6 +106,26 @@ export const TaskEditModal = memo(
                 onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder="Enter task title"
               />
+            </FormField>
+
+            <FormField>
+              <Label required>Story</Label>
+              <Select
+                value={(localTask as any)?.storyId || ""}
+                onValueChange={handleStoryChange}
+                disabled={isLoadingStories}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={isLoadingStories ? "Loading stories..." : "Select a Story *"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectStories.map((story: any) => (
+                    <SelectItem key={story.id} value={story.id}>
+                      {story.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormField>
 
             <FormField>
@@ -195,7 +224,7 @@ export const TaskEditModal = memo(
               onClick={handleSave}
               variant="cyan"
               loading={isSavingTask}
-              disabled={isSavingTask || !localTask?.title}
+              disabled={isSavingTask || !localTask?.title || !localTask?.storyId}
             >
               {editingTask?.id ? "Update Task" : "Create Task"}
             </Button>
