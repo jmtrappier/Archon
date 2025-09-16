@@ -283,12 +283,12 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       port: parseInt(process.env.ARCHON_UI_PORT || env.ARCHON_UI_PORT || '3737'), // Use configurable port
       strictPort: true, // Exit if port is in use
       allowedHosts: (() => {
-        const defaultHosts = ['localhost', '127.0.0.1', '::1'];
+        const defaultHosts = ['localhost', '127.0.0.1', '::1', 'archon-ui', 'archon-server'];
         const customHosts = env.VITE_ALLOWED_HOSTS?.trim()
           ? env.VITE_ALLOWED_HOSTS.split(',').map(h => h.trim()).filter(Boolean)
           : [];
-        const hostFromEnv = (process.env.HOST ?? env.HOST) && (process.env.HOST ?? env.HOST) !== 'localhost' 
-          ? [process.env.HOST ?? env.HOST] 
+        const hostFromEnv = (process.env.HOST ?? env.HOST) && (process.env.HOST ?? env.HOST) !== 'localhost'
+          ? [process.env.HOST ?? env.HOST]
           : [];
         return [...new Set([...defaultHosts, ...hostFromEnv, ...customHosts])];
       })(),

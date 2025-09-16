@@ -116,6 +116,18 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
     setEditingEpic(null);
   };
 
+  // Epic edit and delete handlers
+  const handleEpicEdit = (epic: Epic) => {
+    setEditingEpic(epic);
+    setIsEpicModalOpen(true);
+  };
+
+  const handleEpicDelete = (epic: Epic) => {
+    // For now, we'll just show the Epic edit modal - delete functionality can be added later
+    console.log('Epic delete requested for:', epic.title);
+    // TODO: Implement Epic delete functionality
+  };
+
   // Delete modal management functions
   const openDeleteModal = (task: Task) => {
     setTaskToDelete(task);
@@ -286,6 +298,8 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
               onTaskReorder={handleTaskReorder}
               onTaskEdit={openTaskView}
               onTaskDelete={openDeleteModal}
+              onEpicEdit={handleEpicEdit}
+              onEpicDelete={handleEpicDelete}
             />
           )}
         </div>
