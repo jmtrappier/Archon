@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +28,7 @@ export const EpicModal: React.FC<EpicModalProps> = ({
   onSaved,
 }) => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -113,6 +116,11 @@ export const EpicModal: React.FC<EpicModalProps> = ({
     }
   }, [formData, isEditing, editingEpic?.id, createEpicMutation, updateEpicMutation, onSaved, showToast, projectId]);
 
+  const handleBackToKanban = useCallback(() => {
+    onClose();
+    navigate(`/projects/${projectId}?view=board&filter=all`);
+  }, [navigate, projectId, onClose]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
@@ -194,13 +202,22 @@ export const EpicModal: React.FC<EpicModalProps> = ({
             <label htmlFor="mvp_flag" className="text-sm font-medium">MVP (Minimum Viable Product)</label>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
+          <div className="flex justify-between items-center pt-4">
+            {/* Back to Kanban button on the left */}
+            <Button type="button" variant="outline" onClick={handleBackToKanban} className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Kanban
             </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving..." : isEditing ? "Update Epic" : "Create Epic"}
-            </Button>
+
+            {/* Action buttons on the right */}
+            <div className="flex space-x-2">
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Saving..." : isEditing ? "Update Epic" : "Create Epic"}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

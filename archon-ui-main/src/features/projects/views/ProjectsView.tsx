@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useStaggeredEntrance } from "../../../hooks/useStaggeredEntrance";
 import { DeleteConfirmModal } from "../../ui/components/DeleteConfirmModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/primitives";
@@ -47,6 +47,7 @@ const itemVariants = {
 
 export function ProjectsView({ className = "", "data-id": dataId }: ProjectsViewProps) {
   const { projectId, epicId, storyId, taskId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -55,9 +56,17 @@ export function ProjectsView({ className = "", "data-id": dataId }: ProjectsView
     if (taskId) return "task";
     if (storyId) return "story";
     if (epicId) return "epic";
-    if (projectId) return "project";
+    if (projectId) {
+      const viewParam = searchParams.get('view');
+      const filterParam = searchParams.get('filter');
+      // If we have view=board or specific filters, show TasksTab instead of ProjectDashboard
+      if (viewParam === 'board' || viewParam === 'table' || filterParam) {
+        return "project-tasks";
+      }
+      return "project";
+    }
     return "list";
-  }, [projectId, epicId, storyId, taskId]);
+  }, [projectId, epicId, storyId, taskId, searchParams]);
 
   // State management
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -93,7 +102,7 @@ export function ProjectsView({ className = "", "data-id": dataId }: ProjectsView
 
       setSelectedProject(project);
       setActiveTab("tasks");
-      navigate(`/projects/${project.id}`, { replace: true });
+      navigate(`/projects/${project.id}?view=board&filter=all`, { replace: true });
     },
     [selectedProject?.id, navigate],
   );
@@ -115,7 +124,7 @@ export function ProjectsView({ className = "", "data-id": dataId }: ProjectsView
     if (!selectedProject || !sortedProjects.find((p) => p.id === selectedProject.id)) {
       const defaultProject = sortedProjects[0];
       setSelectedProject(defaultProject);
-      navigate(`/projects/${defaultProject.id}`, { replace: true });
+      navigate(`/projects/${defaultProject.id}?view=board&filter=all`, { replace: true });
     }
   }, [sortedProjects, projectId, selectedProject, navigate]);
 
@@ -160,7 +169,7 @@ export function ProjectsView({ className = "", "data-id": dataId }: ProjectsView
           if (remainingProjects.length > 0) {
             const nextProject = remainingProjects[0];
             setSelectedProject(nextProject);
-            navigate(`/projects/${nextProject.id}`, { replace: true });
+            navigate(`/projects/${nextProject.id}?view=board&filter=all`, { replace: true });
           } else {
             setSelectedProject(null);
             navigate("/projects", { replace: true });
@@ -189,6 +198,14 @@ export function ProjectsView({ className = "", "data-id": dataId }: ProjectsView
 
   if (currentView === "epic" && epicId) {
     return <EpicDetailView />;
+  }
+
+  if (currentView === "project-tasks" && projectId && !epicId && !storyId && !taskId) {
+    return (
+      <div className="max-w-full mx-auto">
+        <TasksTab projectId={projectId} />
+      </div>
+    );
   }
 
   if (currentView === "project" && projectId && !epicId && !storyId && !taskId) {

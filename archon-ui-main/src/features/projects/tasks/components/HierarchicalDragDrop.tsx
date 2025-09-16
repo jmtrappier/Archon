@@ -266,9 +266,9 @@ export const HierarchicalDragWrapper: FC<HierarchicalDragWrapperProps> = ({
 
 // Utility hook for hierarchical drag & drop operations
 export const useHierarchicalDragDrop = () => {
-  // Import existing services that support hierarchical operations
-  const { taskService } = require('../services/taskService');
-  const { storyService } = require('../../stories/services/storyService');
+  // Services are not yet implemented - will be integrated later
+  const taskService = undefined;
+  const storyService = undefined;
 
   // Move story between epics
   const moveStoryToEpic = async (storyId: string, targetEpicId: string) => {

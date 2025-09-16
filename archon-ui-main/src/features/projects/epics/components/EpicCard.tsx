@@ -235,7 +235,7 @@ export const EpicCard: React.FC<EpicCardProps> = ({
                       color: priorityColor,
                     }}
                   >
-                    {epic.priority?.toUpperCase()}
+                    {String(epic.priority || "").toUpperCase()}
                   </Badge>
                 )}
               </div>

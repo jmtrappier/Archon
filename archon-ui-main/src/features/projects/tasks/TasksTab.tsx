@@ -8,6 +8,7 @@ import { Button } from "../../ui/primitives";
 import { cn, glassmorphism } from "../../ui/primitives/styles";
 import { useProjectEpics } from "../epics/hooks/useEpicQueries";
 import type { Epic } from "../epics/types";
+import { EpicModal } from "../epics/components/EpicModal";
 import { TaskEditModal, TaskView } from "./components";
 import { useDeleteTask, useProjectTasks, useUpdateTask } from "./hooks";
 import type { Task } from "./types";
@@ -63,6 +64,10 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [viewingTask, setViewingTask] = useState<Task | null>(null); // For detailed task view
 
+  // Epic modal state
+  const [isEpicModalOpen, setIsEpicModalOpen] = useState(false);
+  const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
+
   // Fetch tasks and epics using TanStack Query
   const { data: tasks = [], isLoading: isLoadingTasks } = useProjectTasks(projectId);
   const { data: epics = [], isLoading: isLoadingEpics } = useProjectEpics(projectId);
@@ -93,6 +98,22 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
   const closeModal = () => {
     setEditingTask(null);
     setIsModalOpen(false);
+  };
+
+  // Epic modal management functions
+  const openCreateEpicModal = () => {
+    setEditingEpic(null);
+    setIsEpicModalOpen(true);
+  };
+
+  const closeEpicModal = () => {
+    setEditingEpic(null);
+    setIsEpicModalOpen(false);
+  };
+
+  const handleEpicSaved = () => {
+    setIsEpicModalOpen(false);
+    setEditingEpic(null);
   };
 
   // Delete modal management functions
@@ -276,6 +297,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
           onViewChange={handleViewModeChange}
           onFilterChange={handleFilterChange}
           onAddTask={openCreateModal}
+          onAddEpic={openCreateEpicModal}
         />
 
         {/* Edit/Create Task Modal */}
@@ -303,6 +325,15 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
             isModal={true}
           />
         )}
+
+        {/* Epic Modal */}
+        <EpicModal
+          isOpen={isEpicModalOpen}
+          projectId={projectId}
+          editingEpic={editingEpic}
+          onClose={closeEpicModal}
+          onSaved={handleEpicSaved}
+        />
       </div>
     </DndProvider>
   );
@@ -311,11 +342,19 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
 // Extracted ViewControls component using Radix primitives
 interface ViewControlsProps {
   viewMode: "table" | "board";
+  viewFilter: ViewFilter;
   onViewChange: (mode: "table" | "board") => void;
+  onFilterChange: (filter: ViewFilter) => void;
   onAddTask: () => void;
+  onAddEpic: () => void;
 }
 
-const ViewControls = ({ viewMode, onViewChange, onAddTask }: ViewControlsProps) => {
+const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAddTask, onAddEpic }: ViewControlsProps) => {
+  const filterOptions = [
+    { value: 'all' as ViewFilter, label: 'All', icon: '🎯' },
+    { value: 'epics' as ViewFilter, label: 'EPICs', icon: '📋' },
+    { value: 'tasks' as ViewFilter, label: 'Tasks', icon: '✅' },
+  ];
   return (
     <div className="fixed bottom-6 left-0 right-0 flex justify-center z-50 pointer-events-none">
       <div className="flex items-center gap-4">
@@ -361,32 +400,66 @@ const ViewControls = ({ viewMode, onViewChange, onAddTask }: ViewControlsProps) 
             </>
           ))}
         </div>
-        {/* Add Task Button with Glassmorphism */}
-        <Button
-          onClick={onAddTask}
-          variant="outline"
-          className={cn(
-            "pointer-events-auto relative",
-            glassmorphism.background.subtle,
-            glassmorphism.border.default,
-            glassmorphism.shadow.elevated,
-            "text-cyan-600 dark:text-cyan-400",
-            "hover:text-cyan-700 dark:hover:text-cyan-300",
-            "transition-all duration-300",
+        {/* Add Buttons with Glassmorphism - Conditional based on filter */}
+        <div className="flex items-center gap-2">
+          {/* Add Epic Button - show for 'epics' or 'all' filter */}
+          {(viewFilter === 'epics' || viewFilter === 'all') && (
+            <Button
+              onClick={onAddEpic}
+              variant="outline"
+              className={cn(
+                "pointer-events-auto relative",
+                glassmorphism.background.subtle,
+                glassmorphism.border.default,
+                glassmorphism.shadow.elevated,
+                "text-purple-600 dark:text-purple-400",
+                "hover:text-purple-700 dark:hover:text-purple-300",
+                "transition-all duration-300",
+              )}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              <span>Add Epic</span>
+              {/* Glow effect */}
+              <span
+                className={cn(
+                  "absolute bottom-0 left-0 right-0 h-[2px]",
+                  "bg-gradient-to-r from-transparent via-purple-500 to-transparent",
+                  "shadow-[0_0_10px_2px_rgba(168,85,247,0.4)]",
+                  "dark:shadow-[0_0_20px_5px_rgba(168,85,247,0.7)]",
+                )}
+              />
+            </Button>
           )}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          <span>Add Task</span>
-          {/* Glow effect */}
-          <span
-            className={cn(
-              "absolute bottom-0 left-0 right-0 h-[2px]",
-              "bg-gradient-to-r from-transparent via-cyan-500 to-transparent",
-              "shadow-[0_0_10px_2px_rgba(34,211,238,0.4)]",
-              "dark:shadow-[0_0_20px_5px_rgba(34,211,238,0.7)]",
-            )}
-          />
-        </Button>
+
+          {/* Add Task Button - show for 'tasks' or 'all' filter */}
+          {(viewFilter === 'tasks' || viewFilter === 'all') && (
+            <Button
+              onClick={onAddTask}
+              variant="outline"
+              className={cn(
+                "pointer-events-auto relative",
+                glassmorphism.background.subtle,
+                glassmorphism.border.default,
+                glassmorphism.shadow.elevated,
+                "text-cyan-600 dark:text-cyan-400",
+                "hover:text-cyan-700 dark:hover:text-cyan-300",
+                "transition-all duration-300",
+              )}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              <span>Add Task</span>
+              {/* Glow effect */}
+              <span
+                className={cn(
+                  "absolute bottom-0 left-0 right-0 h-[2px]",
+                  "bg-gradient-to-r from-transparent via-cyan-500 to-transparent",
+                  "shadow-[0_0_10px_2px_rgba(34,211,238,0.4)]",
+                  "dark:shadow-[0_0_20px_5px_rgba(34,211,238,0.7)]",
+                )}
+              />
+            </Button>
+          )}
+        </div>
 
         {/* View Toggle Controls with Glassmorphism */}
         <div
