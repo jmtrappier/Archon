@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { Button, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives";
 import { cn } from "../../../ui/primitives/styles";
+import type { Epic } from "../../epics/types";
 import { EditableTableCell } from "../components/EditableTableCell";
 import { TaskAssignee } from "../components/TaskAssignee";
 import { useDeleteTask, useUpdateTask } from "../hooks";
@@ -11,7 +12,9 @@ import { getOrderColor, getOrderGlow, ItemTypes } from "../utils/task-styles";
 
 interface TableViewProps {
   tasks: Task[];
+  epics: Epic[];
   projectId: string;
+  dataType: 'epics' | 'tasks' | 'mixed';
   onTaskView?: (task: Task) => void;
   onTaskComplete?: (taskId: string) => void;
   onTaskDelete?: (task: Task) => void;
@@ -222,12 +225,27 @@ const DraggableRow = ({
 
 export const TableView = ({
   tasks,
+  epics,
   projectId,
+  dataType,
   onTaskView,
   onTaskComplete,
   onTaskDelete,
   onTaskReorder,
 }: TableViewProps) => {
+  // Handle EPICs view with informative message
+  if (dataType === 'epics' || dataType === 'mixed') {
+    return (
+      <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+        <div className="text-center">
+          <p className="text-lg font-medium">EPICs Table View</p>
+          <p className="text-sm mt-2">EPICs are best viewed in Board mode. Use the Board view for better EPIC management.</p>
+          <p className="text-xs mt-2 opacity-75">Switch to Board view using the controls below ⬇️</p>
+        </div>
+      </div>
+    );
+  }
+  // Only show tasks in table view
   // Group tasks by status for better organization
   const groupedTasks = React.useMemo(() => {
     const groups: Record<Task["status"], Task[]> = {

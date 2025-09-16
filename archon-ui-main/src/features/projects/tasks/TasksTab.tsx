@@ -1,10 +1,13 @@
-import { LayoutGrid, Plus, Table } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Filter, LayoutGrid, Plus, Table } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { useSearchParams } from "react-router-dom";
 import { DeleteConfirmModal } from "../../ui/components/DeleteConfirmModal";
 import { Button } from "../../ui/primitives";
 import { cn, glassmorphism } from "../../ui/primitives/styles";
+import { useProjectEpics } from "../epics/hooks/useEpicQueries";
+import type { Epic } from "../epics/types";
 import { TaskEditModal, TaskView } from "./components";
 import { useDeleteTask, useProjectTasks, useUpdateTask } from "./hooks";
 import type { Task } from "./types";
@@ -15,16 +18,54 @@ interface TasksTabProps {
   projectId: string;
 }
 
+type ViewFilter = 'all' | 'epics' | 'tasks';
+
 export const TasksTab = ({ projectId }: TasksTabProps) => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<"table" | "board">("board");
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
+
+  // Sync with URL parameters
+  useEffect(() => {
+    const urlView = searchParams.get('view');
+    const urlFilter = searchParams.get('filter');
+
+    if (urlView === 'table' || urlView === 'board') {
+      setViewMode(urlView);
+    }
+
+    if (urlFilter === 'epics' || urlFilter === 'tasks' || urlFilter === 'all') {
+      setViewFilter(urlFilter);
+    }
+  }, [searchParams]);
+
+  // Update URL when view or filter changes
+  const handleViewModeChange = useCallback((mode: 'table' | 'board') => {
+    setViewMode(mode);
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('view', mode);
+      return newParams;
+    });
+  }, [setSearchParams]);
+
+  const handleFilterChange = useCallback((filter: ViewFilter) => {
+    setViewFilter(filter);
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('filter', filter);
+      return newParams;
+    });
+  }, [setSearchParams]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [viewingTask, setViewingTask] = useState<Task | null>(null); // For detailed task view
 
-  // Fetch tasks using TanStack Query
+  // Fetch tasks and epics using TanStack Query
   const { data: tasks = [], isLoading: isLoadingTasks } = useProjectTasks(projectId);
+  const { data: epics = [], isLoading: isLoadingEpics } = useProjectEpics(projectId);
 
   // Mutations for task operations
   const updateTaskMutation = useUpdateTask(projectId);
@@ -174,7 +215,22 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
     }
   };
 
-  if (isLoadingTasks) {
+  // Filter data based on current filter
+  const getFilteredData = () => {
+    switch (viewFilter) {
+      case 'epics':
+        return { items: epics, type: 'epics' as const };
+      case 'tasks':
+        return { items: tasks, type: 'tasks' as const };
+      case 'all':
+      default:
+        return { items: [...(epics || []), ...(tasks || [])], type: 'mixed' as const };
+    }
+  };
+
+  const { items: filteredItems, type: dataType } = getFilteredData();
+
+  if (isLoadingTasks || isLoadingEpics) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -189,9 +245,11 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
         <div className="relative h-[calc(100vh-220px)] overflow-auto">
           {viewMode === "table" ? (
             <TableView
-              tasks={tasks as Task[]}
+              tasks={dataType === 'epics' ? [] : tasks as Task[]}
+              epics={dataType === 'tasks' ? [] : epics as Epic[]}
               projectId={projectId}
-              onTaskView={openTaskView} // Changed to use detailed task view
+              dataType={dataType}
+              onTaskView={openTaskView}
               onTaskComplete={completeTask}
               onTaskDelete={openDeleteModal}
               onTaskReorder={handleTaskReorder}
@@ -199,18 +257,26 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
             />
           ) : (
             <BoardView
-              tasks={tasks as Task[]}
+              tasks={dataType === 'epics' ? [] : tasks as Task[]}
+              epics={dataType === 'tasks' ? [] : epics as Epic[]}
               projectId={projectId}
+              dataType={dataType}
               onTaskMove={moveTask}
               onTaskReorder={handleTaskReorder}
-              onTaskEdit={openTaskView} // Changed to use detailed task view
+              onTaskEdit={openTaskView}
               onTaskDelete={openDeleteModal}
             />
           )}
         </div>
 
         {/* Fixed View Controls using Radix primitives */}
-        <ViewControls viewMode={viewMode} onViewChange={setViewMode} onAddTask={openCreateModal} />
+        <ViewControls
+          viewMode={viewMode}
+          viewFilter={viewFilter}
+          onViewChange={handleViewModeChange}
+          onFilterChange={handleFilterChange}
+          onAddTask={openCreateModal}
+        />
 
         {/* Edit/Create Task Modal */}
         <TaskEditModal isModalOpen={isModalOpen} editingTask={editingTask} projectId={projectId} onClose={closeModal} />
@@ -253,6 +319,48 @@ const ViewControls = ({ viewMode, onViewChange, onAddTask }: ViewControlsProps) 
   return (
     <div className="fixed bottom-6 left-0 right-0 flex justify-center z-50 pointer-events-none">
       <div className="flex items-center gap-4">
+        {/* Filter Controls */}
+        <div
+          className={cn(
+            "flex items-center overflow-hidden pointer-events-auto",
+            glassmorphism.background.subtle,
+            glassmorphism.border.default,
+            glassmorphism.shadow.elevated,
+            "rounded-lg",
+          )}
+        >
+          {filterOptions.map((option, index) => (
+            <>
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onFilterChange(option.value)}
+                className={cn(
+                  "px-3 py-2.5 flex items-center gap-2 relative transition-all duration-300 text-sm",
+                  viewFilter === option.value
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300",
+                )}
+              >
+                <span className="text-xs">{option.icon}</span>
+                <span className="hidden sm:inline">{option.label}</span>
+                {viewFilter === option.value && (
+                  <span
+                    className={cn(
+                      "absolute bottom-0 left-[10%] right-[10%] w-[80%] mx-auto h-[2px]",
+                      "bg-emerald-500",
+                      "shadow-[0_0_10px_2px_rgba(16,185,129,0.4)]",
+                      "dark:shadow-[0_0_20px_5px_rgba(16,185,129,0.7)]",
+                    )}
+                  />
+                )}
+              </button>
+              {index < filterOptions.length - 1 && (
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-700" />
+              )}
+            </>
+          ))}
+        </div>
         {/* Add Task Button with Glassmorphism */}
         <Button
           onClick={onAddTask}

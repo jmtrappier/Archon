@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, FileText, AlertCircle } from "lucide-react";
+import { Plus, FileText, AlertCircle, LayoutGrid } from "lucide-react";
 import { HierarchyLayout } from "../../hierarchy/components/HierarchyLayout";
 import { ProgressCard } from "../../hierarchy/components/ProgressCard";
 import { HierarchyBreadcrumb } from "@/features/ui/components/navigation";
@@ -33,6 +33,10 @@ export const EpicDetailView: React.FC = () => {
 
   const handleBack = useCallback(() => {
     navigate(`/projects/${projectId}`);
+  }, [navigate, projectId]);
+
+  const handleViewKanban = useCallback(() => {
+    navigate(`/projects/${projectId}?view=board&filter=epics`);
   }, [navigate, projectId]);
 
   const handleStoryClick = useCallback((storyId: string) => {
@@ -144,10 +148,16 @@ export const EpicDetailView: React.FC = () => {
               Stories are features or requirements that deliver value to users.
               Create your first story to break down this epic.
             </p>
-            <Button onClick={handleAddStory} className="mx-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Story
-            </Button>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={handleAddStory} className="">
+                <Plus className="h-4 w-4 mr-2" />
+                Create First Story
+              </Button>
+              <Button onClick={handleViewKanban} variant="outline" className="">
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                View Project Kanban
+              </Button>
+            </div>
           </div>
         ) : (
           <>
