@@ -44,7 +44,7 @@ export const EpicView: React.FC<EpicViewProps> = ({
     error,
   } = useProjectEpics(projectId);
 
-  const createEpic = useCreateEpic();
+  const createEpic = useCreateEpic(projectId);
   const deleteEpic = useDeleteEpic(projectId);
 
   // Set project context when component mounts or project data changes

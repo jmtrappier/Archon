@@ -19,10 +19,10 @@ export interface Epic {
 export const epicService = {
   async listEpics(projectId: string): Promise<Epic[]> {
     try {
-      const response = await callAPIWithETag<{ epics: Epic[] }>(
+      const response = await callAPIWithETag<Epic[]>(
         `/api/projects/${projectId}/epics`
       );
-      return response.epics || [];
+      return response || [];
     } catch (error) {
       console.error(`Failed to list epics for project ${projectId}:`, error);
       throw error;

@@ -20,6 +20,9 @@ export const useEpics = (projectId: string) => {
   });
 };
 
+// Alias for backward compatibility
+export const useProjectEpics = useEpics;
+
 // Get a single epic
 export const useEpic = (epicId: string) => {
   return useQuery({
@@ -61,6 +64,24 @@ export const useUpdateEpic = (projectId: string) => {
     },
     onError: (error: any) => {
       showToast(error.message || "Failed to update epic", "error");
+    },
+  });
+};
+
+// Update epic status mutation
+export const useUpdateEpicStatus = (projectId: string) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ epicId, status }: { epicId: string; status: string }) =>
+      epicService.updateEpic(epicId, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: epicKeys.list(projectId) });
+      showToast("Epic status updated", "success");
+    },
+    onError: (error: any) => {
+      showToast(error.message || "Failed to update epic status", "error");
     },
   });
 };
