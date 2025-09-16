@@ -1,0 +1,106 @@
+# Prometheus Configuration for Archon-TRAXIS Production Monitoring
+# Collects metrics from all Archon services for observability
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'production'
+    project: 'archon-traxis'
+
+# Alerting rules
+rule_files:
+  - "alerts.yml"
+
+# Alertmanager configuration (optional - configure if needed)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Archon Server (Main Backend API)
+  - job_name: 'archon-server'
+    static_configs:
+      - targets: ['archon-server:8181']
+    metrics_path: '/api/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    health_checks:
+      - target: 'archon-server:8181/api/health'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+      - source_labels: [__address__]
+        regex: '(.*):.*'
+        target_label: host
+        replacement: '${1}'
+
+  # Archon MCP Server (IDE Integration)
+  - job_name: 'archon-mcp'
+    static_configs:
+      - targets: ['archon-mcp:8051']
+    metrics_path: '/health'  # MCP uses tool-based metrics
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    health_checks:
+      - target: 'archon-mcp:8051/health'
+
+  # Archon Agents (AI Processing) - Optional
+  - job_name: 'archon-agents'
+    static_configs:
+      - targets: ['archon-agents:8052']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    health_checks:
+      - target: 'archon-agents:8052/health'
+
+  # Archon Frontend (React App)
+  - job_name: 'archon-frontend'
+    static_configs:
+      - targets: ['archon-frontend:3737']
+    metrics_path: '/health'
+    scrape_interval: 60s  # Less frequent for frontend
+    scrape_timeout: 10s
+
+  # Nginx Reverse Proxy
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    metrics_path: '/nginx_status'
+    scrape_interval: 30s
+
+  # Redis Cache
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    metrics_path: '/info'
+    scrape_interval: 30s
+
+  # System Metrics (if node_exporter is available)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+  # Docker container metrics (if cadvisor is available)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+
+# Optional: Recording rules for common queries
+# recording_rules:
+#   - name: archon_requests
+#     rules:
+#     - record: archon:request_rate_5m
+#       expr: rate(archon_requests_total[5m])
+#     - record: archon:request_latency_95p
+#       expr: histogram_quantile(0.95, rate(archon_request_duration_seconds_bucket[5m]))

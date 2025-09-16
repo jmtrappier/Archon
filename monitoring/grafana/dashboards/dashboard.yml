@@ -1,0 +1,11 @@
+# Grafana Dashboard Configuration
+apiVersion: 1
+
+providers:
+  - name: 'Archon TRAXIS Dashboards'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

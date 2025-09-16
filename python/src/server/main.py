@@ -23,6 +23,7 @@ from .api_routes.bug_report_api import router as bug_report_router
 from .api_routes.internal_api import router as internal_router
 from .api_routes.knowledge_api import router as knowledge_router
 from .api_routes.mcp_api import router as mcp_router
+from .api_routes.monitoring_api import router as monitoring_router
 from .api_routes.progress_api import router as progress_router
 from .api_routes.projects_api import router as projects_router
 
@@ -166,12 +167,17 @@ app.add_middleware(
 )
 
 
-# Add middleware to skip logging for health checks
+# Add middleware to skip logging for health checks and collect metrics
 @app.middleware("http")
-async def skip_health_check_logs(request, call_next):
+async def monitoring_middleware(request, call_next):
+    import time
+    from .api_routes.monitoring_api import increment_request_counter, record_request_duration, increment_error_counter
+
+    start_time = time.time()
+
     # Skip logging for health check endpoints
-    if request.url.path in ["/health", "/api/health"]:
-        # Temporarily suppress the log
+    if request.url.path in ["/health", "/api/health", "/api/health/ready", "/api/health/live", "/api/metrics"]:
+        # Temporarily suppress the log for health endpoints
         import logging
 
         logger = logging.getLogger("uvicorn.access")
@@ -179,11 +185,24 @@ async def skip_health_check_logs(request, call_next):
         logger.setLevel(logging.ERROR)
         response = await call_next(request)
         logger.setLevel(old_level)
-        return response
-    return await call_next(request)
+    else:
+        # Process regular requests and collect metrics
+        increment_request_counter()
+        response = await call_next(request)
+
+    # Record request duration for all requests
+    duration = time.time() - start_time
+    record_request_duration(duration)
+
+    # Track errors
+    if response.status_code >= 400:
+        increment_error_counter()
+
+    return response
 
 
 # Include API routers
+app.include_router(monitoring_router)  # Production monitoring endpoints
 app.include_router(settings_router)
 app.include_router(mcp_router)
 # app.include_router(mcp_client_router)  # Removed - not part of new architecture

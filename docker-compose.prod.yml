@@ -1,0 +1,452 @@
+# Docker Compose Production Configuration for Archon-TRAXIS
+# Production-ready deployment with monitoring, security hardening, and operational excellence
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d                        # Core services
+#   docker compose -f docker-compose.prod.yml --profile agents up -d       # With AI agents
+#   docker compose -f docker-compose.prod.yml --profile monitoring up -d   # With monitoring stack
+
+name: archon-traxis-prod
+
+services:
+  # === CORE APPLICATION SERVICES ===
+
+  # Main Server Service (FastAPI + Business Logic)
+  archon-server:
+    build:
+      context: ./python
+      dockerfile: Dockerfile.server
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+        ARCHON_SERVER_PORT: ${ARCHON_SERVER_PORT:-8181}
+      target: production
+    image: archon-server:production
+    container_name: archon-server-prod
+    restart: unless-stopped
+    ports:
+      - "${ARCHON_SERVER_PORT:-8181}:${ARCHON_SERVER_PORT:-8181}"
+    environment:
+      # Database & External Services
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LOGFIRE_TOKEN=${LOGFIRE_TOKEN:-}
+
+      # Service Configuration
+      - SERVICE_DISCOVERY_MODE=docker_compose
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENVIRONMENT=production
+      - DEBUG=false
+
+      # Service Ports
+      - ARCHON_SERVER_PORT=${ARCHON_SERVER_PORT:-8181}
+      - ARCHON_MCP_PORT=${ARCHON_MCP_PORT:-8051}
+      - ARCHON_AGENTS_PORT=${ARCHON_AGENTS_PORT:-8052}
+      - AGENTS_ENABLED=${AGENTS_ENABLED:-false}
+
+      # Security
+      - API_KEY_HEADER=${API_KEY_HEADER:-X-API-Key}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3737}
+
+      # Performance
+      - WORKER_PROCESSES=${WORKER_PROCESSES:-4}
+      - MAX_CONNECTIONS=${MAX_CONNECTIONS:-1000}
+      - CONNECTION_TIMEOUT=${CONNECTION_TIMEOUT:-30}
+
+    networks:
+      - app-network
+      - monitoring-network
+
+    volumes:
+      - ./python/logs:/app/logs:rw
+      - ./migration:/app/migration:ro
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${ARCHON_SERVER_PORT:-8181}/api/health/ready')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+    security_opt:
+      - no-new-privileges:true
+
+    user: "1000:1000"  # Non-root user
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+
+  # MCP Server Service (IDE Integration)
+  archon-mcp:
+    build:
+      context: ./python
+      dockerfile: Dockerfile.mcp
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+        ARCHON_MCP_PORT: ${ARCHON_MCP_PORT:-8051}
+      target: production
+    image: archon-mcp:production
+    container_name: archon-mcp-prod
+    restart: unless-stopped
+    ports:
+      - "${ARCHON_MCP_PORT:-8051}:${ARCHON_MCP_PORT:-8051}"
+
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - LOGFIRE_TOKEN=${LOGFIRE_TOKEN:-}
+      - SERVICE_DISCOVERY_MODE=docker_compose
+      - TRANSPORT=sse
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENVIRONMENT=production
+
+      # Service Communication
+      - API_SERVICE_URL=http://archon-server:${ARCHON_SERVER_PORT:-8181}
+      - AGENTS_ENABLED=${AGENTS_ENABLED:-false}
+      - AGENTS_SERVICE_URL=http://archon-agents:${ARCHON_AGENTS_PORT:-8052}
+      - ARCHON_MCP_PORT=${ARCHON_MCP_PORT:-8051}
+      - ARCHON_SERVER_PORT=${ARCHON_SERVER_PORT:-8181}
+      - ARCHON_AGENTS_PORT=${ARCHON_AGENTS_PORT:-8052}
+
+      # Performance
+      - MCP_REQUEST_TIMEOUT=${MCP_REQUEST_TIMEOUT:-30}
+      - MAX_CONCURRENT_REQUESTS=${MAX_CONCURRENT_REQUESTS:-100}
+
+    networks:
+      - app-network
+      - monitoring-network
+
+    volumes:
+      - ./python/logs:/app/logs:rw
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+    depends_on:
+      archon-server:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${ARCHON_MCP_PORT:-8051}/health/ready')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # AI Agents Service (Optional - Production ML/AI Processing)
+  archon-agents:
+    profiles:
+      - agents
+    build:
+      context: ./python
+      dockerfile: Dockerfile.agents
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+        ARCHON_AGENTS_PORT: ${ARCHON_AGENTS_PORT:-8052}
+      target: production
+    image: archon-agents:production
+    container_name: archon-agents-prod
+    restart: unless-stopped
+    ports:
+      - "${ARCHON_AGENTS_PORT:-8052}:${ARCHON_AGENTS_PORT:-8052}"
+
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LOGFIRE_TOKEN=${LOGFIRE_TOKEN:-}
+      - SERVICE_DISCOVERY_MODE=docker_compose
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENVIRONMENT=production
+
+      - ARCHON_AGENTS_PORT=${ARCHON_AGENTS_PORT:-8052}
+      - ARCHON_SERVER_PORT=${ARCHON_SERVER_PORT:-8181}
+
+      # ML/AI Performance
+      - AGENT_WORKERS=${AGENT_WORKERS:-2}
+      - MODEL_CACHE_SIZE=${MODEL_CACHE_SIZE:-1G}
+      - INFERENCE_TIMEOUT=${INFERENCE_TIMEOUT:-60}
+
+    networks:
+      - app-network
+      - monitoring-network
+
+    volumes:
+      - ./python/logs:/app/logs:rw
+      - agent-cache:/app/cache
+
+    deploy:
+      resources:
+        limits:
+          cpus: '3.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${ARCHON_AGENTS_PORT:-8052}/health/ready')"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+
+  # Frontend Application (React/TypeScript)
+  archon-frontend:
+    build:
+      context: ./archon-ui-main
+      dockerfile: Dockerfile
+      target: production
+    image: archon-frontend:production
+    container_name: archon-ui-prod
+    restart: unless-stopped
+    ports:
+      - "${ARCHON_UI_PORT:-3737}:3737"
+
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://${EXTERNAL_HOST:-localhost}:${ARCHON_SERVER_PORT:-8181}
+      - VITE_ARCHON_SERVER_PORT=${ARCHON_SERVER_PORT:-8181}
+      - ARCHON_SERVER_PORT=${ARCHON_SERVER_PORT:-8181}
+      - HOST=${EXTERNAL_HOST:-localhost}
+      - PROD=true
+      - VITE_ALLOWED_HOSTS=${VITE_ALLOWED_HOSTS:-localhost}
+      - VITE_SHOW_DEVTOOLS=false
+
+      # Security
+      - VITE_CSP_ENABLED=true
+      - VITE_HTTPS_ONLY=${HTTPS_ONLY:-false}
+
+    networks:
+      - app-network
+      - monitoring-network
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+    depends_on:
+      archon-server:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3737/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+
+  # === INFRASTRUCTURE SERVICES ===
+
+  # Redis Cache (Session, Caching)
+  redis:
+    image: redis:7-alpine
+    container_name: archon-redis-prod
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+
+    networks:
+      - app-network
+
+    volumes:
+      - redis-data:/data
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+    security_opt:
+      - no-new-privileges:true
+
+  # Nginx Reverse Proxy (Load Balancing & SSL Termination)
+  nginx:
+    image: nginx:alpine
+    container_name: archon-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl:/etc/ssl/certs:ro
+      - ./logs/nginx:/var/log/nginx:rw
+
+    networks:
+      - app-network
+      - monitoring-network
+
+    depends_on:
+      - archon-server
+      - archon-frontend
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # === MONITORING SERVICES ===
+
+  # Prometheus (Metrics Collection)
+  prometheus:
+    profiles:
+      - monitoring
+    image: prom/prometheus:latest
+    container_name: archon-prometheus-prod
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+    networks:
+      - monitoring-network
+
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  # Grafana (Metrics Dashboard)
+  grafana:
+    profiles:
+      - monitoring
+    image: grafana/grafana:latest
+    container_name: archon-grafana-prod
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+
+    networks:
+      - monitoring-network
+
+    depends_on:
+      - prometheus
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+# === NETWORKS ===
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+  monitoring-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+# === VOLUMES ===
+volumes:
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  agent-cache:
+    driver: local

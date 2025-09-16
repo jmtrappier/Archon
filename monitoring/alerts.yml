@@ -1,0 +1,64 @@
+# Prometheus Alert Rules for Archon TRAXIS Production
+
+groups:
+  - name: archon_services
+    rules:
+      # Service availability alerts
+      - alert: ArchonServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Archon service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute"
+
+      # High memory usage
+      - alert: ArchonHighMemoryUsage
+        expr: archon_memory_usage_percent > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 90% for 5 minutes on {{ $labels.instance }}"
+
+      # High CPU usage
+      - alert: ArchonHighCPUUsage
+        expr: archon_cpu_usage_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% for 5 minutes on {{ $labels.instance }}"
+
+      # High error rate
+      - alert: ArchonHighErrorRate
+        expr: rate(archon_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on {{ $labels.instance }}"
+          description: "Error rate is above 10% for 2 minutes on {{ $labels.instance }}"
+
+      # Database connectivity
+      - alert: ArchonDatabaseConnectionFailed
+        expr: archon_database_queries_total == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection failed on {{ $labels.instance }}"
+          description: "No database queries recorded for 2 minutes on {{ $labels.instance }}"
+
+      # Disk space
+      - alert: ArchonHighDiskUsage
+        expr: archon_disk_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk usage on {{ $labels.instance }}"
+          description: "Disk usage is above 85% for 5 minutes on {{ $labels.instance }}"

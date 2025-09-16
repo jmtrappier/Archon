@@ -1,0 +1,238 @@
+# Archon TRAXIS - Production Deployment Makefile
+# STORY 02.04: Production Environment & Deployment
+#
+# Production-ready commands for deploying and managing Archon in production
+
+SHELL := /bin/bash
+.SHELLFLAGS := -ec
+
+# Production configuration
+COMPOSE_FILE ?= docker-compose.prod.yml
+COMPOSE_PROJECT_NAME ?= archon-traxis-prod
+ENV_FILE ?= .env
+BACKUP_DIR ?= ./backups
+LOG_DIR ?= ./logs
+
+# Docker compose command detection
+COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
+
+.PHONY: help prod-validate prod-deploy prod-start prod-stop prod-restart prod-status prod-logs prod-clean prod-backup prod-restore prod-monitor
+
+help:
+	@echo "Archon TRAXIS - Production Deployment Commands"
+	@echo "=============================================="
+	@echo ""
+	@echo "Validation & Deployment:"
+	@echo "  make prod-validate    - Validate production environment before deployment"
+	@echo "  make prod-deploy      - Full production deployment (validate + start + monitor)"
+	@echo ""
+	@echo "Service Management:"
+	@echo "  make prod-start       - Start production services"
+	@echo "  make prod-stop        - Stop production services"
+	@echo "  make prod-restart     - Restart production services"
+	@echo "  make prod-status      - Show service status and health"
+	@echo ""
+	@echo "Operations:"
+	@echo "  make prod-logs        - View aggregated logs"
+	@echo "  make prod-monitor     - Open monitoring dashboard"
+	@echo "  make prod-backup      - Create system backup"
+	@echo "  make prod-restore     - Restore from backup"
+	@echo "  make prod-clean       - Clean up production environment"
+	@echo ""
+	@echo "Configuration:"
+	@echo "  COMPOSE_FILE=$(COMPOSE_FILE)"
+	@echo "  COMPOSE_PROJECT_NAME=$(COMPOSE_PROJECT_NAME)"
+	@echo "  ENV_FILE=$(ENV_FILE)"
+
+# Validate production environment
+prod-validate:
+	@echo "🔍 Validating production environment..."
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "❌ Environment file not found: $(ENV_FILE)"; \
+		echo "Please copy .env.example to $(ENV_FILE) and configure it"; \
+		exit 1; \
+	fi
+	@set -a; source $(ENV_FILE); set +a; \
+	./scripts/production/validate-environment.sh $(COMPOSE_FILE)
+
+# Full production deployment
+prod-deploy: prod-validate
+	@echo "🚀 Starting full production deployment..."
+	@$(MAKE) prod-start
+	@echo "⏳ Waiting for services to initialize..."
+	@sleep 30
+	@$(MAKE) prod-status
+	@echo ""
+	@echo "✅ Production deployment completed!"
+	@echo "Access your services at:"
+	@set -a; source $(ENV_FILE); set +a; \
+	echo "  • Frontend: http://localhost:$${ARCHON_UI_PORT:-3737}"; \
+	echo "  • API: http://localhost:$${ARCHON_SERVER_PORT:-8181}"; \
+	echo "  • Metrics: http://localhost:$${ARCHON_SERVER_PORT:-8181}/api/metrics"
+	@if [ "$(shell docker ps --filter 'name=prometheus' --format '{{.Names}}' | wc -l)" -gt 0 ]; then \
+		echo "  • Prometheus: http://localhost:9090"; \
+		echo "  • Grafana: http://localhost:3000"; \
+	fi
+
+# Start production services
+prod-start:
+	@echo "🏭 Starting production services..."
+	@$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) up -d --build
+	@echo "✅ Production services started"
+
+# Start with monitoring stack
+prod-start-full:
+	@echo "🏭 Starting production services with monitoring..."
+	@$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) --profile monitoring up -d --build
+	@echo "✅ Production services with monitoring started"
+
+# Stop production services
+prod-stop:
+	@echo "🛑 Stopping production services..."
+	@$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) down
+	@echo "✅ Production services stopped"
+
+# Restart production services
+prod-restart: prod-stop prod-start
+	@echo "🔄 Production services restarted"
+
+# Show service status and health
+prod-status:
+	@echo "📊 Production Service Status"
+	@echo "============================="
+	@$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) ps
+	@echo ""
+	@echo "🏥 Health Checks:"
+	@set -a; source $(ENV_FILE); set +a; \
+	services=("server:$${ARCHON_SERVER_PORT:-8181}/api/health" "mcp:$${ARCHON_MCP_PORT:-8051}/health" "frontend:$${ARCHON_UI_PORT:-3737}/health"); \
+	for service_url in "$${services[@]}"; do \
+		IFS=':' read -r service url <<< "$$service_url"; \
+		if curl -f -s "http://localhost:$$url" >/dev/null 2>&1; then \
+			echo "  ✅ $$service - healthy"; \
+		else \
+			echo "  ❌ $$service - unhealthy (http://localhost:$$url)"; \
+		fi; \
+	done
+	@echo ""
+
+# View production logs
+prod-logs:
+	@echo "📋 Production Service Logs"
+	@echo "=========================="
+	@$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) logs --tail=100 --follow
+
+# View logs for specific service
+prod-logs-%:
+	@echo "📋 Logs for $*"
+	@echo "==============="
+	@$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) logs --tail=100 --follow $*
+
+# Open monitoring dashboard
+prod-monitor:
+	@echo "📈 Opening monitoring interfaces..."
+	@set -a; source $(ENV_FILE); set +a; \
+	if [ "$(shell docker ps --filter 'name=grafana' --format '{{.Names}}' | wc -l)" -gt 0 ]; then \
+		echo "Opening Grafana dashboard..."; \
+		if command -v xdg-open >/dev/null 2>&1; then \
+			xdg-open "http://localhost:3000" 2>/dev/null || true; \
+		elif command -v open >/dev/null 2>&1; then \
+			open "http://localhost:3000" 2>/dev/null || true; \
+		else \
+			echo "  • Grafana: http://localhost:3000"; \
+		fi; \
+	fi; \
+	echo "  • Prometheus: http://localhost:9090"; \
+	echo "  • Metrics: http://localhost:$${ARCHON_SERVER_PORT:-8181}/api/metrics"
+
+# Create backup
+prod-backup:
+	@echo "💾 Creating production backup..."
+	@mkdir -p $(BACKUP_DIR)
+	@timestamp=$$(date +%Y%m%d_%H%M%S); \
+	backup_file="$(BACKUP_DIR)/archon_backup_$$timestamp.tar.gz"; \
+	echo "Creating backup: $$backup_file"; \
+	tar -czf "$$backup_file" \
+		--exclude='.git' \
+		--exclude='node_modules' \
+		--exclude='__pycache__' \
+		--exclude='.venv' \
+		--exclude='logs/*' \
+		. || true; \
+	$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) exec -T postgres pg_dumpall -U postgres > "$(BACKUP_DIR)/db_backup_$$timestamp.sql" 2>/dev/null || echo "Database backup skipped (service not running)"; \
+	echo "✅ Backup created: $$backup_file"
+
+# Restore from backup (interactive)
+prod-restore:
+	@echo "🔄 Available backups:"
+	@ls -la $(BACKUP_DIR)/*.tar.gz 2>/dev/null || echo "No backups found in $(BACKUP_DIR)"
+	@echo ""
+	@read -p "Enter backup filename to restore: " backup_file; \
+	if [ -f "$(BACKUP_DIR)/$$backup_file" ]; then \
+		echo "Stopping services for restore..."; \
+		$(MAKE) prod-stop; \
+		echo "Restoring from $$backup_file..."; \
+		tar -xzf "$(BACKUP_DIR)/$$backup_file"; \
+		echo "✅ Restore completed. Start services with 'make prod-start'"; \
+	else \
+		echo "❌ Backup file not found: $(BACKUP_DIR)/$$backup_file"; \
+	fi
+
+# Clean up production environment
+prod-clean:
+	@echo "🧹 Cleaning production environment..."
+	@read -p "This will remove all containers, volumes, and images. Continue? (y/N) " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) down -v --remove-orphans; \
+		docker system prune -f; \
+		echo "✅ Production environment cleaned"; \
+	else \
+		echo "Cancelled"; \
+	fi
+
+# Update production deployment
+prod-update:
+	@echo "🔄 Updating production deployment..."
+	@git pull
+	@$(MAKE) prod-validate
+	@$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) build --no-cache
+	@$(MAKE) prod-restart
+	@echo "✅ Production update completed"
+
+# Scale services (usage: make prod-scale SERVICE=archon-server REPLICAS=3)
+prod-scale:
+	@if [ -z "$(SERVICE)" ] || [ -z "$(REPLICAS)" ]; then \
+		echo "Usage: make prod-scale SERVICE=service-name REPLICAS=number"; \
+		echo "Available services: archon-server, archon-mcp, archon-agents"; \
+		exit 1; \
+	fi
+	@echo "⚖️ Scaling $(SERVICE) to $(REPLICAS) replicas..."
+	@$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) up -d --scale $(SERVICE)=$(REPLICAS)
+	@echo "✅ Service scaled successfully"
+
+# Run performance tests
+prod-test:
+	@echo "🧪 Running production performance tests..."
+	@set -a; source $(ENV_FILE); set +a; \
+	if command -v ab >/dev/null 2>&1; then \
+		echo "Testing API performance..."; \
+		ab -n 100 -c 10 "http://localhost:$${ARCHON_SERVER_PORT:-8181}/api/health"; \
+		echo "Testing frontend performance..."; \
+		ab -n 50 -c 5 "http://localhost:$${ARCHON_UI_PORT:-3737}/"; \
+	else \
+		echo "Apache Bench (ab) not found. Install with: apt-get install apache2-utils"; \
+		echo "Running simple connectivity tests instead..."; \
+		curl -f "http://localhost:$${ARCHON_SERVER_PORT:-8181}/api/health" && echo "✅ API health check passed"; \
+		curl -f "http://localhost:$${ARCHON_UI_PORT:-3737}/" && echo "✅ Frontend accessibility passed"; \
+	fi
+
+# Show resource usage
+prod-stats:
+	@echo "📊 Production Resource Usage"
+	@echo "==========================="
+	@$(COMPOSE) -f $(COMPOSE_FILE) --project-name $(COMPOSE_PROJECT_NAME) ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+	@echo ""
+	@echo "Docker resource usage:"
+	@docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}" | grep archon || echo "No running containers found"
+
+.DEFAULT_GOAL := help
