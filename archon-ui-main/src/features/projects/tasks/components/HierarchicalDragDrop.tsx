@@ -233,11 +233,11 @@ export const HierarchicalDragWrapper: FC<HierarchicalDragWrapperProps> = ({
   onDragStart,
   onDragEnd,
 }) => {
-  const [{ isDragging }, drag, preview] = useDrag({
+  const [{ isDragging }, drag, preview] = useDrag(() => ({
     type: item.type,
-    item,
-    begin: () => {
+    item: () => {
       onDragStart?.();
+      return item;
     },
     end: () => {
       onDragEnd?.();
@@ -245,7 +245,7 @@ export const HierarchicalDragWrapper: FC<HierarchicalDragWrapperProps> = ({
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
-  });
+  }));
 
   return (
     <div

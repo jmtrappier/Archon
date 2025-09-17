@@ -12,7 +12,6 @@ import {
   type DraggedTask,
   useHierarchicalDragDrop
 } from "../../tasks/components/HierarchicalDragDrop";
-import { useUpdateStoryStatus } from "../hooks/useStoryQueries";
 import type { Story, StoryWithEpic, HierarchyStatus, Priority } from "../types";
 import {
   getStoryStatusColor,
@@ -29,8 +28,8 @@ import {
 export interface StoryCardProps {
   story: Story | StoryWithEpic;
   index: number;
-  epicId: string;
-  onStoryReorder: (storyId: string, targetIndex: number, status: HierarchyStatus) => void;
+  epicId?: string;
+  onStoryReorder?: (storyId: string, targetIndex: number, status: HierarchyStatus) => void;
   onEdit?: (story: Story | StoryWithEpic) => void;
   onDelete?: (story: Story | StoryWithEpic) => void;
   onViewTasks?: (story: Story | StoryWithEpic) => void;
@@ -62,34 +61,18 @@ export const StoryCard: React.FC<StoryCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Use React Query hook for status updates
-  const updateStoryStatus = useUpdateStoryStatus(epicId);
+  const effectiveEpicId = epicId ?? story.epic_id;
 
   // Check if story has epic context
   const storyWithEpic = story as StoryWithEpic;
   const hasEpicContext = showEpicContext && storyWithEpic.epic;
 
   // Handlers
-  const handleEdit = useCallback(() => {
-    if (onEdit) {
-      onEdit(story);
-    }
-  }, [onEdit, story]);
-
-  const handleDelete = useCallback(() => {
-    if (onDelete) {
-      onDelete(story);
-    }
-  }, [onDelete, story]);
-
   const handleViewTasks = useCallback(() => {
     if (onViewTasks) {
       onViewTasks(story);
     }
   }, [onViewTasks, story]);
-
-  const handleStatusChange = useCallback((newStatus: HierarchyStatus) => {
-    updateStoryStatus.mutate({ storyId: story.id, status: newStatus });
-  }, [updateStoryStatus, story.id]);
 
   // Hierarchical drag & drop functionality
   const { moveTaskToStory } = useHierarchicalDragDrop();
@@ -108,7 +91,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
       type: HierarchicalItemTypes.STORY,
       id: story.id,
       title: story.title,
-      epicId: epicId,
+      epicId: effectiveEpicId,
       projectId: story.project_id
     },
     collect: (monitor) => ({
@@ -129,7 +112,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
       if (draggedIndex === hoveredIndex) return;
 
       // Move the story immediately for visual feedback
-      onStoryReorder(draggedItem.id, hoveredIndex, story.status);
+      onStoryReorder?.(draggedItem.id, hoveredIndex, story.status);
 
       // Update the dragged item's index
       draggedItem.index = hoveredIndex;
@@ -195,7 +178,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
             type: HierarchicalItemTypes.STORY,
             id: story.id,
             title: story.title,
-            epicId: epicId,
+            epicId: effectiveEpicId,
             projectId: story.project_id
           }}
         >
@@ -301,7 +284,7 @@ export const StoryCard: React.FC<StoryCardProps> = ({
                       color: priorityColor,
                     }}
                   >
-                    {story.priority?.toUpperCase()}
+                    {String(story.priority || "").toUpperCase()}
                   </Badge>
                 )}
               </div>

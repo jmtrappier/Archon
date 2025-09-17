@@ -1187,23 +1187,15 @@ async def list_all_stories(
 
         story_service = StoryService()
 
-        # Use epic-specific listing if epic_id provided
-        if epic_id:
-            success, result = await story_service.list_stories(
-                epic_id=epic_id,
-                status=status,
-                include_archived=include_closed,
-                limit=per_page,
-                offset=(page - 1) * per_page
-            )
-        else:
-            # This would need a new method in StoryService to list across all epics
-            # For now, return empty result with appropriate message
-            return {
-                "stories": [],
-                "total_count": 0,
-                "message": "Cross-epic story listing not yet implemented. Use epic_id parameter."
-            }
+        # List stories with optional filters
+        success, result = await story_service.list_stories(
+            epic_id=epic_id,
+            project_id=project_id,
+            status=status,
+            include_archived=include_closed,
+            limit=per_page,
+            offset=(page - 1) * per_page
+        )
 
         if success:
             stories = result.get("stories", [])
