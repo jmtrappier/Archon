@@ -18,7 +18,7 @@ import {
 } from "../hooks/useProjectQueries";
 import { TasksTab } from "../tasks/TasksTab";
 import { ProjectDashboard } from "./ProjectDashboard";
-import { EpicDetailView } from "../epics/views/EpicDetailView";
+import { EpicDetailView, EpicStoriesView } from "../epics/views";
 import { StoryDetailView } from "../stories/views/StoryDetailView";
 import { TaskDetailView } from "../tasks/views/TaskDetailView";
 import type { Project } from "../types";
@@ -55,7 +55,14 @@ export function ProjectsView({ className = "", "data-id": dataId }: ProjectsView
   const currentView = useMemo(() => {
     if (taskId) return "task";
     if (storyId) return "story";
-    if (epicId) return "epic";
+    if (epicId) {
+      // Check if we're on the epic stories route: /projects/:projectId/epics/:epicId/stories
+      const currentPath = window.location.pathname;
+      if (currentPath.includes(`/epics/${epicId}/stories`) && !storyId && !taskId) {
+        return "epic-stories";
+      }
+      return "epic";
+    }
     if (projectId) {
       const viewParam = searchParams.get('view');
       const filterParam = searchParams.get('filter');
@@ -194,6 +201,10 @@ export function ProjectsView({ className = "", "data-id": dataId }: ProjectsView
 
   if (currentView === "story" && storyId) {
     return <StoryDetailView />;
+  }
+
+  if (currentView === "epic-stories" && epicId) {
+    return <EpicStoriesView />;
   }
 
   if (currentView === "epic" && epicId) {

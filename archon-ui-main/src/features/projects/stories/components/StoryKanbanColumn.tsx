@@ -10,9 +10,9 @@ interface StoryKanbanColumnProps {
   status: HierarchyStatus;
   title: string;
   stories: Story[];
-  epicId: string;
-  onStoryMove: (storyId: string, newStatus: HierarchyStatus) => void;
-  onStoryReorder: (storyId: string, targetIndex: number, status: HierarchyStatus) => void;
+  epicId?: string;
+  onStoryMove?: (storyId: string, newStatus: HierarchyStatus) => void;
+  onStoryReorder?: (storyId: string, targetIndex: number, status: HierarchyStatus) => void;
   onStoryEdit?: (story: Story) => void;
   className?: string;
 }
@@ -63,7 +63,7 @@ export const StoryKanbanColumn = ({
     accept: StoryItemTypes.STORY,
     drop: (item: { id: string; status: HierarchyStatus }) => {
       if (item.status !== status) {
-        onStoryMove(item.id, status);
+        onStoryMove?.(item.id, status);
       }
     },
     collect: (monitor) => ({
@@ -120,7 +120,7 @@ export const StoryKanbanColumn = ({
               key={story.id}
               story={story}
               index={index}
-              epicId={epicId}
+              epicId={epicId ?? story.epic_id}
               onStoryReorder={onStoryReorder}
               onEdit={onStoryEdit}
               showEpicContext={false}

@@ -69,16 +69,18 @@ export const StoryModal: React.FC<StoryModalProps> = ({
   // Initialize form data when editing
   useEffect(() => {
     if (editingStory) {
+      setSelectedEpicId(editingStory.epic_id || "");
       setFormData({
         title: editingStory.title || "",
         description: editingStory.description || "",
         status: editingStory.status || "todo",
-        priority: typeof editingStory.priority === 'number'
+        priority: typeof editingStory.priority === "number"
           ? PRIORITY_REVERSE_MAP[editingStory.priority as keyof typeof PRIORITY_REVERSE_MAP] || "medium"
           : editingStory.priority || "medium",
         mvp_flag: editingStory.mvp_flag || false,
       });
     } else {
+      setSelectedEpicId(epicId || "");
       setFormData({
         title: "",
         description: "",
@@ -87,7 +89,7 @@ export const StoryModal: React.FC<StoryModalProps> = ({
         mvp_flag: false,
       });
     }
-  }, [editingStory, isOpen]);
+  }, [editingStory, epicId]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();

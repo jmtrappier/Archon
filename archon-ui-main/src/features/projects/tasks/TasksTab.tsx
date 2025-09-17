@@ -1,5 +1,5 @@
 import { Filter, LayoutGrid, Plus, Table } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useSearchParams } from "react-router-dom";
@@ -450,9 +450,8 @@ const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAd
           )}
         >
           {filterOptions.map((option, index) => (
-            <>
+            <React.Fragment key={option.value}>
               <button
-                key={option.value}
                 type="button"
                 onClick={() => onFilterChange(option.value)}
                 className={cn(
@@ -478,7 +477,7 @@ const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAd
               {index < filterOptions.length - 1 && (
                 <div className="w-px h-6 bg-gray-300 dark:bg-gray-700" />
               )}
-            </>
+            </React.Fragment>
           ))}
         </div>
         {/* Add Buttons with Glassmorphism - Conditional based on filter */}

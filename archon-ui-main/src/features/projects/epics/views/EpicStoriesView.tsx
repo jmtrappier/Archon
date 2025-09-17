@@ -2,15 +2,15 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Plus, Loader2, ChevronRight } from "lucide-react";
 import { Button } from "@/features/ui/primitives/button";
-import { epicService } from "@/features/projects/services/epicService";
-import { storyService } from "@/features/projects/services/storyService";
-import { useProject } from "@/features/projects/hooks/useProject";
+import { epicService } from "@/features/projects/epics/services/epicService";
+import { storyService } from "@/features/projects/stories/services/storyService";
+import { useProject } from "@/features/projects/hooks/useProjectQueries";
 import { StoryKanbanColumn } from "@/features/projects/stories/components/StoryKanbanColumn";
 import { StoryModal } from "@/features/projects/stories/components/StoryModal";
 import { StoryCard } from "@/features/projects/stories/components/StoryCard";
 import type { Epic } from "@/features/projects/types/epic";
 import type { Story, StoryStatus } from "@/features/projects/types/story";
-import { toast } from "sonner";
+import { useToast } from "../../../ui/hooks/useToast";
 import { cn } from "@/lib/utils";
 
 const STORY_STATUSES: { status: StoryStatus; title: string }[] = [
@@ -24,6 +24,7 @@ export const EpicStoriesView = () => {
   const { projectId, epicId } = useParams<{ projectId: string; epicId: string }>();
   const navigate = useNavigate();
   const { data: project, isLoading: projectLoading } = useProject(projectId);
+  const { showToast } = useToast();
 
   const [epic, setEpic] = useState<Epic | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
@@ -46,7 +47,7 @@ export const EpicStoriesView = () => {
         setStories(storiesData);
       } catch (error) {
         console.error("Failed to load epic and stories:", error);
-        toast.error("Failed to load epic details");
+        showToast("Failed to load epic details", "error");
       } finally {
         setIsLoading(false);
       }
@@ -66,10 +67,10 @@ export const EpicStoriesView = () => {
         )
       );
 
-      toast.success("Story status updated");
+      showToast("Story status updated", "success");
     } catch (error) {
       console.error("Failed to update story status:", error);
-      toast.error("Failed to update story status");
+      showToast("Failed to update story status", "error");
     }
   };
 
@@ -82,7 +83,7 @@ export const EpicStoriesView = () => {
       setStories(updatedStories);
     } catch (error) {
       console.error("Failed to reorder story:", error);
-      toast.error("Failed to reorder story");
+      showToast("Failed to reorder story", "error");
     }
   };
 
@@ -99,11 +100,11 @@ export const EpicStoriesView = () => {
       });
 
       setStories(prev => [...prev, newStory]);
-      toast.success("Story created successfully");
+      showToast("Story created successfully", "success");
       setIsModalOpen(false);
     } catch (error) {
       console.error("Failed to create story:", error);
-      toast.error("Failed to create story");
+      showToast("Failed to create story", "error");
     }
   };
 
