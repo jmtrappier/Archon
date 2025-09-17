@@ -14,6 +14,7 @@ interface BoardViewProps {
   onTaskDelete?: (task: Task) => void;
   onEpicEdit?: (epic: Epic) => void;
   onEpicDelete?: (epic: Epic) => void;
+  onEpicViewStories?: (epic: Epic) => void;
 }
 
 export const BoardView = ({
@@ -27,6 +28,7 @@ export const BoardView = ({
   onTaskDelete,
   onEpicEdit,
   onEpicDelete,
+  onEpicViewStories,
 }: BoardViewProps) => {
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
 
@@ -97,6 +99,7 @@ export const BoardView = ({
               onTaskDelete={onTaskDelete}
               onEpicEdit={onEpicEdit}
               onEpicDelete={onEpicDelete}
+              onEpicViewStories={onEpicViewStories}
               hoveredTaskId={hoveredTaskId}
               onTaskHover={setHoveredTaskId}
             />

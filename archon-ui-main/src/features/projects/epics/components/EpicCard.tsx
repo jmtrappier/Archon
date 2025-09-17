@@ -21,7 +21,7 @@ import {
 } from "../../tasks/components/HierarchicalDragDrop";
 import { useUpdateEpicStatus } from "../hooks/useEpicQueries";
 import type { Epic, HierarchyStatus, Priority } from "../types";
-import { getEpicStatusColor, getEpicPriorityColor, ItemTypes } from "../utils/epic-styles";
+import { getEpicStatusColor, getEpicPriorityColor } from "../utils/epic-styles";
 
 export interface EpicCardProps {
   epic: Epic;
@@ -98,15 +98,15 @@ export const EpicCard: React.FC<EpicCardProps> = ({
 
   // Drag and Drop
   const [{ isDragging }, drag] = useDrag({
-    type: ItemTypes.EPIC,
-    item: { id: epic.id, status: epic.status, index },
+    type: HierarchicalItemTypes.EPIC,
+    item: { id: epic.id, status: epic.status, index, type: 'epic' },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
   });
 
   const [, drop] = useDrop({
-    accept: ItemTypes.EPIC,
+    accept: HierarchicalItemTypes.EPIC,
     hover: (draggedItem: { id: string; status: HierarchyStatus; index: number }, monitor) => {
       if (!monitor.isOver({ shallow: true })) return;
       if (draggedItem.id === epic.id) return;
@@ -137,9 +137,24 @@ export const EpicCard: React.FC<EpicCardProps> = ({
   };
 
   const handleEpicClick = (e: React.MouseEvent) => {
+    // Handle selection with Ctrl/Cmd
     if (e.ctrlKey || e.metaKey) {
       e.stopPropagation();
       onEpicSelect?.(epic.id);
+      return;
+    }
+
+    // Don't navigate if clicking on buttons or dropdown
+    if ((e.target as HTMLElement).closest('button') ||
+        (e.target as HTMLElement).closest('[role="menu"]') ||
+        (e.target as HTMLElement).closest('[role="menuitem"]')) {
+      return;
+    }
+
+    // Navigate to epic stories view
+    if (onViewStories) {
+      e.stopPropagation();
+      onViewStories(epic);
     }
   };
 

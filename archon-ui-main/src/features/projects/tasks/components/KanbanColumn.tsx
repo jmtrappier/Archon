@@ -22,6 +22,7 @@ interface KanbanColumnProps {
   onTaskDelete?: (task: Task) => void;
   onEpicEdit?: (epic: Epic) => void;
   onEpicDelete?: (epic: Epic) => void;
+  onEpicViewStories?: (epic: Epic) => void;
   hoveredTaskId: string | null;
   onTaskHover: (taskId: string | null) => void;
 }
@@ -40,6 +41,7 @@ export const KanbanColumn = ({
   onTaskDelete,
   onEpicEdit,
   onEpicDelete,
+  onEpicViewStories,
   hoveredTaskId,
   onTaskHover,
 }: KanbanColumnProps) => {
@@ -49,8 +51,11 @@ export const KanbanColumn = ({
     accept: [HierarchicalItemTypes.TASK, HierarchicalItemTypes.EPIC],
     drop: (item: { id: string; status: Task["status"] | Epic["status"]; type?: string }) => {
       if (item.status !== status) {
-        // For now, only handle task moves - epic moves would need separate handler
-        if (item.type !== 'epic') {
+        if (item.type === 'epic') {
+          // Handle epic moves - for now, call onTaskMove as it handles all status changes
+          onTaskMove(item.id, status);
+        } else {
+          // Handle task moves
           onTaskMove(item.id, status);
         }
       }
@@ -74,6 +79,7 @@ export const KanbanColumn = ({
           onEpicReorder={() => {}} // TODO: Implement epic reordering
           onEdit={onEpicEdit}
           onDelete={onEpicDelete}
+          onViewStories={onEpicViewStories}
         />
       ));
     }

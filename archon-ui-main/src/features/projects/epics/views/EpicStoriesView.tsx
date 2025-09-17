@@ -1,262 +1,242 @@
-import React, { useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Plus, ArrowLeft, LayoutGrid, Filter } from "lucide-react";
-import { HierarchyBreadcrumb } from "@/features/ui/components/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Plus, Loader2, ChevronRight } from "lucide-react";
 import { Button } from "@/features/ui/primitives/button";
-import { cn, glassmorphism } from "@/features/ui/primitives/styles";
-import { useToast } from "@/features/ui/hooks";
-import { useProject } from "../../hooks/useProjectQueries";
-import { useEpic } from "../hooks/useEpicQueries";
-import { useStories } from "../../stories/hooks/useStoryQueries";
-import { StoryModal } from "../../stories/components/StoryModal";
-import { StoryKanbanColumn } from "../../stories/components/StoryKanbanColumn";
-import type { Story } from "../../stories/types";
-import type { HierarchyStatus } from "../../shared/types/hierarchy";
+import { epicService } from "@/features/projects/services/epicService";
+import { storyService } from "@/features/projects/services/storyService";
+import { useProject } from "@/features/projects/hooks/useProject";
+import { StoryKanbanColumn } from "@/features/projects/stories/components/StoryKanbanColumn";
+import { StoryModal } from "@/features/projects/stories/components/StoryModal";
+import { StoryCard } from "@/features/projects/stories/components/StoryCard";
+import type { Epic } from "@/features/projects/types/epic";
+import type { Story, StoryStatus } from "@/features/projects/types/story";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-export const EpicStoriesView: React.FC = () => {
+const STORY_STATUSES: { status: StoryStatus; title: string }[] = [
+  { status: "todo", title: "To Do" },
+  { status: "doing", title: "In Progress" },
+  { status: "review", title: "Review" },
+  { status: "done", title: "Done" },
+];
+
+export const EpicStoriesView = () => {
   const { projectId, epicId } = useParams<{ projectId: string; epicId: string }>();
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const { data: project, isLoading: projectLoading } = useProject(projectId);
 
-  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
-  const [editingStory, setEditingStory] = useState<Story | null>(null);
+  const [epic, setEpic] = useState<Epic | null>(null);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [epicToUpdate, setEpicToUpdate] = useState<Epic | null>(null);
 
-  // Fetch data
-  const { data: project } = useProject(projectId!);
-  const { data: epic, isLoading: epicLoading, error: epicError } = useEpic(epicId!);
-  const { data: stories = [], isLoading: storiesLoading, error: storiesError } = useStories(epicId!);
+  useEffect(() => {
+    const loadEpicAndStories = async () => {
+      if (!epicId || !projectId) return;
 
-  // Calculate stats
-  const totalStories = stories.length;
-  const completedStories = stories.filter(s => s.status === "done").length;
-  const progressPercentage = totalStories > 0 ? Math.round((completedStories / totalStories) * 100) : 0;
+      setIsLoading(true);
+      try {
+        // Load Epic details
+        const epicData = await epicService.getEpic(epicId);
+        setEpic(epicData);
 
-  // Group stories by status
-  const getStoriesByStatus = (status: HierarchyStatus) => {
-    return stories.filter(story => story.status === status);
+        // Load Stories for this Epic
+        const storiesData = await storyService.listStories(epicId);
+        setStories(storiesData);
+      } catch (error) {
+        console.error("Failed to load epic and stories:", error);
+        toast.error("Failed to load epic details");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadEpicAndStories();
+  }, [epicId, projectId]);
+
+  const handleStoryMove = async (storyId: string, newStatus: StoryStatus) => {
+    try {
+      await storyService.updateStory(storyId, { status: newStatus });
+
+      // Update local state optimistically
+      setStories(prev =>
+        prev.map(story =>
+          story.id === storyId ? { ...story, status: newStatus } : story
+        )
+      );
+
+      toast.success("Story status updated");
+    } catch (error) {
+      console.error("Failed to update story status:", error);
+      toast.error("Failed to update story status");
+    }
   };
 
-  const handleBack = useCallback(() => {
-    navigate(`/projects/${projectId}/epics/${epicId}`);
-  }, [navigate, projectId, epicId]);
+  const handleStoryReorder = async (storyId: string, targetOrder: number) => {
+    try {
+      await storyService.updateStory(storyId, { story_order: targetOrder });
 
-  const handleBackToProject = useCallback(() => {
-    navigate(`/projects/${projectId}?view=board&filter=epics`);
-  }, [navigate, projectId]);
+      // Reload stories to get updated order
+      const updatedStories = await storyService.listStories(epicId!);
+      setStories(updatedStories);
+    } catch (error) {
+      console.error("Failed to reorder story:", error);
+      toast.error("Failed to reorder story");
+    }
+  };
 
-  const handleAddStory = useCallback(() => {
-    setEditingStory(null);
-    setIsStoryModalOpen(true);
-  }, []);
+  const handleStoryEdit = (storyId: string) => {
+    navigate(`/projects/${projectId}/epics/${epicId}/stories/${storyId}`);
+  };
 
-  const handleStoryEdit = useCallback((story: Story) => {
-    setEditingStory(story);
-    setIsStoryModalOpen(true);
-  }, []);
+  const handleStoryCreate = async (data: any) => {
+    try {
+      const newStory = await storyService.createStory({
+        ...data,
+        epic_id: epicId,
+        project_id: projectId,
+      });
 
-  const handleStorySaved = useCallback(() => {
-    setIsStoryModalOpen(false);
-    setEditingStory(null);
-    showToast(editingStory ? "Story updated successfully" : "Story created successfully", "success");
-  }, [editingStory, showToast]);
+      setStories(prev => [...prev, newStory]);
+      toast.success("Story created successfully");
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Failed to create story:", error);
+      toast.error("Failed to create story");
+    }
+  };
 
-  const handleStoryMove = useCallback((storyId: string, newStatus: HierarchyStatus) => {
-    // TODO: Implement story status update
-    showToast(`Moving story to ${newStatus} - Implementation needed`, "info");
-  }, [showToast]);
+  const calculateProgress = () => {
+    if (stories.length === 0) return 0;
+    const doneStories = stories.filter(s => s.status === "done").length;
+    return Math.round((doneStories / stories.length) * 100);
+  };
 
-  const handleStoryReorder = useCallback((storyId: string, targetIndex: number, status: HierarchyStatus) => {
-    // TODO: Implement story reordering
-    showToast(`Reordering story in ${status} - Implementation needed`, "info");
-  }, [showToast]);
+  const getStoriesByStatus = (status: StoryStatus) => {
+    return stories
+      .filter(story => story.status === status)
+      .sort((a, b) => (a.story_order || 0) - (b.story_order || 0));
+  };
 
-  if (epicLoading || storiesLoading) {
+  if (isLoading || projectLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <LayoutGrid className="h-12 w-12 text-gray-400 animate-pulse mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading epic stories...</p>
-        </div>
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
       </div>
     );
   }
 
-  if (epicError || storiesError) {
+  if (!epic || !project) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="h-12 w-12 text-red-500 mx-auto mb-4 flex items-center justify-center">
-            ⚠️
-          </div>
-          <p className="text-red-600 dark:text-red-400">
-            Failed to load epic data
-          </p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <p className="text-gray-500">Epic not found</p>
+        <Button onClick={() => navigate(`/projects/${projectId}`)}>
+          Back to Project
+        </Button>
       </div>
     );
   }
+
+  const progress = calculateProgress();
 
   return (
-    <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        {/* Header */}
-        <div className={cn("sticky top-0 z-10 border-b backdrop-blur-sm", glassmorphism)}>
-          <div className="max-w-full mx-auto px-6 py-4">
-            {/* Breadcrumb */}
-            <HierarchyBreadcrumb className="mb-4">
-              <button
-                onClick={() => navigate(`/projects/${projectId}`)}
-                className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
-              >
-                {project?.title || "Project"}
-              </button>
-              <span className="mx-2 text-gray-400">/</span>
-              <button
-                onClick={handleBack}
-                className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
-              >
-                {epic?.code}: {epic?.title}
-              </button>
-              <span className="mx-2 text-gray-400">/</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                Stories
-              </span>
-            </HierarchyBreadcrumb>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50/50 via-white to-gray-100/30 dark:from-gray-900/50 dark:via-gray-900 dark:to-gray-800/30">
+      <div className="container mx-auto px-4 py-6">
+        {/* Header with Epic info */}
+        <div className="mb-6 space-y-4">
+          {/* Breadcrumb */}
+          <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <Link
+              to={`/projects/${projectId}`}
+              className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              {project.title}
+            </Link>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-gray-700 dark:text-gray-300 font-medium">
+              {epic.title}
+            </span>
+          </div>
 
-            {/* Epic Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleBack}
-                  className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Epic
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {epic?.code}: {epic?.title}
-                  </h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    {epic?.description}
+          {/* Epic Header */}
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate(`/projects/${projectId}`)}
+                    className="hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Project Kanban
+                  </Button>
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {epic.title}
+                </h1>
+                {epic.description && (
+                  <p className="text-gray-600 dark:text-gray-400 line-clamp-2">
+                    {epic.description}
                   </p>
+                )}
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-gray-500">
+                    {stories.length} {stories.length === 1 ? "Story" : "Stories"}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Progress:</span>
+                    <div className="w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">
+                      {progress}%
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="text-right text-sm">
-                  <div className="text-gray-900 dark:text-white font-medium">
-                    {completedStories}/{totalStories} Stories
-                  </div>
-                  <div className="text-gray-600 dark:text-gray-400">
-                    {progressPercentage}% Complete
-                  </div>
-                </div>
-                <Button onClick={handleAddStory} className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Story
-                </Button>
-                <Button onClick={handleBackToProject} variant="outline">
-                  <LayoutGrid className="h-4 w-4 mr-2" />
-                  Project Kanban
-                </Button>
-              </div>
+              <Button
+                onClick={() => setIsModalOpen(true)}
+                className="bg-gradient-to-r from-cyan-500 to-purple-500 text-white hover:from-cyan-600 hover:to-purple-600"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Story
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Kanban Board */}
-        <div className="max-w-full mx-auto px-6 py-6">
-          {stories.length === 0 ? (
-            // Empty State
-            <div className="text-center py-20">
-              <LayoutGrid className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No stories in this epic yet
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                Stories break down this epic into manageable chunks of work.
-                Create your first story to get started.
-              </p>
-              <div className="flex gap-3 justify-center">
-                <Button onClick={handleAddStory} className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Story
-                </Button>
-                <Button onClick={handleBackToProject} variant="outline">
-                  <LayoutGrid className="h-4 w-4 mr-2" />
-                  Back to Project
-                </Button>
-              </div>
-            </div>
-          ) : (
-            // Kanban Columns
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[70vh]">
-              {/* Todo Column */}
-              <StoryKanbanColumn
-                title="Todo"
-                status="todo"
-                stories={getStoriesByStatus("todo")}
-                epicId={epicId!}
-                onStoryMove={handleStoryMove}
-                onStoryReorder={handleStoryReorder}
-                onStoryEdit={handleStoryEdit}
-                className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900"
-              />
-
-              {/* Doing Column */}
-              <StoryKanbanColumn
-                title="Doing"
-                status="doing"
-                stories={getStoriesByStatus("doing")}
-                epicId={epicId!}
-                onStoryMove={handleStoryMove}
-                onStoryReorder={handleStoryReorder}
-                onStoryEdit={handleStoryEdit}
-                className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20"
-              />
-
-              {/* Review Column */}
-              <StoryKanbanColumn
-                title="Review"
-                status="review"
-                stories={getStoriesByStatus("review")}
-                epicId={epicId!}
-                onStoryMove={handleStoryMove}
-                onStoryReorder={handleStoryReorder}
-                onStoryEdit={handleStoryEdit}
-                className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20"
-              />
-
-              {/* Done Column */}
-              <StoryKanbanColumn
-                title="Done"
-                status="done"
-                stories={getStoriesByStatus("done")}
-                epicId={epicId!}
-                onStoryMove={handleStoryMove}
-                onStoryReorder={handleStoryReorder}
-                onStoryEdit={handleStoryEdit}
-                className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20"
-              />
-            </div>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {STORY_STATUSES.map((column) => (
+            <StoryKanbanColumn
+              key={column.status}
+              status={column.status}
+              title={column.title}
+              stories={getStoriesByStatus(column.status)}
+              epicId={epicId}
+              onStoryMove={handleStoryMove}
+              onStoryReorder={handleStoryReorder}
+              onStoryEdit={handleStoryEdit}
+              className="min-h-[400px]"
+            />
+          ))}
         </div>
-      </div>
 
-      {/* Story Modal */}
-      <StoryModal
-        isOpen={isStoryModalOpen}
-        epicId={epicId!}
-        editingStory={editingStory}
-        onClose={() => {
-          setIsStoryModalOpen(false);
-          setEditingStory(null);
-        }}
-        onSaved={handleStorySaved}
-      />
-    </>
+        {/* Story Creation Modal */}
+        {isModalOpen && (
+          <StoryModal
+            epicId={epicId}
+            onSubmit={handleStoryCreate}
+            onClose={() => setIsModalOpen(false)}
+          />
+        )}
+      </div>
+    </div>
   );
 };

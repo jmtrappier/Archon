@@ -9,9 +9,11 @@ import { cn, glassmorphism } from "../../ui/primitives/styles";
 import { useProjectEpics } from "../epics/hooks/useEpicQueries";
 import type { Epic } from "../epics/types";
 import { EpicModal } from "../epics/components/EpicModal";
-import { useProjectStories } from "../stories/hooks/useStoryQueries";
-import type { Story } from "../stories/types";
+import { useProjectStories, useUpdateStoryStatus } from "../stories/hooks/useStoryQueries";
+import type { Story, HierarchyStatus } from "../stories/types";
 import { StoryModal } from "../stories/components/StoryModal";
+import { ProjectStoriesBoard } from "../stories/components/ProjectStoriesBoard";
+import { ProjectStoriesTable } from "../stories/components/ProjectStoriesTable";
 import { TaskEditModal, TaskView } from "./components";
 import { useDeleteTask, useProjectTasks, useUpdateTask } from "./hooks";
 import type { Task } from "./types";
@@ -74,11 +76,13 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
   // Story modal state
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const [selectedEpicForStory, setSelectedEpicForStory] = useState<string | null>(null);
+  const [editingStory, setEditingStory] = useState<Story | null>(null);
 
   // Fetch tasks, epics and stories using TanStack Query
   const { data: tasks = [], isLoading: isLoadingTasks } = useProjectTasks(projectId);
   const { data: epics = [], isLoading: isLoadingEpics } = useProjectEpics(projectId);
   const { data: stories = [], isLoading: isLoadingStories } = useProjectStories(projectId);
+  const updateStoryStatusMutation = useUpdateStoryStatus();
 
   // Mutations for task operations
   const updateTaskMutation = useUpdateTask(projectId);
@@ -136,22 +140,40 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
     // TODO: Implement Epic delete functionality
   };
 
+  const handleEpicViewStories = (epic: Epic) => {
+    // Navigate to epic stories view
+    window.location.href = `/projects/${projectId}/epics/${epic.id}/stories`;
+  };
+
   // Story modal management functions
   const openCreateStoryModal = () => {
     // For Kanban usage, we don't pre-select an epic - let the modal handle it
     setSelectedEpicForStory(null);
+    setEditingStory(null);
     setIsStoryModalOpen(true);
   };
 
   const closeStoryModal = () => {
     setSelectedEpicForStory(null);
+    setEditingStory(null);
     setIsStoryModalOpen(false);
   };
 
   const handleStorySaved = () => {
     setIsStoryModalOpen(false);
     setSelectedEpicForStory(null);
+    setEditingStory(null);
   };
+
+  const handleStoryEdit = useCallback((story: Story) => {
+    setEditingStory(story);
+    setSelectedEpicForStory(story.epic_id);
+    setIsStoryModalOpen(true);
+  }, []);
+
+  const handleStoryMove = useCallback((storyId: string, newStatus: HierarchyStatus) => {
+    updateStoryStatusMutation.mutate({ storyId, status: newStatus });
+  }, [updateStoryStatusMutation]);
 
   // Delete modal management functions
   const openDeleteModal = (task: Task) => {
@@ -273,22 +295,10 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
     }
   };
 
-  // Filter data based on current filter
-  const getFilteredData = () => {
-    switch (viewFilter) {
-      case 'epics':
-        return { items: epics, type: 'epics' as const };
-      case 'stories':
-        return { items: stories, type: 'stories' as const };
-      case 'tasks':
-        return { items: tasks, type: 'tasks' as const };
-      case 'all':
-      default:
-        return { items: [...(epics || []), ...(stories || []), ...(tasks || [])], type: 'mixed' as const };
-    }
-  };
 
-  const { items: filteredItems, type: dataType } = getFilteredData();
+
+  const boardDataType: "epics" | "tasks" | "mixed" =
+    viewFilter === "epics" ? "epics" : viewFilter === "tasks" ? "tasks" : "mixed";
 
   if (isLoadingTasks || isLoadingEpics || isLoadingStories) {
     return (
@@ -304,30 +314,47 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
         {/* Main content - Table or Board view */}
         <div className="relative h-[calc(100vh-220px)] overflow-auto">
           {viewMode === "table" ? (
-            <TableView
-              tasks={dataType === 'epics' ? [] : tasks as Task[]}
-              epics={dataType === 'tasks' ? [] : epics as Epic[]}
-              projectId={projectId}
-              dataType={dataType}
-              onTaskView={openTaskView}
-              onTaskComplete={completeTask}
-              onTaskDelete={openDeleteModal}
-              onTaskReorder={handleTaskReorder}
-              onTaskUpdate={updateTaskInline}
-            />
+            viewFilter === 'stories' ? (
+              <ProjectStoriesTable
+                stories={stories as Story[]}
+                epics={epics as Epic[]}
+                onStoryEdit={handleStoryEdit}
+              />
+            ) : (
+              <TableView
+                tasks={boardDataType === 'epics' ? [] : (tasks as Task[])}
+                epics={boardDataType === 'tasks' ? [] : (epics as Epic[])}
+                projectId={projectId}
+                dataType={boardDataType}
+                onTaskView={openTaskView}
+                onTaskComplete={completeTask}
+                onTaskDelete={openDeleteModal}
+                onTaskReorder={handleTaskReorder}
+                onTaskUpdate={updateTaskInline}
+              />
+            )
           ) : (
-            <BoardView
-              tasks={dataType === 'epics' ? [] : tasks as Task[]}
-              epics={dataType === 'tasks' ? [] : epics as Epic[]}
-              projectId={projectId}
-              dataType={dataType}
-              onTaskMove={moveTask}
-              onTaskReorder={handleTaskReorder}
-              onTaskEdit={openTaskView}
-              onTaskDelete={openDeleteModal}
-              onEpicEdit={handleEpicEdit}
-              onEpicDelete={handleEpicDelete}
-            />
+            viewFilter === 'stories' ? (
+              <ProjectStoriesBoard
+                stories={stories as Story[]}
+                onStoryMove={handleStoryMove}
+                onStoryEdit={handleStoryEdit}
+              />
+            ) : (
+              <BoardView
+                tasks={boardDataType === 'epics' ? [] : (tasks as Task[])}
+                epics={boardDataType === 'tasks' ? [] : (epics as Epic[])}
+                projectId={projectId}
+                dataType={boardDataType}
+                onTaskMove={moveTask}
+                onTaskReorder={handleTaskReorder}
+                onTaskEdit={openTaskView}
+                onTaskDelete={openDeleteModal}
+                onEpicEdit={handleEpicEdit}
+                onEpicDelete={handleEpicDelete}
+                onEpicViewStories={handleEpicViewStories}
+              />
+            )
           )}
         </div>
 
@@ -382,6 +409,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
           isOpen={isStoryModalOpen}
           epicId={selectedEpicForStory}
           projectId={projectId}
+          editingStory={editingStory ?? undefined}
           onClose={closeStoryModal}
           onSaved={handleStorySaved}
         />
