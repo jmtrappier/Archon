@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { epicService } from "../services/epicService";
+import { storyService } from "../../stories/services/storyService";
 import { useToast } from "@/features/ui/hooks";
 
 // Query keys
@@ -9,6 +10,7 @@ export const epicKeys = {
   list: (projectId: string) => [...epicKeys.lists(), projectId] as const,
   details: () => [...epicKeys.all, "detail"] as const,
   detail: (epicId: string) => [...epicKeys.details(), epicId] as const,
+  storyCounts: () => [...epicKeys.all, "story-counts"] as const,
 };
 
 // Get all epics for a project
@@ -100,5 +102,15 @@ export const useDeleteEpic = (projectId: string) => {
     onError: (error: any) => {
       showToast(error.message || "Failed to delete epic", "error");
     },
+  });
+};
+
+// Get story counts for all epics
+export const useStoryCountsForAllEpics = () => {
+  return useQuery({
+    queryKey: epicKeys.storyCounts(),
+    queryFn: () => storyService.getStoryCountsForAllEpics(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
   });
 };

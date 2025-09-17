@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Plus, Loader2, ChevronRight } from "lucide-react";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/features/ui/primitives/button";
 import { epicService } from "@/features/projects/epics/services/epicService";
 import { storyService } from "@/features/projects/stories/services/storyService";
@@ -142,8 +144,9 @@ export const EpicStoriesView = () => {
   const progress = calculateProgress();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50/50 via-white to-gray-100/30 dark:from-gray-900/50 dark:via-gray-900 dark:to-gray-800/30">
-      <div className="container mx-auto px-4 py-6">
+    <DndProvider backend={HTML5Backend}>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50/50 via-white to-gray-100/30 dark:from-gray-900/50 dark:via-gray-900 dark:to-gray-800/30">
+        <div className="container mx-auto px-4 py-6">
         {/* Header with Epic info */}
         <div className="mb-6 space-y-4">
           {/* Breadcrumb */}
@@ -237,7 +240,8 @@ export const EpicStoriesView = () => {
             onClose={() => setIsModalOpen(false)}
           />
         )}
+        </div>
       </div>
-    </div>
+    </DndProvider>
   );
 };

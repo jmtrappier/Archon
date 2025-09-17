@@ -36,6 +36,7 @@ export interface EpicCardProps {
   selectedEpics?: Set<string>;
   onEpicSelect?: (epicId: string) => void;
   showProgress?: boolean;
+  storyCounts?: Record<string, any>;
 }
 
 export const EpicCard: React.FC<EpicCardProps> = ({
@@ -51,6 +52,7 @@ export const EpicCard: React.FC<EpicCardProps> = ({
   selectedEpics,
   onEpicSelect,
   showProgress = true,
+  storyCounts,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -183,13 +185,15 @@ export const EpicCard: React.FC<EpicCardProps> = ({
 
   return (
     <TooltipProvider>
-      <HierarchicalDropZone
-        type="epic"
-        targetId={epic.id}
-        onDrop={handleStoryDrop}
-        acceptedTypes={[HierarchicalItemTypes.STORY]}
-        className="relative"
-      >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <HierarchicalDropZone
+            type="epic"
+            targetId={epic.id}
+            onDrop={handleStoryDrop}
+            acceptedTypes={[HierarchicalItemTypes.STORY]}
+            className="relative"
+          >
         <div
           ref={(node) => drag(drop(node))}
           role="button"
@@ -383,7 +387,11 @@ export const EpicCard: React.FC<EpicCardProps> = ({
                 <div className="pl-1 mb-3 grid grid-cols-2 gap-2 text-xs">
                   <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
                     <Users className="w-3 h-3" />
-                    <span>Stories: 0</span> {/* Will be populated when stories are implemented */}
+                    <span>Stories: {(() => {
+                      const counts = storyCounts?.[epic.id];
+                      if (!counts) return '0';
+                      return (counts.todo + counts.doing + counts.review + counts.waiting + counts.done).toString();
+                    })()}</span>
                   </div>
                   <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
                     <BarChart3 className="w-3 h-3" />
@@ -402,7 +410,12 @@ export const EpicCard: React.FC<EpicCardProps> = ({
             </div>
           </div>
         </div>
-      </HierarchicalDropZone>
+          </HierarchicalDropZone>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Click to view Stories</p>
+        </TooltipContent>
+      </Tooltip>
     </TooltipProvider>
   );
 };

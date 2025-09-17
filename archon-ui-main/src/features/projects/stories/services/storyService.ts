@@ -310,4 +310,11 @@ export const storyService = {
       throw error;
     }
   },
+
+  /**
+   * Alias for getStoriesByEpic for backward compatibility
+   */
+  async listStories(epicId: string, params?: StoryQueryParams): Promise<Story[]> {
+    return this.getStoriesByEpic(epicId, params);
+  },
 };

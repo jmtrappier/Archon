@@ -2,11 +2,11 @@ import { Filter, LayoutGrid, Plus, Table } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { DeleteConfirmModal } from "../../ui/components/DeleteConfirmModal";
 import { Button } from "../../ui/primitives";
 import { cn, glassmorphism } from "../../ui/primitives/styles";
-import { useProjectEpics } from "../epics/hooks/useEpicQueries";
+import { useProjectEpics, useStoryCountsForAllEpics } from "../epics/hooks/useEpicQueries";
 import type { Epic } from "../epics/types";
 import { EpicModal } from "../epics/components/EpicModal";
 import { useProjectStories, useUpdateStoryStatus } from "../stories/hooks/useStoryQueries";
@@ -28,6 +28,7 @@ type ViewFilter = 'all' | 'epics' | 'stories' | 'tasks';
 
 export const TasksTab = ({ projectId }: TasksTabProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"table" | "board">("board");
   const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
 
@@ -82,6 +83,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
   const { data: tasks = [], isLoading: isLoadingTasks } = useProjectTasks(projectId);
   const { data: epics = [], isLoading: isLoadingEpics } = useProjectEpics(projectId);
   const { data: stories = [], isLoading: isLoadingStories } = useProjectStories(projectId);
+  const { data: storyCounts = {}, isLoading: isLoadingStoryCounts } = useStoryCountsForAllEpics();
   const updateStoryStatusMutation = useUpdateStoryStatus();
 
   // Mutations for task operations
@@ -140,10 +142,10 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
     // TODO: Implement Epic delete functionality
   };
 
-  const handleEpicViewStories = (epic: Epic) => {
-    // Navigate to epic stories view
-    window.location.href = `/projects/${projectId}/epics/${epic.id}/stories`;
-  };
+  const handleEpicViewStories = useCallback((epic: Epic) => {
+    // Navigate to epic stories view using React Router
+    navigate(`/projects/${projectId}/epics/${epic.id}/stories`);
+  }, [navigate, projectId]);
 
   // Story modal management functions
   const openCreateStoryModal = () => {
@@ -300,7 +302,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
   const boardDataType: "epics" | "tasks" | "mixed" =
     viewFilter === "epics" ? "epics" : viewFilter === "tasks" ? "tasks" : "mixed";
 
-  if (isLoadingTasks || isLoadingEpics || isLoadingStories) {
+  if (isLoadingTasks || isLoadingEpics || isLoadingStories || isLoadingStoryCounts) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -346,6 +348,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
                 epics={boardDataType === 'tasks' ? [] : (epics as Epic[])}
                 projectId={projectId}
                 dataType={boardDataType}
+                storyCounts={storyCounts}
                 onTaskMove={moveTask}
                 onTaskReorder={handleTaskReorder}
                 onTaskEdit={openTaskView}

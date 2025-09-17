@@ -743,6 +743,64 @@ async def create_project_epic(project_id: str, request: CreateEpicRequest):
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
+@router.get("/epics/story-counts")
+async def get_epics_story_counts(
+    request: Request,
+    response: Response,
+):
+    """
+    Get story counts for all epics in a single batch query.
+    Optimized endpoint to avoid N+1 query problem.
+
+    Returns counts grouped by epic_id with todo, doing, review, waiting, and done counts.
+    """
+    try:
+        # Get If-None-Match header for ETag comparison
+        if_none_match = request.headers.get("If-None-Match")
+
+        logfire.debug(f"Getting story counts for all epics | etag={if_none_match}")
+
+        # Use StoryService to get batch story counts
+        story_service = StoryService()
+        success, result = await story_service.get_all_epic_story_counts()
+
+        if not success:
+            logfire.error(f"Failed to get story counts | error={result.get('error')}")
+            raise HTTPException(status_code=500, detail=result)
+
+        # Generate ETag from counts data
+        etag_data = {
+            "counts": result,
+            "count": len(result)
+        }
+        current_etag = generate_etag(etag_data)
+
+        # Check if client's ETag matches (304 Not Modified)
+        if check_etag(if_none_match, current_etag):
+            response.status_code = 304
+            response.headers["ETag"] = current_etag
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            logfire.debug(f"Story counts unchanged, returning 304 | etag={current_etag}")
+            return None
+
+        # Set ETag headers for successful response
+        response.headers["ETag"] = current_etag
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        response.headers["Last-Modified"] = datetime.utcnow().isoformat()
+
+        logfire.debug(
+            f"Story counts retrieved | epic_count={len(result)} | etag={current_etag}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to get story counts | error={str(e)}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
 @router.get("/epics/{epic_id}")
 async def get_epic(epic_id: str):
     """Get a specific epic by ID."""

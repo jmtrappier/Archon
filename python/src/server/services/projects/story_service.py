@@ -643,3 +643,75 @@ class StoryService:
         except Exception as e:
             logger.error(f"Error getting stories by epic: {str(e)}")
             return False, {"error": f"Error getting stories by epic: {str(e)}"}
+
+    async def get_all_epic_story_counts(self, project_id: str | None = None) -> tuple[bool, dict[str, Any]]:
+        """
+        Get story counts for all epics, grouped by status.
+        Optimized to avoid N+1 queries by fetching all data in one query.
+
+        Args:
+            project_id: Optional project filter
+
+        Returns:
+            Tuple of (success, result_dict)
+            Result format: {
+                "epic_id": {
+                    "todo": count,
+                    "doing": count,
+                    "review": count,
+                    "waiting": count,
+                    "done": count,
+                    "backlog": count
+                }
+            }
+        """
+        try:
+            # Build query to get all stories with epic_id
+            query = (
+                self.supabase_client.table("archon_stories")
+                .select("epic_id, status")
+            )
+
+            # Apply project filter if provided
+            if project_id:
+                query = query.eq("project_id", project_id)
+
+            # Execute query
+            response = query.execute()
+
+            if response.data is None:
+                return True, {}
+
+            # Initialize counts dictionary
+            epic_counts = {}
+
+            # Process each story and count by epic_id and status
+            for story in response.data:
+                epic_id = story["epic_id"]
+                status = story.get("status", "todo")
+
+                # Initialize epic entry if not exists
+                if epic_id not in epic_counts:
+                    epic_counts[epic_id] = {
+                        "todo": 0,
+                        "doing": 0,
+                        "review": 0,
+                        "waiting": 0,
+                        "done": 0,
+                        "backlog": 0
+                    }
+
+                # Increment count for this status
+                if status in epic_counts[epic_id]:
+                    epic_counts[epic_id][status] += 1
+                else:
+                    # Handle unknown statuses by defaulting to todo
+                    epic_counts[epic_id]["todo"] += 1
+
+            logger.info(f"Retrieved story counts for {len(epic_counts)} epics")
+            return True, epic_counts
+
+        except Exception as e:
+            logger.error(f"Error getting all epic story counts: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return False, {"error": f"Error getting all epic story counts: {str(e)}"}
