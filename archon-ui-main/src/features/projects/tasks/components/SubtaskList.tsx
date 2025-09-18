@@ -5,8 +5,8 @@ import { Button } from "../../../ui/primitives";
 import { useReorderSubtasks, useSubtasks } from "../hooks";
 import type { Task } from "../types";
 import { getProgressColor, getProgressTextColor } from "../utils";
-import { SubtaskItem } from "./SubtaskItem";
 import { SubtaskEditModal } from "./SubtaskEditModal";
+import { SubtaskItem } from "./SubtaskItem";
 
 export interface SubtaskListProps {
   parentTask: Task;
@@ -45,11 +45,10 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
     setIsExpanded(true); // Auto-expand when adding
   }, []);
 
-
   const handleSubtaskReorder = useCallback(
     (subtaskId: string, targetIndex: number) => {
       const currentSubtasks = [...subtasks];
-      const draggedSubtask = currentSubtasks.find(s => s.id === subtaskId);
+      const draggedSubtask = currentSubtasks.find((s) => s.id === subtaskId);
 
       if (!draggedSubtask) return;
 
@@ -57,14 +56,14 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
       currentSubtasks.splice(currentIndex, 1);
       currentSubtasks.splice(targetIndex, 0, draggedSubtask);
 
-      const orderedIds = currentSubtasks.map(s => s.id);
+      const orderedIds = currentSubtasks.map((s) => s.id);
       reorderSubtasksMutation.mutate(orderedIds);
     },
-    [subtasks, reorderSubtasksMutation]
+    [subtasks, reorderSubtasksMutation],
   );
 
   const handleToggleSubtaskExpand = useCallback((subtaskId: string) => {
-    setExpandedSubtasks(prev => {
+    setExpandedSubtasks((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(subtaskId)) {
         newSet.delete(subtaskId);
@@ -90,11 +89,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
           onClick={handleToggleExpanded}
           className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white p-1"
         >
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
+          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
 
           <span>Subtasks</span>
 
@@ -108,16 +103,12 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
               {/* Progress bar */}
               <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-300 ${getProgressColor(
-                    progress
-                  )}`}
+                  className={`h-full transition-all duration-300 ${getProgressColor(progress)}`}
                   style={{ width: `${progress}%` }}
                 />
               </div>
 
-              <span className={`text-xs font-medium ${getProgressTextColor(progress)}`}>
-                {progress}%
-              </span>
+              <span className={`text-xs font-medium ${getProgressTextColor(progress)}`}>{progress}%</span>
             </div>
           )}
         </Button>
@@ -140,35 +131,28 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
       {isExpanded && (
         <div className="space-y-1">
           {/* Loading state */}
-          {isLoading && (
-            <div className="pl-6 py-2 text-sm text-gray-500">
-              Loading subtasks...
-            </div>
-          )}
+          {isLoading && <div className="pl-6 py-2 text-sm text-gray-500">Loading subtasks...</div>}
 
           {/* Error state */}
-          {error && (
-            <div className="pl-6 py-2 text-sm text-red-600">
-              Failed to load subtasks
-            </div>
-          )}
+          {error && <div className="pl-6 py-2 text-sm text-red-600">Failed to load subtasks</div>}
 
           {/* Subtasks list */}
-          {Array.isArray(subtasks) && subtasks.map((subtask, index) => (
-            <SubtaskItem
-              key={subtask.id}
-              subtask={subtask}
-              parentTaskId={parentTask.id}
-              index={index}
-              projectId={projectId}
-              onSubtaskReorder={handleSubtaskReorder}
-              onEdit={onSubtaskEdit}
-              onDelete={onSubtaskDelete}
-              isExpanded={expandedSubtasks.has(subtask.id)}
-              onToggleExpand={() => handleToggleSubtaskExpand(subtask.id)}
-              hasNestedSubtasks={false} // TODO: Implement nested subtasks detection
-            />
-          ))}
+          {Array.isArray(subtasks) &&
+            subtasks.map((subtask, index) => (
+              <SubtaskItem
+                key={subtask.id}
+                subtask={subtask}
+                parentTaskId={parentTask.id}
+                index={index}
+                projectId={projectId}
+                onSubtaskReorder={handleSubtaskReorder}
+                onEdit={onSubtaskEdit}
+                onDelete={onSubtaskDelete}
+                isExpanded={expandedSubtasks.has(subtask.id)}
+                onToggleExpand={() => handleToggleSubtaskExpand(subtask.id)}
+                hasNestedSubtasks={false} // TODO: Implement nested subtasks detection
+              />
+            ))}
 
           {/* Empty state */}
           {!isLoading && !error && Array.isArray(subtasks) && subtasks.length === 0 && (

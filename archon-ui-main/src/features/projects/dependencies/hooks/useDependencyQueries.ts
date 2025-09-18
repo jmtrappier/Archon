@@ -6,45 +6,33 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dependencyService } from "../services";
 import type {
-  Dependency,
-  CreateDependencyRequest,
-  UpdateDependencyRequest,
-  DependencyListResponse,
-  DependencyQueryParams,
-  DependencyGraph,
-  GraphQueryParams,
   BatchDependencyRequest,
   BatchDependencyResponse,
+  CreateDependencyRequest,
+  Dependency,
   DependencyEntityType,
+  DependencyGraph,
+  DependencyListResponse,
+  DependencyQueryParams,
   DependencyValidation,
+  GraphQueryParams,
+  UpdateDependencyRequest,
 } from "../types";
 
 // Query keys for caching
 export const dependencyKeys = {
   all: ["dependencies"] as const,
   lists: () => [...dependencyKeys.all, "list"] as const,
-  list: (projectId: string, params?: DependencyQueryParams) => [
-    ...dependencyKeys.lists(),
-    projectId,
-    params,
-  ] as const,
+  list: (projectId: string, params?: DependencyQueryParams) => [...dependencyKeys.lists(), projectId, params] as const,
   details: () => [...dependencyKeys.all, "detail"] as const,
   detail: (dependencyId: string) => [...dependencyKeys.details(), dependencyId] as const,
-  entity: (entityType: DependencyEntityType, entityId: string) => [
-    ...dependencyKeys.all,
-    "entity",
-    entityType,
-    entityId,
-  ] as const,
+  entity: (entityType: DependencyEntityType, entityId: string) =>
+    [...dependencyKeys.all, "entity", entityType, entityId] as const,
   graph: (params: GraphQueryParams) => [...dependencyKeys.all, "graph", params] as const,
   stats: (projectId: string) => [...dependencyKeys.all, "stats", projectId] as const,
   circular: (projectId: string) => [...dependencyKeys.all, "circular", projectId] as const,
-  suggestions: (entityType: DependencyEntityType, entityId: string) => [
-    ...dependencyKeys.all,
-    "suggestions",
-    entityType,
-    entityId,
-  ] as const,
+  suggestions: (entityType: DependencyEntityType, entityId: string) =>
+    [...dependencyKeys.all, "suggestions", entityType, entityId] as const,
 } as const;
 
 /**
@@ -57,7 +45,7 @@ export function useDependenciesByProject(
     enabled?: boolean;
     staleTime?: number;
     refetchInterval?: number;
-  }
+  },
 ) {
   return useQuery({
     queryKey: dependencyKeys.list(projectId, params),
@@ -78,7 +66,7 @@ export function useDependenciesForEntity(
   options?: {
     enabled?: boolean;
     staleTime?: number;
-  }
+  },
 ) {
   return useQuery({
     queryKey: dependencyKeys.entity(entityType, entityId),
@@ -96,7 +84,7 @@ export function useDependency(
   options?: {
     enabled?: boolean;
     staleTime?: number;
-  }
+  },
 ) {
   return useQuery({
     queryKey: dependencyKeys.detail(dependencyId),
@@ -115,7 +103,7 @@ export function useDependencyGraph(
     enabled?: boolean;
     staleTime?: number;
     refetchInterval?: number;
-  }
+  },
 ) {
   return useQuery({
     queryKey: dependencyKeys.graph(params),
@@ -134,7 +122,7 @@ export function useDependencyStats(
   options?: {
     enabled?: boolean;
     staleTime?: number;
-  }
+  },
 ) {
   return useQuery({
     queryKey: dependencyKeys.stats(projectId),
@@ -152,7 +140,7 @@ export function useCircularDependencies(
   options?: {
     enabled?: boolean;
     staleTime?: number;
-  }
+  },
 ) {
   return useQuery({
     queryKey: dependencyKeys.circular(projectId),
@@ -172,7 +160,7 @@ export function useSuggestedDependencies(
   options?: {
     enabled?: boolean;
     staleTime?: number;
-  }
+  },
 ) {
   return useQuery({
     queryKey: dependencyKeys.suggestions(entityType, entityId),
@@ -189,8 +177,7 @@ export function useCreateDependency(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (dependencyData: CreateDependencyRequest) =>
-      dependencyService.createDependency(dependencyData),
+    mutationFn: (dependencyData: CreateDependencyRequest) => dependencyService.createDependency(dependencyData),
     onSuccess: (newDependency) => {
       // Invalidate and refetch dependency lists
       queryClient.invalidateQueries({ queryKey: dependencyKeys.lists() });
@@ -232,10 +219,7 @@ export function useUpdateDependency(projectId: string) {
       dependencyService.updateDependency(dependencyId, updates),
     onSuccess: (updatedDependency) => {
       // Update the dependency in the cache
-      queryClient.setQueryData(
-        dependencyKeys.detail(updatedDependency.id),
-        updatedDependency
-      );
+      queryClient.setQueryData(dependencyKeys.detail(updatedDependency.id), updatedDependency);
 
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: dependencyKeys.lists() });
@@ -295,8 +279,7 @@ export function useDeleteDependency(projectId: string) {
  */
 export function useValidateDependency() {
   return useMutation({
-    mutationFn: (dependencyData: CreateDependencyRequest) =>
-      dependencyService.validateDependency(dependencyData),
+    mutationFn: (dependencyData: CreateDependencyRequest) => dependencyService.validateDependency(dependencyData),
     onError: (error) => {
       console.error("Failed to validate dependency:", error);
     },
@@ -310,8 +293,7 @@ export function useCreateDependenciesBatch(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (batchRequest: BatchDependencyRequest) =>
-      dependencyService.createDependenciesBatch(batchRequest),
+    mutationFn: (batchRequest: BatchDependencyRequest) => dependencyService.createDependenciesBatch(batchRequest),
     onSuccess: (response) => {
       // Invalidate all related queries if any dependencies were created
       if (response.created.length > 0) {
@@ -321,7 +303,7 @@ export function useCreateDependenciesBatch(projectId: string) {
         queryClient.invalidateQueries({ queryKey: dependencyKeys.circular(projectId) });
 
         // Invalidate entity queries for all involved entities
-        response.created.forEach(dep => {
+        response.created.forEach((dep) => {
           queryClient.invalidateQueries({
             queryKey: dependencyKeys.entity(dep.from_type, dep.from_id),
           });
@@ -351,7 +333,7 @@ export function useRealtimeDependencies(
   options?: {
     refetchInterval?: number;
     enabled?: boolean;
-  }
+  },
 ) {
   return useDependenciesByProject(projectId, params, {
     enabled: options?.enabled,
@@ -368,7 +350,7 @@ export function useRealtimeDependencyGraph(
   options?: {
     refetchInterval?: number;
     enabled?: boolean;
-  }
+  },
 ) {
   return useDependencyGraph(params, {
     enabled: options?.enabled,

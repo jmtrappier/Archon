@@ -1,16 +1,12 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/features/ui/primitives/dialog";
+import type React from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/features/ui/hooks";
 import { Button, Input } from "@/features/ui/primitives";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/features/ui/primitives/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/primitives/select";
 import { useCreateEpic, useUpdateEpic } from "../hooks/useEpicQueries";
-import { useToast } from "@/features/ui/hooks";
 
 interface EpicModalProps {
   isOpen: boolean;
@@ -20,13 +16,7 @@ interface EpicModalProps {
   onSaved: () => void;
 }
 
-export const EpicModal: React.FC<EpicModalProps> = ({
-  isOpen,
-  projectId,
-  editingEpic,
-  onClose,
-  onSaved,
-}) => {
+export const EpicModal: React.FC<EpicModalProps> = ({ isOpen, projectId, editingEpic, onClose, onSaved }) => {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -46,7 +36,7 @@ export const EpicModal: React.FC<EpicModalProps> = ({
   // Helper function to convert number to priority string
   const numberToPriority = (num: number): "low" | "medium" | "high" | "critical" => {
     if (num <= 25) return "low";
-    if (num <= 50) return "medium"; 
+    if (num <= 50) return "medium";
     if (num <= 75) return "high";
     return "critical";
   };
@@ -54,11 +44,16 @@ export const EpicModal: React.FC<EpicModalProps> = ({
   // Helper function to convert priority string to number
   const priorityToNumber = (priority: string): number => {
     switch (priority) {
-      case "low": return 25;
-      case "medium": return 50;
-      case "high": return 75;
-      case "critical": return 100;
-      default: return 50;
+      case "low":
+        return 25;
+      case "medium":
+        return 50;
+      case "high":
+        return 75;
+      case "critical":
+        return 100;
+      default:
+        return 50;
     }
   };
 
@@ -85,36 +80,39 @@ export const EpicModal: React.FC<EpicModalProps> = ({
     }
   }, [isOpen, editingEpic]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
 
-    if (!formData.title.trim()) {
-      showToast("Epic title is required", "error");
-      return;
-    }
-
-    try {
-      if (isEditing) {
-        await updateEpicMutation.mutateAsync({
-          epicId: editingEpic.id,
-          updates: formData,
-        });
-      } else {
-        // Send the correct data format to the backend
-        const createRequest = {
-          project_id: projectId,
-          title: formData.title,
-          description: formData.description,
-          priority: formData.priority, // Already a string
-          mvp_flag: formData.mvp_flag,
-        };
-        await createEpicMutation.mutateAsync(createRequest);
+      if (!formData.title.trim()) {
+        showToast("Epic title is required", "error");
+        return;
       }
-      onSaved();
-    } catch (error) {
-      // Error handling is done in the mutation
-    }
-  }, [formData, isEditing, editingEpic?.id, createEpicMutation, updateEpicMutation, onSaved, showToast, projectId]);
+
+      try {
+        if (isEditing) {
+          await updateEpicMutation.mutateAsync({
+            epicId: editingEpic.id,
+            updates: formData,
+          });
+        } else {
+          // Send the correct data format to the backend
+          const createRequest = {
+            project_id: projectId,
+            title: formData.title,
+            description: formData.description,
+            priority: formData.priority, // Already a string
+            mvp_flag: formData.mvp_flag,
+          };
+          await createEpicMutation.mutateAsync(createRequest);
+        }
+        onSaved();
+      } catch (error) {
+        // Error handling is done in the mutation
+      }
+    },
+    [formData, isEditing, editingEpic?.id, createEpicMutation, updateEpicMutation, onSaved, showToast, projectId],
+  );
 
   const handleBackToKanban = useCallback(() => {
     onClose();
@@ -125,29 +123,31 @@ export const EpicModal: React.FC<EpicModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit Epic" : "Create New Epic"}
-          </DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Epic" : "Create New Epic"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="title" className="block text-sm font-medium mb-1">Title</label>
+            <label htmlFor="title" className="block text-sm font-medium mb-1">
+              Title
+            </label>
             <Input
               id="title"
               value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
               placeholder="Epic title..."
               required
             />
           </div>
 
           <div>
-            <label htmlFor="description" className="block text-sm font-medium mb-1">Description</label>
+            <label htmlFor="description" className="block text-sm font-medium mb-1">
+              Description
+            </label>
             <textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
               placeholder="Epic description..."
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -155,10 +155,12 @@ export const EpicModal: React.FC<EpicModalProps> = ({
           </div>
 
           <div>
-            <label htmlFor="status" className="block text-sm font-medium mb-1">Status</label>
+            <label htmlFor="status" className="block text-sm font-medium mb-1">
+              Status
+            </label>
             <Select
               value={formData.status}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as any }))}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value as any }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
@@ -174,10 +176,12 @@ export const EpicModal: React.FC<EpicModalProps> = ({
           </div>
 
           <div>
-            <label htmlFor="priority" className="block text-sm font-medium mb-1">Priority</label>
+            <label htmlFor="priority" className="block text-sm font-medium mb-1">
+              Priority
+            </label>
             <Select
               value={formData.priority}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value as any }))}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, priority: value as any }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select priority" />
@@ -196,10 +200,12 @@ export const EpicModal: React.FC<EpicModalProps> = ({
               type="checkbox"
               id="mvp_flag"
               checked={formData.mvp_flag}
-              onChange={(e) => setFormData(prev => ({ ...prev, mvp_flag: e.target.checked }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, mvp_flag: e.target.checked }))}
               className="h-4 w-4"
             />
-            <label htmlFor="mvp_flag" className="text-sm font-medium">MVP (Minimum Viable Product)</label>
+            <label htmlFor="mvp_flag" className="text-sm font-medium">
+              MVP (Minimum Viable Product)
+            </label>
           </div>
 
           <div className="flex justify-between items-center pt-4">

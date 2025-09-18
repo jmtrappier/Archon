@@ -1,9 +1,9 @@
 import { Edit } from "lucide-react";
-import type { Story } from "../types";
-import type { Epic } from "../../epics/types";
 import { Badge } from "../../../ui/primitives/badge";
 import { Button } from "../../../ui/primitives/button";
 import { cn } from "../../../ui/primitives/styles";
+import type { Epic } from "../../epics/types";
+import type { Story } from "../types";
 
 const STATUS_COLORS: Record<string, string> = {
   todo: "bg-gray-100 text-gray-700 border-gray-200",
@@ -38,24 +38,37 @@ export const ProjectStoriesTable = ({ stories, epics, onStoryEdit }: ProjectStor
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
         <thead className="bg-gray-50/70 dark:bg-gray-900/50">
           <tr>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300"
+            >
               Story
             </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300"
+            >
               Epic
             </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300"
+            >
               Status
             </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300"
+            >
               Priority
             </th>
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300"
+            >
               Updated
             </th>
-            {onStoryEdit && (
-              <th scope="col" className="px-4 py-3" />
-            )}
+            {onStoryEdit && <th scope="col" className="px-4 py-3" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-gray-800 bg-white/60 dark:bg-gray-950/40">
@@ -69,9 +82,7 @@ export const ProjectStoriesTable = ({ stories, epics, onStoryEdit }: ProjectStor
                   <div className="flex flex-col">
                     <span className="font-medium text-gray-900 dark:text-white">{story.title}</span>
                     {story.description && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                        {story.description}
-                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{story.description}</span>
                     )}
                   </div>
                 </td>
@@ -81,17 +92,12 @@ export const ProjectStoriesTable = ({ stories, epics, onStoryEdit }: ProjectStor
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <Badge
-                    variant="outline"
-                    className={cn("text-xs font-medium px-2 py-1 border", statusClass)}
-                  >
+                  <Badge variant="outline" className={cn("text-xs font-medium px-2 py-1 border", statusClass)}>
                     {story.status.toUpperCase()}
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-sm capitalize text-gray-700 dark:text-gray-300">
-                    {story.priority}
-                  </span>
+                  <span className="text-sm capitalize text-gray-700 dark:text-gray-300">{story.priority}</span>
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-sm text-gray-500 dark:text-gray-400">

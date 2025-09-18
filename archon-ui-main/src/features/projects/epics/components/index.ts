@@ -5,14 +5,13 @@
  * These components provide a complete UI for managing Epic entities in the TRAXIS hierarchy.
  */
 
-// Core Epic Components
-export { EpicCard } from "./EpicCard";
-export { EpicList } from "./EpicList";
-export { EpicView } from "./EpicView";
-export { EpicModal } from "./EpicModal";
-
 // Export component prop types for external usage
 export type { EpicCardProps } from "./EpicCard";
+// Core Epic Components
+export { EpicCard } from "./EpicCard";
 export type { EpicListProps } from "./EpicList";
-export type { EpicViewProps } from "./EpicView";
+export { EpicList } from "./EpicList";
 export type { EpicModalProps } from "./EpicModal";
+export { EpicModal } from "./EpicModal";
+export type { EpicViewProps } from "./EpicView";
+export { EpicView } from "./EpicView";

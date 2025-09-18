@@ -4,17 +4,17 @@
  * Helper functions for working with dependencies, validation, and visualization
  */
 
+import type { HierarchyStatus, Priority } from "../../shared/types/hierarchy";
 import type {
   Dependency,
-  DependencyNode,
+  DependencyConflict,
   DependencyEdge,
   DependencyEntityType,
-  DependencyType,
+  DependencyNode,
   DependencyStatus,
-  DependencyConflict,
+  DependencyType,
   GraphFilter,
 } from "../types";
-import type { HierarchyStatus, Priority } from "../../shared/types/hierarchy";
 
 // Color schemes for different dependency types and statuses
 export const DEPENDENCY_COLORS = {
@@ -127,7 +127,7 @@ export function getEntityTypeLabel(type: DependencyEntityType): string {
 export function calculateDependencyStatus(
   fromEntity: { status: HierarchyStatus },
   toEntity: { status: HierarchyStatus },
-  dependencyType: DependencyType
+  dependencyType: DependencyType,
 ): DependencyStatus {
   // For "blocks" relationships
   if (dependencyType === "blocks") {
@@ -168,7 +168,7 @@ export function calculateDependencyStatus(
 export function validateDependency(
   fromEntity: DependencyNode,
   toEntity: DependencyNode,
-  dependencyType: DependencyType
+  dependencyType: DependencyType,
 ): { valid: boolean; error?: string } {
   // Cannot depend on itself
   if (fromEntity.id === toEntity.id) {
@@ -226,13 +226,13 @@ export function validateDependency(
  */
 export function detectCircularDependency(
   dependencies: Dependency[],
-  newDependency: { from_id: string; to_id: string }
+  newDependency: { from_id: string; to_id: string },
 ): boolean {
   // Build adjacency list
   const graph = new Map<string, Set<string>>();
 
   // Add existing dependencies
-  dependencies.forEach(dep => {
+  dependencies.forEach((dep) => {
     if (!graph.has(dep.from_id)) {
       graph.set(dep.from_id, new Set());
     }
@@ -283,16 +283,12 @@ export function detectCircularDependency(
 /**
  * Find shortest path between two entities
  */
-export function findShortestPath(
-  dependencies: Dependency[],
-  fromId: string,
-  toId: string
-): string[] | null {
+export function findShortestPath(dependencies: Dependency[], fromId: string, toId: string): string[] | null {
   if (fromId === toId) return [fromId];
 
   // Build adjacency list
   const graph = new Map<string, string[]>();
-  dependencies.forEach(dep => {
+  dependencies.forEach((dep) => {
     if (!graph.has(dep.from_id)) {
       graph.set(dep.from_id, []);
     }
@@ -327,7 +323,7 @@ export function findShortestPath(
  */
 export function analyzeDependencyImpact(
   dependencies: Dependency[],
-  entityId: string
+  entityId: string,
 ): {
   directlyAffects: string[];
   indirectlyAffects: string[];
@@ -338,7 +334,7 @@ export function analyzeDependencyImpact(
   const incoming = new Map<string, string[]>();
 
   // Build graphs
-  dependencies.forEach(dep => {
+  dependencies.forEach((dep) => {
     // Outgoing dependencies (what this entity affects)
     if (!outgoing.has(dep.from_id)) {
       outgoing.set(dep.from_id, []);
@@ -415,10 +411,10 @@ export function analyzeDependencyImpact(
 export function filterGraph(
   nodes: DependencyNode[],
   edges: DependencyEdge[],
-  filter: GraphFilter
+  filter: GraphFilter,
 ): { nodes: DependencyNode[]; edges: DependencyEdge[] } {
   // Filter nodes
-  let filteredNodes = nodes.filter(node => {
+  let filteredNodes = nodes.filter((node) => {
     // Entity type filter
     if (filter.entityTypes.size > 0 && !filter.entityTypes.has(node.type)) {
       return false;
@@ -443,15 +439,15 @@ export function filterGraph(
   });
 
   // Filter edges
-  let filteredEdges = edges.filter(edge => {
+  const filteredEdges = edges.filter((edge) => {
     // Dependency type filter
     if (filter.dependencyTypes.size > 0 && !filter.dependencyTypes.has(edge.type)) {
       return false;
     }
 
     // Ensure both source and target nodes are in filtered nodes
-    const hasSource = filteredNodes.some(node => node.id === edge.source);
-    const hasTarget = filteredNodes.some(node => node.id === edge.target);
+    const hasSource = filteredNodes.some((node) => node.id === edge.source);
+    const hasTarget = filteredNodes.some((node) => node.id === edge.target);
 
     return hasSource && hasTarget;
   });
@@ -459,12 +455,12 @@ export function filterGraph(
   // If showOnlyConnected is true, remove nodes with no edges
   if (filter.showOnlyConnected) {
     const connectedNodeIds = new Set<string>();
-    filteredEdges.forEach(edge => {
+    filteredEdges.forEach((edge) => {
       connectedNodeIds.add(edge.source);
       connectedNodeIds.add(edge.target);
     });
 
-    filteredNodes = filteredNodes.filter(node => connectedNodeIds.has(node.id));
+    filteredNodes = filteredNodes.filter((node) => connectedNodeIds.has(node.id));
   }
 
   return { nodes: filteredNodes, edges: filteredEdges };
@@ -475,7 +471,7 @@ export function filterGraph(
  */
 export function calculateGraphMetrics(
   nodes: DependencyNode[],
-  edges: DependencyEdge[]
+  edges: DependencyEdge[],
 ): {
   totalNodes: number;
   totalEdges: number;
@@ -493,12 +489,12 @@ export function calculateGraphMetrics(
   const inDegree = new Map<string, number>();
   const outDegree = new Map<string, number>();
 
-  nodes.forEach(node => {
+  nodes.forEach((node) => {
     inDegree.set(node.id, 0);
     outDegree.set(node.id, 0);
   });
 
-  edges.forEach(edge => {
+  edges.forEach((edge) => {
     outDegree.set(edge.source, (outDegree.get(edge.source) || 0) + 1);
     inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
   });
@@ -512,8 +508,8 @@ export function calculateGraphMetrics(
   const density = maxPossibleEdges > 0 ? edgeCount / maxPossibleEdges : 0;
 
   // Count isolated nodes (no incoming or outgoing edges)
-  const isolatedNodes = nodes.filter(node =>
-    (inDegree.get(node.id) || 0) === 0 && (outDegree.get(node.id) || 0) === 0
+  const isolatedNodes = nodes.filter(
+    (node) => (inDegree.get(node.id) || 0) === 0 && (outDegree.get(node.id) || 0) === 0,
   ).length;
 
   return {
@@ -534,7 +530,7 @@ export function calculateGraphMetrics(
 export function generateDependencySuggestions(
   node: DependencyNode,
   allNodes: DependencyNode[],
-  existingDependencies: Dependency[]
+  existingDependencies: Dependency[],
 ): Array<{
   targetNode: DependencyNode;
   suggestedType: DependencyType;
@@ -550,13 +546,11 @@ export function generateDependencySuggestions(
 
   // Get existing dependency IDs for this node
   const existingFromIds = new Set(
-    existingDependencies.filter(dep => dep.from_id === node.id).map(dep => dep.to_id)
+    existingDependencies.filter((dep) => dep.from_id === node.id).map((dep) => dep.to_id),
   );
-  const existingToIds = new Set(
-    existingDependencies.filter(dep => dep.to_id === node.id).map(dep => dep.from_id)
-  );
+  const existingToIds = new Set(existingDependencies.filter((dep) => dep.to_id === node.id).map((dep) => dep.from_id));
 
-  allNodes.forEach(targetNode => {
+  allNodes.forEach((targetNode) => {
     if (targetNode.id === node.id) return;
     if (existingFromIds.has(targetNode.id) || existingToIds.has(targetNode.id)) return;
 
@@ -616,7 +610,5 @@ export function generateDependencySuggestions(
   });
 
   // Sort by confidence and return top suggestions
-  return suggestions
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, 10);
+  return suggestions.sort((a, b) => b.confidence - a.confidence).slice(0, 10);
 }

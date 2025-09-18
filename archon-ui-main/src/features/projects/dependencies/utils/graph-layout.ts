@@ -5,12 +5,7 @@
  * Uses pure TypeScript/JavaScript without external graph libraries
  */
 
-import type {
-  DependencyNode,
-  DependencyEdge,
-  GraphLayout,
-  DependencyEntityType,
-} from "../types";
+import type { DependencyEdge, DependencyEntityType, DependencyNode, GraphLayout } from "../types";
 
 // Constants for layout algorithms
 const LAYOUT_CONSTANTS = {
@@ -46,7 +41,10 @@ const NODE_SIZES = {
 
 // Vector operations for force-directed layout
 class Vector2D {
-  constructor(public x: number = 0, public y: number = 0) {}
+  constructor(
+    public x: number = 0,
+    public y: number = 0,
+  ) {}
 
   add(other: Vector2D): Vector2D {
     return new Vector2D(this.x + other.x, this.y + other.y);
@@ -81,14 +79,14 @@ export class ForceDirectedLayout {
   private edges: DependencyEdge[] = [];
   private width: number;
   private height: number;
-  private options: GraphLayout['options'];
+  private options: GraphLayout["options"];
 
   constructor(
     nodes: DependencyNode[],
     edges: DependencyEdge[],
     width: number,
     height: number,
-    options: GraphLayout['options'] = {}
+    options: GraphLayout["options"] = {},
   ) {
     this.width = width;
     this.height = height;
@@ -115,10 +113,7 @@ export class ForceDirectedLayout {
 
       this.nodes.set(node.id, {
         node,
-        position: new Vector2D(
-          centerX + Math.cos(angle) * radius,
-          centerY + Math.sin(angle) * radius
-        ),
+        position: new Vector2D(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius),
         velocity: new Vector2D(0, 0),
       });
     });
@@ -169,7 +164,10 @@ export class ForceDirectedLayout {
 
         if (distance === 0) continue;
 
-        const force = nodeA.position.subtract(nodeB.position).normalize().multiply(strength / distance);
+        const force = nodeA.position
+          .subtract(nodeB.position)
+          .normalize()
+          .multiply(strength / distance);
 
         nodeA.velocity = nodeA.velocity.add(force);
         nodeB.velocity = nodeB.velocity.subtract(force);
@@ -190,7 +188,8 @@ export class ForceDirectedLayout {
       const distance = sourceData.position.distance(targetData.position);
       if (distance === 0) continue;
 
-      const force = targetData.position.subtract(sourceData.position)
+      const force = targetData.position
+        .subtract(sourceData.position)
         .normalize()
         .multiply(strength * (distance - linkDistance));
 
@@ -220,7 +219,7 @@ export class ForceDirectedLayout {
   }
 
   private getPositionedNodes(): DependencyNode[] {
-    return Array.from(this.nodes.values()).map(nodeData => ({
+    return Array.from(this.nodes.values()).map((nodeData) => ({
       ...nodeData.node,
       position: { x: nodeData.position.x, y: nodeData.position.y },
     }));
@@ -235,12 +234,7 @@ export class HierarchicalLayout {
   private height: number;
   private levels: Map<number, DependencyNode[]> = new Map();
 
-  constructor(
-    nodes: DependencyNode[],
-    edges: DependencyEdge[],
-    width: number,
-    height: number
-  ) {
+  constructor(nodes: DependencyNode[], edges: DependencyEdge[], width: number, height: number) {
     this.nodes = nodes;
     this.edges = edges;
     this.width = width;
@@ -258,7 +252,7 @@ export class HierarchicalLayout {
     });
 
     // Group nodes by level
-    this.nodes.forEach(node => {
+    this.nodes.forEach((node) => {
       const level = levels.get(node.type) ?? 2;
       if (!this.levels.has(level)) {
         this.levels.set(level, []);
@@ -278,7 +272,7 @@ export class HierarchicalLayout {
       const y = startY + levelIndex * levelHeight;
       const nodeSpacing = Math.max(
         LAYOUT_CONSTANTS.HIERARCHICAL.MIN_NODE_SPACING,
-        this.width / (levelNodes.length + 1)
+        this.width / (levelNodes.length + 1),
       );
 
       levelNodes.forEach((node, index) => {
@@ -338,18 +332,13 @@ export class TreeLayout {
   private width: number;
   private height: number;
 
-  constructor(
-    nodes: DependencyNode[],
-    edges: DependencyEdge[],
-    width: number,
-    height: number
-  ) {
+  constructor(nodes: DependencyNode[], edges: DependencyEdge[], width: number, height: number) {
     this.width = width;
     this.height = height;
     this.edges = edges;
 
     // Build node map
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       this.nodes.set(node.id, node);
       this.children.set(node.id, []);
     });
@@ -359,10 +348,10 @@ export class TreeLayout {
 
   private buildTree(): void {
     // Find all nodes that are targets (have incoming dependencies)
-    const targets = new Set(this.edges.map(edge => edge.target));
+    const targets = new Set(this.edges.map((edge) => edge.target));
 
     // Build children map and find roots
-    this.edges.forEach(edge => {
+    this.edges.forEach((edge) => {
       if (this.children.has(edge.source)) {
         this.children.get(edge.source)!.push(edge.target);
       }
@@ -378,7 +367,7 @@ export class TreeLayout {
     // If no roots found (circular dependencies), pick nodes with minimum incoming edges
     if (this.roots.size === 0) {
       const incomingCount = new Map<string, number>();
-      this.edges.forEach(edge => {
+      this.edges.forEach((edge) => {
         incomingCount.set(edge.target, (incomingCount.get(edge.target) ?? 0) + 1);
       });
 
@@ -421,7 +410,7 @@ export class TreeLayout {
     nodeId: string,
     x: number,
     level: number,
-    positions: Map<string, { x: number; y: number }>
+    positions: Map<string, { x: number; y: number }>,
   ): void {
     const y = level * LAYOUT_CONSTANTS.TREE.LEVEL_HEIGHT;
     positions.set(nodeId, { x, y });
@@ -446,7 +435,7 @@ export function calculateLayout(
   edges: DependencyEdge[],
   width: number,
   height: number,
-  layout: GraphLayout = { algorithm: "force", options: {} }
+  layout: GraphLayout = { algorithm: "force", options: {} },
 ): DependencyNode[] {
   if (nodes.length === 0) return [];
 
@@ -469,11 +458,7 @@ export function calculateLayout(
 }
 
 // Calculate edge paths for SVG rendering
-export function calculateEdgePath(
-  sourceNode: DependencyNode,
-  targetNode: DependencyNode,
-  curved = true
-): string {
+export function calculateEdgePath(sourceNode: DependencyNode, targetNode: DependencyNode, curved = true): string {
   if (!sourceNode.position || !targetNode.position) {
     return "";
   }
@@ -491,8 +476,8 @@ export function calculateEdgePath(
   const distance = Math.sqrt(dx * dx + dy * dy);
 
   // Control point offset (perpendicular to line)
-  const offsetX = -dy / distance * 20;
-  const offsetY = dx / distance * 20;
+  const offsetX = (-dy / distance) * 20;
+  const offsetY = (dx / distance) * 20;
 
   const midX = (source.x + target.x) / 2 + offsetX;
   const midY = (source.y + target.y) / 2 + offsetY;
@@ -503,7 +488,7 @@ export function calculateEdgePath(
 // Calculate optimal label position for edges
 export function calculateLabelPosition(
   sourceNode: DependencyNode,
-  targetNode: DependencyNode
+  targetNode: DependencyNode,
 ): { x: number; y: number } {
   if (!sourceNode.position || !targetNode.position) {
     return { x: 0, y: 0 };

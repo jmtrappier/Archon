@@ -124,20 +124,20 @@ export const STORY_ANIMATIONS = {
 // Story-specific styling helpers
 export function getStoryEpicBadgeColor(epicTitle: string): string {
   // Generate a consistent color based on epic title
-  const hash = epicTitle.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0);
+  const hash = epicTitle.split("").reduce((a, b) => {
+    a = (a << 5) - a + b.charCodeAt(0);
     return a & a;
   }, 0);
 
   const colors = [
-    '#6366F1', // Indigo
-    '#8B5CF6', // Violet
-    '#06B6D4', // Cyan
-    '#10B981', // Emerald
-    '#F59E0B', // Amber
-    '#EF4444', // Red
-    '#EC4899', // Pink
-    '#84CC16', // Lime
+    "#6366F1", // Indigo
+    "#8B5CF6", // Violet
+    "#06B6D4", // Cyan
+    "#10B981", // Emerald
+    "#F59E0B", // Amber
+    "#EF4444", // Red
+    "#EC4899", // Pink
+    "#84CC16", // Lime
   ];
 
   return colors[Math.abs(hash) % colors.length];

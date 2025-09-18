@@ -6,9 +6,9 @@
  */
 
 import type React from "react";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../ui/primitives/tabs";
-import { DependencyTab, DependencyGraph } from "../components";
+import { DependencyGraph, DependencyTab } from "../components";
 import type { DependencyNode } from "../types";
 
 // Mock data for demonstration
@@ -92,7 +92,7 @@ export const DependencyIntegrationExample: React.FC = () => {
   const [selectedEntity, setSelectedEntity] = useState(mockEpic);
 
   const handleNavigateToEntity = (entityId: string, entityType: string) => {
-    const entity = mockAvailableEntities.find(e => e.id === entityId);
+    const entity = mockAvailableEntities.find((e) => e.id === entityId);
     if (entity) {
       setSelectedEntity({
         id: entity.id,
@@ -108,9 +108,7 @@ export const DependencyIntegrationExample: React.FC = () => {
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold mb-2">Dependency Visualization Integration</h1>
-        <p className="text-gray-600">
-          Example showing how to integrate dependency visualization into existing views
-        </p>
+        <p className="text-gray-600">Example showing how to integrate dependency visualization into existing views</p>
       </div>
 
       {/* Current Entity Info */}
@@ -146,13 +144,13 @@ export const DependencyIntegrationExample: React.FC = () => {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {mockAvailableEntities.find(e => e.id === selectedEntity.id)?.progress || 0}%
+                  {mockAvailableEntities.find((e) => e.id === selectedEntity.id)?.progress || 0}%
                 </div>
                 <div className="text-sm text-gray-500">Progress</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-amber-600">
-                  {mockAvailableEntities.find(e => e.id === selectedEntity.id)?.priority || "N/A"}
+                  {mockAvailableEntities.find((e) => e.id === selectedEntity.id)?.priority || "N/A"}
                 </div>
                 <div className="text-sm text-gray-500">Priority</div>
               </div>
@@ -215,8 +213,14 @@ export const DependencyIntegrationExample: React.FC = () => {
       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-6">
         <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-3">Integration Guide</h3>
         <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
-          <p>• Add <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">DependencyTab</code> to existing Epic/Story/Task views</p>
-          <p>• Use <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">DependencyGraph</code> for standalone visualization</p>
+          <p>
+            • Add <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">DependencyTab</code> to existing
+            Epic/Story/Task views
+          </p>
+          <p>
+            • Use <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">DependencyGraph</code> for standalone
+            visualization
+          </p>
           <p>• Integrate with existing navigation handlers for seamless UX</p>
           <p>• Configure performance options for large projects (virtualization, max nodes)</p>
           <p>• Add dependency creation buttons to action menus</p>

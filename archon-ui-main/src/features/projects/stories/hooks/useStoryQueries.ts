@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { HierarchyStatus } from "../types";
 
 // API base URL
@@ -82,7 +82,10 @@ export const useUpdateStory = (epicId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ storyId, updates }: {
+    mutationFn: async ({
+      storyId,
+      updates,
+    }: {
       storyId: string;
       updates: {
         title?: string;
@@ -90,7 +93,7 @@ export const useUpdateStory = (epicId: string) => {
         priority?: string;
         status?: HierarchyStatus;
         mvp_flag?: boolean;
-      }
+      };
     }) => {
       return apiCall(`/api/stories/${storyId}`, {
         method: "PUT",

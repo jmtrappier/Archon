@@ -7,16 +7,16 @@
 
 // Re-export hierarchy types related to Stories
 export type {
-  Story,
   CreateStoryRequest,
-  UpdateStoryRequest,
-  StoryCounts,
-  HierarchyStatus,
-  Priority,
-  QueryOptions,
-  ListResponse,
   HierarchyError,
+  HierarchyStatus,
+  ListResponse,
+  Priority,
   ProgressCalculation,
+  QueryOptions,
+  Story,
+  StoryCounts,
+  UpdateStoryRequest,
 } from "../../shared/types/hierarchy";
 
 // Story-specific extended types
@@ -43,8 +43,8 @@ export interface StoryFilters {
 }
 
 // Story sorting options
-export type StorySortField = 'title' | 'created_at' | 'updated_at' | 'priority' | 'progress' | 'status';
-export type SortDirection = 'asc' | 'desc';
+export type StorySortField = "title" | "created_at" | "updated_at" | "priority" | "progress" | "status";
+export type SortDirection = "asc" | "desc";
 
 export interface StorySortOptions {
   field: StorySortField;
@@ -69,7 +69,7 @@ export interface StoryWithEpic extends Story {
 
 // Story item types for drag and drop
 export const StoryItemTypes = {
-  STORY: 'story',
+  STORY: "story",
 } as const;
 
 // Story with Tasks relationship

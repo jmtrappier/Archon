@@ -4,8 +4,8 @@
  * Export all navigation-related components for the BMAD hierarchy.
  */
 
-export { HierarchyBreadcrumb } from "./HierarchyBreadcrumb";
+export type { BreadcrumbSegmentProps } from "./BreadcrumbSegment";
 export { BreadcrumbSegment, MemoizedBreadcrumbSegment } from "./BreadcrumbSegment";
 
 export type { HierarchyBreadcrumbProps } from "./HierarchyBreadcrumb";
-export type { BreadcrumbSegmentProps } from "./BreadcrumbSegment";
+export { HierarchyBreadcrumb } from "./HierarchyBreadcrumb";

@@ -28,6 +28,7 @@
     "seed:projects": "node --loader ts-node/esm ../scripts/seed-project-data.ts"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@mdxeditor/editor": "^3.42.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -42,6 +43,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "latest",
     "date-fns": "^4.1.0",
+    "focus-trap-react": "^11.0.4",
     "fractional-indexing": "^3.2.0",
     "framer-motion": "^11.5.4",
     "lucide-react": "^0.441.0",

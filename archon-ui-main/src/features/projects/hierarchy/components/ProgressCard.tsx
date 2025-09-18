@@ -1,22 +1,13 @@
-import React, { useState } from "react";
-import {
-  MoreVertical,
-  Edit2,
-  Trash2,
-  Eye,
-  ChevronRight,
-  Hash,
-  Users,
-  ListTodo,
-  FileText
-} from "lucide-react";
+import { ChevronRight, Edit2, Eye, FileText, Hash, ListTodo, MoreVertical, Trash2, Users } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { Badge } from "@/features/ui/primitives/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/features/ui/primitives/dropdown-menu";
-import { Badge } from "@/features/ui/primitives/badge";
 
 interface ProgressCardProps {
   level: "epic" | "story" | "task" | "subtask";
@@ -143,13 +134,9 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2 flex-1">
             {getLevelIcon()}
-            <span className="text-xs font-mono text-gray-500 dark:text-gray-400">
-              {code}
-            </span>
+            <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{code}</span>
             {priority !== undefined && (
-              <span className={`text-xs font-semibold ${getPriorityColor()}`}>
-                P{priority}
-              </span>
+              <span className={`text-xs font-semibold ${getPriorityColor()}`}>P{priority}</span>
             )}
           </div>
 
@@ -163,19 +150,23 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {onView && (
-                <DropdownMenuItem onClick={(e) => {
-                  e.stopPropagation();
-                  onView();
-                }}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onView();
+                  }}
+                >
                   <Eye className="h-4 w-4 mr-2" />
                   View Details
                 </DropdownMenuItem>
               )}
               {onEdit && (
-                <DropdownMenuItem onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                >
                   <Edit2 className="h-4 w-4 mr-2" />
                   Edit
                 </DropdownMenuItem>
@@ -197,28 +188,18 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
         </div>
 
         {/* Title */}
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
-          {title}
-        </h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">{title}</h3>
 
         {/* Description */}
-        {description && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-            {description}
-          </p>
-        )}
+        {description && <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{description}</p>}
 
         {/* Status and Assignee */}
         <div className="flex items-center gap-2 mb-3">
-          <Badge className={getStatusColor()}>
-            {status}
-          </Badge>
+          <Badge className={getStatusColor()}>{status}</Badge>
           {assignee && (
             <div className="flex items-center gap-1">
               <Users className="h-3 w-3 text-gray-400" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">
-                {assignee}
-              </span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">{assignee}</span>
             </div>
           )}
         </div>
@@ -227,20 +208,19 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
         {progress !== undefined && (
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Progress
-              </span>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                {Math.round(progress)}%
-              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Progress</span>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{Math.round(progress)}%</span>
             </div>
             <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ease-out ${
-                  progress >= 80 ? "bg-green-500" :
-                  progress >= 50 ? "bg-blue-500" :
-                  progress >= 25 ? "bg-yellow-500" :
-                  "bg-red-500"
+                  progress >= 80
+                    ? "bg-green-500"
+                    : progress >= 50
+                      ? "bg-blue-500"
+                      : progress >= 25
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
                 }`}
                 style={{ width: `${progress}%` }}
               />
@@ -251,16 +231,12 @@ export const ProgressCard: React.FC<ProgressCardProps> = ({
         {/* Child Count */}
         {childCount && (
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">
-              {childCount.label}
-            </span>
+            <span className="text-gray-600 dark:text-gray-400">{childCount.label}</span>
             <div className="flex items-center gap-1">
               <span className="font-medium text-gray-900 dark:text-white">
                 {childCount.completed}/{childCount.total}
               </span>
-              {onClick && (
-                <ChevronRight className="h-4 w-4 text-gray-400" />
-              )}
+              {onClick && <ChevronRight className="h-4 w-4 text-gray-400" />}
             </div>
           </div>
         )}

@@ -7,16 +7,16 @@
 
 // Re-export hierarchy types related to Epics
 export type {
-  Epic,
   CreateEpicRequest,
-  UpdateEpicRequest,
+  Epic,
   EpicCounts,
-  HierarchyStatus,
-  Priority,
-  QueryOptions,
-  ListResponse,
   HierarchyError,
+  HierarchyStatus,
+  ListResponse,
+  Priority,
   ProgressCalculation,
+  QueryOptions,
+  UpdateEpicRequest,
 } from "../../shared/types/hierarchy";
 
 // Epic-specific extended types
@@ -42,8 +42,8 @@ export interface EpicFilters {
 }
 
 // Epic sorting options
-export type EpicSortField = 'title' | 'created_at' | 'updated_at' | 'priority' | 'progress' | 'status';
-export type SortDirection = 'asc' | 'desc';
+export type EpicSortField = "title" | "created_at" | "updated_at" | "priority" | "progress" | "status";
+export type SortDirection = "asc" | "desc";
 
 export interface EpicSortOptions {
   field: EpicSortField;

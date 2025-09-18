@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { epicService } from "../services/epicService";
-import { storyService } from "../../stories/services/storyService";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/features/ui/hooks";
+import { storyService } from "../../stories/services/storyService";
+import { epicService } from "../services/epicService";
 
 // Query keys
 export const epicKeys = {
@@ -57,8 +57,7 @@ export const useUpdateEpic = (projectId: string) => {
   const { showToast } = useToast();
 
   return useMutation({
-    mutationFn: ({ epicId, updates }: { epicId: string; updates: any }) =>
-      epicService.updateEpic(epicId, updates),
+    mutationFn: ({ epicId, updates }: { epicId: string; updates: any }) => epicService.updateEpic(epicId, updates),
     onSuccess: (_, { epicId }) => {
       queryClient.invalidateQueries({ queryKey: epicKeys.list(projectId) });
       queryClient.invalidateQueries({ queryKey: epicKeys.detail(epicId) });
@@ -76,8 +75,7 @@ export const useUpdateEpicStatus = (projectId: string) => {
   const { showToast } = useToast();
 
   return useMutation({
-    mutationFn: ({ epicId, status }: { epicId: string; status: string }) =>
-      epicService.updateEpic(epicId, { status }),
+    mutationFn: ({ epicId, status }: { epicId: string; status: string }) => epicService.updateEpic(epicId, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: epicKeys.list(projectId) });
       showToast("Epic status updated", "success");

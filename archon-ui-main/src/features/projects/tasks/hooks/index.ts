@@ -12,11 +12,11 @@ export { useTaskEditor } from "./useTaskEditor";
 // TanStack Query hooks
 export {
   taskKeys,
-  useCreateTask,
   useCreateSubtask,
+  useCreateTask,
   useDeleteTask,
   useProjectTasks,
   useReorderSubtasks,
-  useUpdateTask,
   useSubtasks,
+  useUpdateTask,
 } from "./useTaskQueries";

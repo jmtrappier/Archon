@@ -5,40 +5,47 @@
  * Provides validation, suggestions, and conflict detection
  */
 
-import { AlertTriangle, Check, X, Lightbulb, Search, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Lightbulb, Plus, Search, Trash2, X } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, AlertDescription } from "../../../ui/primitives/alert";
+import { Badge } from "../../../ui/primitives/badge";
 import { Button } from "../../../ui/primitives/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../ui/primitives/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../ui/primitives/dialog";
 import { Input } from "../../../ui/primitives/input";
 import { Label } from "../../../ui/primitives/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/primitives/select";
-import { Textarea } from "../../../ui/primitives/textarea";
-import { Badge } from "../../../ui/primitives/badge";
-import { Alert, AlertDescription } from "../../../ui/primitives/alert";
 import { Separator } from "../../../ui/primitives/separator";
+import { Textarea } from "../../../ui/primitives/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
 import {
   useCreateDependency,
-  useUpdateDependency,
   useDeleteDependency,
-  useValidateDependency,
   useSuggestedDependencies,
+  useUpdateDependency,
+  useValidateDependency,
 } from "../hooks";
 import type {
-  Dependency,
   CreateDependencyRequest,
-  UpdateDependencyRequest,
+  Dependency,
   DependencyEntityType,
-  DependencyType,
   DependencyNode,
+  DependencyType,
   DependencyValidation,
+  UpdateDependencyRequest,
 } from "../types";
 import {
-  getDependencyTypeLabel,
   getDependencyTypeColor,
-  getEntityTypeLabel,
+  getDependencyTypeLabel,
   getEntityTypeColor,
+  getEntityTypeLabel,
   validateDependency,
 } from "../utils";
 
@@ -99,12 +106,9 @@ export const DependencyModal: React.FC<DependencyModalProps> = ({
   const validateDependencyMutation = useValidateDependency();
 
   // Suggestions (only for create mode)
-  const suggestionsQuery = useSuggestedDependencies(
-    fromEntityType,
-    fromEntityId,
-    10,
-    { enabled: mode === "create" && !!fromEntityId && showSuggestions }
-  );
+  const suggestionsQuery = useSuggestedDependencies(fromEntityType, fromEntityId, 10, {
+    enabled: mode === "create" && !!fromEntityId && showSuggestions,
+  });
 
   // Initialize form with props or existing dependency
   useEffect(() => {
@@ -144,24 +148,26 @@ export const DependencyModal: React.FC<DependencyModalProps> = ({
 
   // Filter entities based on search
   const filteredFromEntities = useMemo(() => {
-    return availableEntities.filter(entity =>
-      entity.title.toLowerCase().includes(searchFrom.toLowerCase()) ||
-      entity.id.includes(searchFrom)
+    return availableEntities.filter(
+      (entity) => entity.title.toLowerCase().includes(searchFrom.toLowerCase()) || entity.id.includes(searchFrom),
     );
   }, [availableEntities, searchFrom]);
 
   const filteredToEntities = useMemo(() => {
-    return availableEntities.filter(entity =>
-      entity.id !== fromEntityId && // Can't depend on self
-      (entity.title.toLowerCase().includes(searchTo.toLowerCase()) ||
-       entity.id.includes(searchTo))
+    return availableEntities.filter(
+      (entity) =>
+        entity.id !== fromEntityId && // Can't depend on self
+        (entity.title.toLowerCase().includes(searchTo.toLowerCase()) || entity.id.includes(searchTo)),
     );
   }, [availableEntities, searchTo, fromEntityId]);
 
   // Get entity by ID
-  const getEntityById = useCallback((id: string) => {
-    return availableEntities.find(entity => entity.id === id);
-  }, [availableEntities]);
+  const getEntityById = useCallback(
+    (id: string) => {
+      return availableEntities.find((entity) => entity.id === id);
+    },
+    [availableEntities],
+  );
 
   // Client-side validation
   const performValidation = useCallback(() => {
@@ -221,7 +227,7 @@ export const DependencyModal: React.FC<DependencyModalProps> = ({
       });
 
       if (!validation.valid) {
-        const errors = validation.conflicts?.map(c => c.message) || [];
+        const errors = validation.conflicts?.map((c) => c.message) || [];
         const warnings = validation.warnings || [];
         setValidationErrors(errors);
         setValidationWarnings(warnings);
@@ -234,72 +240,67 @@ export const DependencyModal: React.FC<DependencyModalProps> = ({
       setValidationErrors(["Failed to validate dependency"]);
       return false;
     }
-  }, [
-    fromEntityId,
-    toEntityId,
-    fromEntityType,
-    toEntityType,
-    dependencyType,
-    description,
-    validateDependencyMutation,
-  ]);
+  }, [fromEntityId, toEntityId, fromEntityType, toEntityType, dependencyType, description, validateDependencyMutation]);
 
   // Handle form submission
-  const handleSubmit = useCallback(async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = useCallback(
+    async (event: React.FormEvent) => {
+      event.preventDefault();
 
-    // Client-side validation first
-    if (!performValidation()) return;
+      // Client-side validation first
+      if (!performValidation()) return;
 
-    // Server-side validation
-    const isValid = await performServerValidation();
-    if (!isValid) return;
+      // Server-side validation
+      const isValid = await performServerValidation();
+      if (!isValid) return;
 
-    try {
-      if (mode === "create") {
-        const newDependency = await createDependencyMutation.mutateAsync({
-          from_type: fromEntityType,
-          from_id: fromEntityId,
-          to_type: toEntityType,
-          to_id: toEntityId,
-          dependency_type: dependencyType,
-          description: description.trim() || undefined,
-        });
-
-        onDependencyCreated?.(newDependency);
-      } else if (mode === "edit" && dependency) {
-        const updatedDependency = await updateDependencyMutation.mutateAsync({
-          dependencyId: dependency.id,
-          updates: {
+      try {
+        if (mode === "create") {
+          const newDependency = await createDependencyMutation.mutateAsync({
+            from_type: fromEntityType,
+            from_id: fromEntityId,
+            to_type: toEntityType,
+            to_id: toEntityId,
             dependency_type: dependencyType,
             description: description.trim() || undefined,
-          },
-        });
+          });
 
-        onDependencyUpdated?.(updatedDependency);
+          onDependencyCreated?.(newDependency);
+        } else if (mode === "edit" && dependency) {
+          const updatedDependency = await updateDependencyMutation.mutateAsync({
+            dependencyId: dependency.id,
+            updates: {
+              dependency_type: dependencyType,
+              description: description.trim() || undefined,
+            },
+          });
+
+          onDependencyUpdated?.(updatedDependency);
+        }
+
+        onClose();
+      } catch (error) {
+        console.error("Failed to save dependency:", error);
       }
-
-      onClose();
-    } catch (error) {
-      console.error("Failed to save dependency:", error);
-    }
-  }, [
-    mode,
-    dependency,
-    fromEntityType,
-    fromEntityId,
-    toEntityType,
-    toEntityId,
-    dependencyType,
-    description,
-    performValidation,
-    performServerValidation,
-    createDependencyMutation,
-    updateDependencyMutation,
-    onDependencyCreated,
-    onDependencyUpdated,
-    onClose,
-  ]);
+    },
+    [
+      mode,
+      dependency,
+      fromEntityType,
+      fromEntityId,
+      toEntityType,
+      toEntityId,
+      dependencyType,
+      description,
+      performValidation,
+      performServerValidation,
+      createDependencyMutation,
+      updateDependencyMutation,
+      onDependencyCreated,
+      onDependencyUpdated,
+      onClose,
+    ],
+  );
 
   // Handle delete
   const handleDelete = useCallback(async () => {
@@ -324,9 +325,8 @@ export const DependencyModal: React.FC<DependencyModalProps> = ({
     setShowSuggestions(false);
   }, []);
 
-  const isLoading = createDependencyMutation.isPending ||
-                   updateDependencyMutation.isPending ||
-                   deleteDependencyMutation.isPending;
+  const isLoading =
+    createDependencyMutation.isPending || updateDependencyMutation.isPending || deleteDependencyMutation.isPending;
 
   const canSubmit = fromEntityId && toEntityId && validationErrors.length === 0;
 
@@ -383,7 +383,7 @@ export const DependencyModal: React.FC<DependencyModalProps> = ({
                         <SelectValue placeholder="Select from entity" />
                       </SelectTrigger>
                       <SelectContent>
-                        {filteredFromEntities.map(entity => (
+                        {filteredFromEntities.map((entity) => (
                           <SelectItem key={entity.id} value={entity.id}>
                             <div className="flex items-center gap-2">
                               <Badge
@@ -490,7 +490,7 @@ export const DependencyModal: React.FC<DependencyModalProps> = ({
                           <SelectValue placeholder="Select to entity" />
                         </SelectTrigger>
                         <SelectContent>
-                          {filteredToEntities.map(entity => (
+                          {filteredToEntities.map((entity) => (
                             <SelectItem key={entity.id} value={entity.id}>
                               <div className="flex items-center gap-2">
                                 <Badge
@@ -513,7 +513,7 @@ export const DependencyModal: React.FC<DependencyModalProps> = ({
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => setShowSuggestions(prev => !prev)}
+                            onClick={() => setShowSuggestions((prev) => !prev)}
                             disabled={!fromEntityId}
                           >
                             <Lightbulb className="w-4 h-4" />
@@ -604,12 +604,7 @@ export const DependencyModal: React.FC<DependencyModalProps> = ({
           <DialogFooter className="flex justify-between">
             <div>
               {mode === "edit" && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={isLoading}
-                >
+                <Button type="button" variant="destructive" onClick={handleDelete} disabled={isLoading}>
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete
                 </Button>
@@ -622,11 +617,7 @@ export const DependencyModal: React.FC<DependencyModalProps> = ({
               </Button>
 
               {mode !== "view" && (
-                <Button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!canSubmit || isLoading}
-                >
+                <Button type="button" onClick={handleSubmit} disabled={!canSubmit || isLoading}>
                   {isLoading ? (
                     <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
                   ) : mode === "create" ? (

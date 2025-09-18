@@ -15,9 +15,7 @@ export function calculateTaskProgress(subtasks: Task[]): number {
     return 0;
   }
 
-  const completedSubtasks = subtasks.filter(
-    (subtask) => subtask.status === "done"
-  );
+  const completedSubtasks = subtasks.filter((subtask) => subtask.status === "done");
 
   return Math.round((completedSubtasks.length / subtasks.length) * 100);
 }

@@ -5,17 +5,17 @@
 
 import { formatZodErrors, ValidationError } from "../../shared/api";
 import { callAPIWithETag, invalidateETagCache } from "../../shared/apiWithEtag";
-import { validateCreateStory, validateUpdateStory, validateMoveStory } from "../schemas";
+import { validateCreateStory, validateMoveStory, validateUpdateStory } from "../schemas";
 import type {
-  Story,
-  StoryWithEpic,
   CreateStoryRequest,
-  UpdateStoryRequest,
+  HierarchyStatus,
+  ListResponse,
+  MoveStoryBetweenEpicsRequest,
+  Story,
   StoryCounts,
   StoryQueryParams,
-  MoveStoryBetweenEpicsRequest,
-  HierarchyStatus,
-  ListResponse
+  StoryWithEpic,
+  UpdateStoryRequest,
 } from "../types";
 
 export const storyService = {
@@ -25,16 +25,16 @@ export const storyService = {
   async getStoriesByEpic(epicId: string, params?: StoryQueryParams): Promise<Story[]> {
     try {
       const queryParams = new URLSearchParams();
-      if (params?.search) queryParams.append('search', params.search);
-      if (params?.status) queryParams.append('status', params.status);
-      if (params?.priority) queryParams.append('priority', params.priority);
-      if (params?.mvp_only) queryParams.append('mvp_only', params.mvp_only.toString());
-      if (params?.include_archived) queryParams.append('include_archived', params.include_archived.toString());
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.offset) queryParams.append('offset', params.offset.toString());
+      if (params?.search) queryParams.append("search", params.search);
+      if (params?.status) queryParams.append("status", params.status);
+      if (params?.priority) queryParams.append("priority", params.priority);
+      if (params?.mvp_only) queryParams.append("mvp_only", params.mvp_only.toString());
+      if (params?.include_archived) queryParams.append("include_archived", params.include_archived.toString());
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
+      if (params?.offset) queryParams.append("offset", params.offset.toString());
 
       const queryString = queryParams.toString();
-      const url = `/api/epics/${epicId}/stories${queryString ? `?${queryString}` : ''}`;
+      const url = `/api/epics/${epicId}/stories${queryString ? `?${queryString}` : ""}`;
 
       const stories = await callAPIWithETag<Story[]>(url);
       return stories;
@@ -50,16 +50,16 @@ export const storyService = {
   async getStoriesByProject(projectId: string, params?: StoryQueryParams): Promise<StoryWithEpic[]> {
     try {
       const queryParams = new URLSearchParams();
-      if (params?.search) queryParams.append('search', params.search);
-      if (params?.status) queryParams.append('status', params.status);
-      if (params?.priority) queryParams.append('priority', params.priority);
-      if (params?.mvp_only) queryParams.append('mvp_only', params.mvp_only.toString());
-      if (params?.include_archived) queryParams.append('include_archived', params.include_archived.toString());
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.offset) queryParams.append('offset', params.offset.toString());
+      if (params?.search) queryParams.append("search", params.search);
+      if (params?.status) queryParams.append("status", params.status);
+      if (params?.priority) queryParams.append("priority", params.priority);
+      if (params?.mvp_only) queryParams.append("mvp_only", params.mvp_only.toString());
+      if (params?.include_archived) queryParams.append("include_archived", params.include_archived.toString());
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
+      if (params?.offset) queryParams.append("offset", params.offset.toString());
 
       const queryString = queryParams.toString();
-      const url = `/api/projects/${projectId}/stories${queryString ? `?${queryString}` : ''}`;
+      const url = `/api/projects/${projectId}/stories${queryString ? `?${queryString}` : ""}`;
 
       const stories = await callAPIWithETag<StoryWithEpic[]>(url);
       return stories;
@@ -273,7 +273,7 @@ export const storyService = {
 
       return story;
     } catch (error) {
-      console.error(`Failed to ${archive ? 'archive' : 'unarchive'} story ${storyId}:`, error);
+      console.error(`Failed to ${archive ? "archive" : "unarchive"} story ${storyId}:`, error);
       throw error;
     }
   },

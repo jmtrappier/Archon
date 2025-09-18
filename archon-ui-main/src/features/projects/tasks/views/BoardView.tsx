@@ -8,7 +8,7 @@ interface BoardViewProps {
   tasks: Task[];
   epics: Epic[];
   projectId: string;
-  dataType: 'epics' | 'tasks' | 'mixed';
+  dataType: "epics" | "tasks" | "mixed";
   storyCounts?: Record<string, StoryCounts>;
   onTaskMove: (taskId: string, newStatus: Task["status"]) => void;
   onTaskReorder: (taskId: string, targetIndex: number, status: Task["status"]) => void;
@@ -39,12 +39,14 @@ export const BoardView = ({
   const getItemsByStatus = (status: Task["status"] | Epic["status"]) => {
     let items: (Task | Epic)[] = [];
 
-    if (dataType === 'epics' || dataType === 'mixed') {
-      const epicItems = epics.filter((epic) => epic.status === status).sort((a, b) => (a.priority || 0) - (b.priority || 0));
+    if (dataType === "epics" || dataType === "mixed") {
+      const epicItems = epics
+        .filter((epic) => epic.status === status)
+        .sort((a, b) => (a.priority || 0) - (b.priority || 0));
       items = [...items, ...epicItems];
     }
 
-    if (dataType === 'tasks' || dataType === 'mixed') {
+    if (dataType === "tasks" || dataType === "mixed") {
       const taskItems = tasks.filter((task) => task.status === status).sort((a, b) => a.task_order - b.task_order);
       items = [...items, ...taskItems];
     }
@@ -54,8 +56,8 @@ export const BoardView = ({
 
   // Show empty state when no items to display
   const hasItems = () => {
-    if (dataType === 'epics') return epics.length > 0;
-    if (dataType === 'tasks') return tasks.length > 0;
+    if (dataType === "epics") return epics.length > 0;
+    if (dataType === "tasks") return tasks.length > 0;
     return epics.length > 0 || tasks.length > 0;
   };
 
@@ -69,8 +71,8 @@ export const BoardView = ({
 
   // Display appropriate empty state message
   const getEmptyMessage = () => {
-    if (dataType === 'epics') return "No EPICs found";
-    if (dataType === 'tasks') return "No tasks found";
+    if (dataType === "epics") return "No EPICs found";
+    if (dataType === "tasks") return "No tasks found";
     return "No EPICs or tasks found";
   };
 
@@ -80,7 +82,9 @@ export const BoardView = ({
         <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
           <div className="text-center">
             <p className="text-lg font-medium">{getEmptyMessage()}</p>
-            <p className="text-sm mt-2">Create some {dataType === 'epics' ? 'EPICs' : dataType === 'tasks' ? 'tasks' : 'items'} to get started</p>
+            <p className="text-sm mt-2">
+              Create some {dataType === "epics" ? "EPICs" : dataType === "tasks" ? "tasks" : "items"} to get started
+            </p>
           </div>
         </div>
       ) : (
@@ -91,9 +95,9 @@ export const BoardView = ({
               key={status}
               status={status}
               title={title}
-              tasks={dataType === 'epics' ? [] : getItemsByStatus(status) as Task[]}
-              epics={dataType === 'tasks' ? [] : getItemsByStatus(status) as Epic[]}
-              items={dataType === 'mixed' ? getItemsByStatus(status) : []}
+              tasks={dataType === "epics" ? [] : (getItemsByStatus(status) as Task[])}
+              epics={dataType === "tasks" ? [] : (getItemsByStatus(status) as Epic[])}
+              items={dataType === "mixed" ? getItemsByStatus(status) : []}
               projectId={projectId}
               dataType={dataType}
               storyCounts={storyCounts}

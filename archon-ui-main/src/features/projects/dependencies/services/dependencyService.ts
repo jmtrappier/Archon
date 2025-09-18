@@ -6,19 +6,19 @@
 import { formatZodErrors, ValidationError } from "../../shared/api";
 import { callAPIWithETag, invalidateETagCache } from "../../shared/apiWithEtag";
 import type {
-  Dependency,
-  CreateDependencyRequest,
-  UpdateDependencyRequest,
-  DependencyListResponse,
-  DependencyQueryParams,
-  DependencyGraph,
-  GraphQueryParams,
-  DependencyValidation,
   BatchDependencyRequest,
   BatchDependencyResponse,
+  CreateDependencyRequest,
+  Dependency,
   DependencyEntityType,
-  DependencyType,
+  DependencyGraph,
+  DependencyListResponse,
+  DependencyQueryParams,
   DependencyStatus,
+  DependencyType,
+  DependencyValidation,
+  GraphQueryParams,
+  UpdateDependencyRequest,
 } from "../types";
 
 export const dependencyService = {

@@ -289,7 +289,7 @@ export function useCreateSubtask(parentTaskId: string) {
   const { showToast } = useToast();
 
   return useMutation({
-    mutationFn: (subtaskData: Omit<CreateTaskRequest, 'parent_task_id'>) =>
+    mutationFn: (subtaskData: Omit<CreateTaskRequest, "parent_task_id">) =>
       taskService.createSubtask(parentTaskId, subtaskData),
     onMutate: async (newSubtaskData) => {
       // Cancel any outgoing refetches
@@ -353,8 +353,7 @@ export function useMoveTaskToStory() {
   const { showToast } = useToast();
 
   return useMutation<Task, Error, { taskId: string; toStoryId: string; newTaskOrder?: number }>({
-    mutationFn: ({ taskId, toStoryId, newTaskOrder }) =>
-      taskService.moveTaskToStory(taskId, toStoryId, newTaskOrder),
+    mutationFn: ({ taskId, toStoryId, newTaskOrder }) => taskService.moveTaskToStory(taskId, toStoryId, newTaskOrder),
     onSuccess: (data, { toStoryId }) => {
       // Invalidate relevant caches
       queryClient.invalidateQueries({ queryKey: taskHierarchyKeys.byStory(toStoryId) });
@@ -393,8 +392,7 @@ export function useReorderTasksInStory(storyId: string) {
   const { showToast } = useToast();
 
   return useMutation<Task[], Error, string[]>({
-    mutationFn: (orderedTaskIds: string[]) =>
-      taskService.reorderTasksInStory(storyId, orderedTaskIds),
+    mutationFn: (orderedTaskIds: string[]) => taskService.reorderTasksInStory(storyId, orderedTaskIds),
     onMutate: async (orderedTaskIds) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: taskHierarchyKeys.byStory(storyId) });
@@ -405,7 +403,7 @@ export function useReorderTasksInStory(storyId: string) {
       // Optimistically reorder
       if (previousTasks) {
         const reorderedTasks = orderedTaskIds
-          .map(id => previousTasks.find(task => task.id === id))
+          .map((id) => previousTasks.find((task) => task.id === id))
           .filter(Boolean) as Task[];
         queryClient.setQueryData(taskHierarchyKeys.byStory(storyId), reorderedTasks);
       }
@@ -432,8 +430,7 @@ export function useReorderSubtasks(parentTaskId: string) {
   const { showToast } = useToast();
 
   return useMutation<Task[], Error, string[]>({
-    mutationFn: (orderedSubtaskIds: string[]) =>
-      taskService.reorderSubtasks(parentTaskId, orderedSubtaskIds),
+    mutationFn: (orderedSubtaskIds: string[]) => taskService.reorderSubtasks(parentTaskId, orderedSubtaskIds),
     onMutate: async (orderedSubtaskIds) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: taskHierarchyKeys.subtasks(parentTaskId) });
@@ -444,7 +441,7 @@ export function useReorderSubtasks(parentTaskId: string) {
       // Optimistically reorder
       if (previousSubtasks) {
         const reorderedSubtasks = orderedSubtaskIds
-          .map(id => previousSubtasks.find(task => task.id === id))
+          .map((id) => previousSubtasks.find((task) => task.id === id))
           .filter(Boolean) as Task[];
         queryClient.setQueryData(taskHierarchyKeys.subtasks(parentTaskId), reorderedSubtasks);
       }

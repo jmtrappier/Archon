@@ -14,7 +14,7 @@ interface TableViewProps {
   tasks: Task[];
   epics: Epic[];
   projectId: string;
-  dataType: 'epics' | 'tasks' | 'mixed';
+  dataType: "epics" | "tasks" | "mixed";
   onTaskView?: (task: Task) => void;
   onTaskComplete?: (taskId: string) => void;
   onTaskDelete?: (task: Task) => void;
@@ -234,12 +234,14 @@ export const TableView = ({
   onTaskReorder,
 }: TableViewProps) => {
   // Handle EPICs view with informative message
-  if (dataType === 'epics' || dataType === 'mixed') {
+  if (dataType === "epics" || dataType === "mixed") {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
         <div className="text-center">
           <p className="text-lg font-medium">EPICs Table View</p>
-          <p className="text-sm mt-2">EPICs are best viewed in Board mode. Use the Board view for better EPIC management.</p>
+          <p className="text-sm mt-2">
+            EPICs are best viewed in Board mode. Use the Board view for better EPIC management.
+          </p>
           <p className="text-xs mt-2 opacity-75">Switch to Board view using the controls below ⬇️</p>
         </div>
       </div>

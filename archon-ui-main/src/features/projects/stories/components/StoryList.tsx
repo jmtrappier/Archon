@@ -1,16 +1,16 @@
-import { BarChart3, Plus, Search, Filter, Grid, List } from "lucide-react";
+import { BarChart3, Filter, Grid, List, Plus, Search } from "lucide-react";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { Badge } from "../../../ui/primitives/badge";
 import { Button } from "../../../ui/primitives/button";
 import { Input } from "../../../ui/primitives/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/primitives/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
-import { Badge } from "../../../ui/primitives/badge";
-import { useEpicStories, useUpdateStoryStatus, useReorderStoriesInEpic } from "../hooks/useStoryQueries";
-import type { Story, StoryWithEpic, HierarchyStatus, Priority, StoryFilters } from "../types";
-import { STORY_STATUS_ORDER, STORY_PRIORITY_ORDER } from "../utils/story-styles";
+import { useEpicStories, useReorderStoriesInEpic, useUpdateStoryStatus } from "../hooks/useStoryQueries";
+import type { HierarchyStatus, Priority, Story, StoryFilters, StoryWithEpic } from "../types";
+import { STORY_PRIORITY_ORDER, STORY_STATUS_ORDER } from "../utils/story-styles";
 import { StoryCard } from "./StoryCard";
 
 export interface StoryListProps {
@@ -22,7 +22,7 @@ export interface StoryListProps {
   showEpicContext?: boolean;
   className?: string;
   compact?: boolean;
-  viewMode?: 'grid' | 'list' | 'kanban';
+  viewMode?: "grid" | "list" | "kanban";
 }
 
 export const StoryList: React.FC<StoryListProps> = ({
@@ -34,7 +34,7 @@ export const StoryList: React.FC<StoryListProps> = ({
   showEpicContext = false,
   className = "",
   compact = false,
-  viewMode = 'grid',
+  viewMode = "grid",
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<HierarchyStatus | "all">("all");
@@ -56,9 +56,7 @@ export const StoryList: React.FC<StoryListProps> = ({
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
-        (story) =>
-          story.title.toLowerCase().includes(term) ||
-          story.description?.toLowerCase().includes(term)
+        (story) => story.title.toLowerCase().includes(term) || story.description?.toLowerCase().includes(term),
       );
     }
 
@@ -95,20 +93,22 @@ export const StoryList: React.FC<StoryListProps> = ({
 
   // Group stories by status for kanban view
   const storiesByStatus = useMemo(() => {
-    if (viewMode !== 'kanban') return {};
+    if (viewMode !== "kanban") return {};
 
-    return STORY_STATUS_ORDER.reduce((acc, status) => {
-      acc[status] = filteredStories.filter((story) => story.status === status);
-      return acc;
-    }, {} as Record<HierarchyStatus, Story[]>);
+    return STORY_STATUS_ORDER.reduce(
+      (acc, status) => {
+        acc[status] = filteredStories.filter((story) => story.status === status);
+        return acc;
+      },
+      {} as Record<HierarchyStatus, Story[]>,
+    );
   }, [filteredStories, viewMode]);
 
   // Handlers
   const handleStoryReorder = useCallback(
     (storyId: string, targetIndex: number, status: HierarchyStatus) => {
-      const statusStories = viewMode === 'kanban'
-        ? storiesByStatus[status] || []
-        : filteredStories.filter(s => s.status === status);
+      const statusStories =
+        viewMode === "kanban" ? storiesByStatus[status] || [] : filteredStories.filter((s) => s.status === status);
 
       const newOrder = [...statusStories];
       const currentIndex = newOrder.findIndex((story) => story.id === storyId);
@@ -118,10 +118,10 @@ export const StoryList: React.FC<StoryListProps> = ({
         newOrder.splice(targetIndex, 0, movedStory);
 
         // Update server with new order
-        reorderStoriesInEpic.mutate(newOrder.map(s => s.id));
+        reorderStoriesInEpic.mutate(newOrder.map((s) => s.id));
       }
     },
-    [filteredStories, storiesByStatus, viewMode, reorderStoriesInEpic]
+    [filteredStories, storiesByStatus, viewMode, reorderStoriesInEpic],
   );
 
   const handleStorySelect = useCallback((storyId: string) => {
@@ -148,12 +148,12 @@ export const StoryList: React.FC<StoryListProps> = ({
     return {
       total: stories.length,
       filtered: filteredStories.length,
-      todo: stories.filter(s => s.status === 'todo').length,
-      doing: stories.filter(s => s.status === 'doing').length,
-      review: stories.filter(s => s.status === 'review').length,
-      waiting: stories.filter(s => s.status === 'waiting').length,
-      done: stories.filter(s => s.status === 'done').length,
-      mvp: stories.filter(s => s.mvp_flag).length,
+      todo: stories.filter((s) => s.status === "todo").length,
+      doing: stories.filter((s) => s.status === "doing").length,
+      review: stories.filter((s) => s.status === "review").length,
+      waiting: stories.filter((s) => s.status === "waiting").length,
+      done: stories.filter((s) => s.status === "done").length,
+      mvp: stories.filter((s) => s.mvp_flag).length,
     };
   }, [stories, filteredStories]);
 
@@ -174,9 +174,7 @@ export const StoryList: React.FC<StoryListProps> = ({
             {/* Top row: Title, stats, and create button */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Stories ({stats.filtered})
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Stories ({stats.filtered})</h2>
 
                 {/* Quick stats */}
                 <div className="flex items-center space-x-2">
@@ -248,11 +246,7 @@ export const StoryList: React.FC<StoryListProps> = ({
               </Select>
 
               {/* MVP filter */}
-              <Button
-                variant={mvpOnly ? "default" : "outline"}
-                size="sm"
-                onClick={() => setMvpOnly(!mvpOnly)}
-              >
+              <Button variant={mvpOnly ? "default" : "outline"} size="sm" onClick={() => setMvpOnly(!mvpOnly)}>
                 MVP Only
               </Button>
 
@@ -294,7 +288,7 @@ export const StoryList: React.FC<StoryListProps> = ({
           )}
 
           {/* Kanban view */}
-          {viewMode === 'kanban' && !isLoading && filteredStories.length > 0 && (
+          {viewMode === "kanban" && !isLoading && filteredStories.length > 0 && (
             <div className="grid grid-cols-5 gap-4">
               {STORY_STATUS_ORDER.map((status) => (
                 <div key={status} className="space-y-3">
@@ -327,11 +321,14 @@ export const StoryList: React.FC<StoryListProps> = ({
           )}
 
           {/* Grid/List view */}
-          {(viewMode === 'grid' || viewMode === 'list') && !isLoading && filteredStories.length > 0 && (
-            <div className={viewMode === 'grid'
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-              : "space-y-3"
-            }>
+          {(viewMode === "grid" || viewMode === "list") && !isLoading && filteredStories.length > 0 && (
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                  : "space-y-3"
+              }
+            >
               {filteredStories.map((story, index) => (
                 <StoryCard
                   key={story.id}
@@ -347,7 +344,7 @@ export const StoryList: React.FC<StoryListProps> = ({
                   selectedStories={selectedStories}
                   onStorySelect={handleStorySelect}
                   showEpicContext={showEpicContext}
-                  compact={viewMode === 'list' || compact}
+                  compact={viewMode === "list" || compact}
                 />
               ))}
             </div>

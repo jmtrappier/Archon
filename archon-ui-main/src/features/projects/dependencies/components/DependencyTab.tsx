@@ -5,27 +5,19 @@
  * to show dependency visualization and management
  */
 
-import { Network, Plus, Filter, Eye, Settings } from "lucide-react";
+import { Eye, Filter, Network, Plus, Settings } from "lucide-react";
 import type React from "react";
-import { useState, useCallback, useMemo } from "react";
-import { Button } from "../../../ui/primitives/button";
-import { Badge } from "../../../ui/primitives/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../ui/primitives/tabs";
+import { useCallback, useMemo, useState } from "react";
 import { Alert, AlertDescription } from "../../../ui/primitives/alert";
+import { Badge } from "../../../ui/primitives/badge";
+import { Button } from "../../../ui/primitives/button";
 import { Skeleton } from "../../../ui/primitives/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../ui/primitives/tabs";
+import { useCircularDependencies, useDependenciesForEntity, useDependencyStats } from "../hooks";
+import type { DependencyEntityType, DependencyNode, GraphLayout } from "../types";
+import { getDependencyStatusLabel } from "../utils";
 import { DependencyGraph } from "./DependencyGraph";
 import { DependencyModal } from "./DependencyModal";
-import {
-  useDependenciesForEntity,
-  useDependencyStats,
-  useCircularDependencies,
-} from "../hooks";
-import type {
-  DependencyEntityType,
-  DependencyNode,
-  GraphLayout,
-} from "../types";
-import { getDependencyStatusLabel } from "../utils";
 
 export interface DependencyTabProps {
   projectId: string;
@@ -81,19 +73,13 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
     include_entities: true,
   });
 
-  const {
-    data: projectStats,
-    isLoading: statsLoading,
-  } = useDependencyStats(projectId, { enabled: showMetrics });
+  const { data: projectStats, isLoading: statsLoading } = useDependencyStats(projectId, { enabled: showMetrics });
 
-  const {
-    data: circularCheck,
-    isLoading: circularLoading,
-  } = useCircularDependencies(projectId);
+  const { data: circularCheck, isLoading: circularLoading } = useCircularDependencies(projectId);
 
   // Get current entity as node for create modal
   const currentEntity = useMemo((): DependencyNode | undefined => {
-    const entity = availableEntities.find(e => e.id === entityId);
+    const entity = availableEntities.find((e) => e.id === entityId);
     if (entity) return entity;
 
     // Create a minimal entity representation if not in availableEntities
@@ -115,12 +101,15 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
     refetchDependencies();
   }, [refetchDependencies]);
 
-  const handleNodeClick = useCallback((nodeId: string, nodeType: string) => {
-    // If clicking on the current entity, don't navigate
-    if (nodeId === entityId) return;
+  const handleNodeClick = useCallback(
+    (nodeId: string, nodeType: string) => {
+      // If clicking on the current entity, don't navigate
+      if (nodeId === entityId) return;
 
-    onNavigateToEntity?.(nodeId, nodeType);
-  }, [entityId, onNavigateToEntity]);
+      onNavigateToEntity?.(nodeId, nodeType);
+    },
+    [entityId, onNavigateToEntity],
+  );
 
   const handleEdgeClick = useCallback((edgeId: string) => {
     setSelectedDependency(edgeId);
@@ -130,11 +119,11 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
   const dependencyStats = useMemo(() => {
     if (!entityDependencies?.dependencies) return null;
 
-    const incoming = entityDependencies.dependencies.filter(dep => dep.to_id === entityId);
-    const outgoing = entityDependencies.dependencies.filter(dep => dep.from_id === entityId);
+    const incoming = entityDependencies.dependencies.filter((dep) => dep.to_id === entityId);
+    const outgoing = entityDependencies.dependencies.filter((dep) => dep.from_id === entityId);
 
-    const blocked = incoming.filter(dep => dep.status === "blocked").length;
-    const conflicts = incoming.concat(outgoing).filter(dep => dep.status === "conflict").length;
+    const blocked = incoming.filter((dep) => dep.status === "blocked").length;
+    const conflicts = incoming.concat(outgoing).filter((dep) => dep.status === "conflict").length;
 
     return {
       incoming: incoming.length,
@@ -163,9 +152,7 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
     return (
       <div className={`${className}`}>
         <Alert variant="destructive">
-          <AlertDescription>
-            Failed to load dependencies. Please try again.
-          </AlertDescription>
+          <AlertDescription>Failed to load dependencies. Please try again.</AlertDescription>
         </Alert>
       </div>
     );
@@ -210,12 +197,7 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
 
         <div className="flex items-center gap-2">
           {showCreateButton && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCreateDependency}
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" size="sm" onClick={handleCreateDependency} className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Add Dependency
             </Button>
@@ -276,13 +258,16 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
         <TabsContent value="list">
           <div className="space-y-4">
             {/* Incoming Dependencies */}
-            {entityDependencies?.dependencies.filter(dep => dep.to_id === entityId).length > 0 && (
+            {entityDependencies?.dependencies.filter((dep) => dep.to_id === entityId).length > 0 && (
               <div>
-                <h3 className="font-medium mb-3">Incoming Dependencies ({entityDependencies?.dependencies.filter(dep => dep.to_id === entityId).length})</h3>
+                <h3 className="font-medium mb-3">
+                  Incoming Dependencies (
+                  {entityDependencies?.dependencies.filter((dep) => dep.to_id === entityId).length})
+                </h3>
                 <div className="space-y-2">
                   {entityDependencies?.dependencies
-                    .filter(dep => dep.to_id === entityId)
-                    .map(dependency => (
+                    .filter((dep) => dep.to_id === entityId)
+                    .map((dependency) => (
                       <div
                         key={dependency.id}
                         className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border"
@@ -291,10 +276,18 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
                           <Badge
                             variant="outline"
                             style={{
-                              borderColor: dependency.from_entity?.type === "epic" ? "#8b5cf6" :
-                                          dependency.from_entity?.type === "story" ? "#06b6d4" : "#f97316",
-                              color: dependency.from_entity?.type === "epic" ? "#8b5cf6" :
-                                     dependency.from_entity?.type === "story" ? "#06b6d4" : "#f97316",
+                              borderColor:
+                                dependency.from_entity?.type === "epic"
+                                  ? "#8b5cf6"
+                                  : dependency.from_entity?.type === "story"
+                                    ? "#06b6d4"
+                                    : "#f97316",
+                              color:
+                                dependency.from_entity?.type === "epic"
+                                  ? "#8b5cf6"
+                                  : dependency.from_entity?.type === "story"
+                                    ? "#06b6d4"
+                                    : "#f97316",
                             }}
                           >
                             {dependency.from_entity?.type}
@@ -307,8 +300,13 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
                           </div>
                         </div>
                         <Badge
-                          variant={dependency.status === "blocked" ? "destructive" :
-                                  dependency.status === "active" ? "default" : "secondary"}
+                          variant={
+                            dependency.status === "blocked"
+                              ? "destructive"
+                              : dependency.status === "active"
+                                ? "default"
+                                : "secondary"
+                          }
                         >
                           {getDependencyStatusLabel(dependency.status)}
                         </Badge>
@@ -319,13 +317,16 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
             )}
 
             {/* Outgoing Dependencies */}
-            {entityDependencies?.dependencies.filter(dep => dep.from_id === entityId).length > 0 && (
+            {entityDependencies?.dependencies.filter((dep) => dep.from_id === entityId).length > 0 && (
               <div>
-                <h3 className="font-medium mb-3">Outgoing Dependencies ({entityDependencies?.dependencies.filter(dep => dep.from_id === entityId).length})</h3>
+                <h3 className="font-medium mb-3">
+                  Outgoing Dependencies (
+                  {entityDependencies?.dependencies.filter((dep) => dep.from_id === entityId).length})
+                </h3>
                 <div className="space-y-2">
                   {entityDependencies?.dependencies
-                    .filter(dep => dep.from_id === entityId)
-                    .map(dependency => (
+                    .filter((dep) => dep.from_id === entityId)
+                    .map((dependency) => (
                       <div
                         key={dependency.id}
                         className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border"
@@ -334,10 +335,18 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
                           <Badge
                             variant="outline"
                             style={{
-                              borderColor: dependency.to_entity?.type === "epic" ? "#8b5cf6" :
-                                          dependency.to_entity?.type === "story" ? "#06b6d4" : "#f97316",
-                              color: dependency.to_entity?.type === "epic" ? "#8b5cf6" :
-                                     dependency.to_entity?.type === "story" ? "#06b6d4" : "#f97316",
+                              borderColor:
+                                dependency.to_entity?.type === "epic"
+                                  ? "#8b5cf6"
+                                  : dependency.to_entity?.type === "story"
+                                    ? "#06b6d4"
+                                    : "#f97316",
+                              color:
+                                dependency.to_entity?.type === "epic"
+                                  ? "#8b5cf6"
+                                  : dependency.to_entity?.type === "story"
+                                    ? "#06b6d4"
+                                    : "#f97316",
                             }}
                           >
                             {dependency.to_entity?.type}
@@ -350,8 +359,13 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
                           </div>
                         </div>
                         <Badge
-                          variant={dependency.status === "blocked" ? "destructive" :
-                                  dependency.status === "active" ? "default" : "secondary"}
+                          variant={
+                            dependency.status === "blocked"
+                              ? "destructive"
+                              : dependency.status === "active"
+                                ? "default"
+                                : "secondary"
+                          }
                         >
                           {getDependencyStatusLabel(dependency.status)}
                         </Badge>
@@ -366,9 +380,7 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
               <div className="text-center py-8">
                 <Network className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="font-medium text-gray-900 dark:text-white mb-2">No Dependencies</h3>
-                <p className="text-gray-500 mb-4">
-                  This {entityType} doesn't have any dependencies yet.
-                </p>
+                <p className="text-gray-500 mb-4">This {entityType} doesn't have any dependencies yet.</p>
                 {showCreateButton && (
                   <Button onClick={handleCreateDependency} className="flex items-center gap-2">
                     <Plus className="w-4 h-4" />
@@ -387,9 +399,7 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
             {dependencyStats && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {dependencyStats.incoming}
-                  </div>
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dependencyStats.incoming}</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">Incoming</div>
                 </div>
                 <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border">
@@ -399,15 +409,11 @@ export const DependencyTab: React.FC<DependencyTabProps> = ({
                   <div className="text-sm text-gray-600 dark:text-gray-400">Outgoing</div>
                 </div>
                 <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border">
-                  <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                    {dependencyStats.blocked}
-                  </div>
+                  <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{dependencyStats.blocked}</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">Blocked</div>
                 </div>
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border">
-                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                    {dependencyStats.conflicts}
-                  </div>
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">{dependencyStats.conflicts}</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">Conflicts</div>
                 </div>
               </div>

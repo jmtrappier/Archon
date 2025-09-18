@@ -46,7 +46,7 @@ export interface DependencyEntity {
 
   // Hierarchy context
   project_id: string;
-  epic_id?: string;  // For stories and tasks
+  epic_id?: string; // For stories and tasks
   story_id?: string; // For tasks
   parent_task_id?: string; // For subtasks
 }
@@ -237,24 +237,20 @@ export type {
   DependencyEntityType,
   DependencyType,
   DependencyStatus,
-
   // Main interfaces
   Dependency,
   DependencyEntity,
   DependencyNode,
   DependencyEdge,
   DependencyGraph,
-
   // Request/Response types
   CreateDependencyRequest,
   UpdateDependencyRequest,
   DependencyQueryParams,
   DependencyListResponse,
-
   // Validation and conflicts
   DependencyConflict,
   DependencyValidation,
-
   // Graph types
   GraphQueryParams,
   GraphLayout,

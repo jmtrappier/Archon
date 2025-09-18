@@ -6,14 +6,14 @@
  */
 
 import type React from "react";
-import { useMemo, useCallback } from "react";
-import { DependencyNode } from "./DependencyNode";
-import { DependencyEdge } from "./DependencyEdge";
+import { useCallback, useMemo } from "react";
 import type {
-  DependencyNode as DependencyNodeType,
   DependencyEdge as DependencyEdgeType,
+  DependencyNode as DependencyNodeType,
   GraphPerformanceOptions,
 } from "../types";
+import { DependencyEdge } from "./DependencyEdge";
+import { DependencyNode } from "./DependencyNode";
 
 export interface VirtualizedGraphProps {
   nodes: DependencyNodeType[];
@@ -64,14 +64,13 @@ export const VirtualizedGraph: React.FC<VirtualizedGraphProps> = ({
   const visibleNodes = useMemo(() => {
     if (!performance.virtualizeNodes) return nodes;
 
-    return nodes.filter(node => {
+    return nodes.filter((node) => {
       if (!node.position) return true; // Always render nodes without position
 
       const { x, y } = node.position;
-      return x >= viewportBounds.left &&
-             x <= viewportBounds.right &&
-             y >= viewportBounds.top &&
-             y <= viewportBounds.bottom;
+      return (
+        x >= viewportBounds.left && x <= viewportBounds.right && y >= viewportBounds.top && y <= viewportBounds.bottom
+      );
     });
   }, [nodes, viewportBounds, performance.virtualizeNodes]);
 
@@ -79,29 +78,30 @@ export const VirtualizedGraph: React.FC<VirtualizedGraphProps> = ({
   const visibleEdges = useMemo(() => {
     if (!performance.virtualizeNodes) return edges;
 
-    const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
-    return edges.filter(edge =>
-      visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
-    );
+    const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+    return edges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target));
   }, [edges, visibleNodes, performance.virtualizeNodes]);
 
   // Level of detail - reduce quality for small nodes
-  const getNodeDetailLevel = useCallback((node: DependencyNodeType) => {
-    if (!node.position) return "full";
+  const getNodeDetailLevel = useCallback(
+    (node: DependencyNodeType) => {
+      if (!node.position) return "full";
 
-    // Calculate node screen size
-    const nodeSize = node.size === "lg" ? 120 : node.size === "sm" ? 80 : 100;
-    const screenSize = nodeSize * zoom;
+      // Calculate node screen size
+      const nodeSize = node.size === "lg" ? 120 : node.size === "sm" ? 80 : 100;
+      const screenSize = nodeSize * zoom;
 
-    if (screenSize < 30) return "minimal"; // Just a colored dot
-    if (screenSize < 60) return "basic";   // Title only
-    return "full"; // Full details
-  }, [zoom]);
+      if (screenSize < 30) return "minimal"; // Just a colored dot
+      if (screenSize < 60) return "basic"; // Title only
+      return "full"; // Full details
+    },
+    [zoom],
+  );
 
   // Level of detail - simplify edges when zoomed out
   const getEdgeDetailLevel = useCallback(() => {
     if (zoom < 0.5) return "minimal"; // Straight lines only
-    if (zoom < 0.8) return "basic";   // No labels
+    if (zoom < 0.8) return "basic"; // No labels
     return "full"; // Full styling and labels
   }, [zoom]);
 
@@ -109,7 +109,7 @@ export const VirtualizedGraph: React.FC<VirtualizedGraphProps> = ({
   const renderNodes = useMemo(() => {
     const detailLevel = zoom < 0.3 ? "minimal" : zoom < 0.6 ? "basic" : "full";
 
-    return visibleNodes.map(node => {
+    return visibleNodes.map((node) => {
       const nodeDetailLevel = getNodeDetailLevel(node);
 
       // For minimal LOD, render simple colored circles
@@ -154,11 +154,11 @@ export const VirtualizedGraph: React.FC<VirtualizedGraphProps> = ({
   const renderEdges = useMemo(() => {
     const edgeDetailLevel = getEdgeDetailLevel();
 
-    return visibleEdges.map(edge => {
+    return visibleEdges.map((edge) => {
       // For minimal LOD, render simple straight lines
       if (edgeDetailLevel === "minimal") {
-        const sourceNode = nodes.find(n => n.id === edge.source);
-        const targetNode = nodes.find(n => n.id === edge.target);
+        const sourceNode = nodes.find((n) => n.id === edge.source);
+        const targetNode = nodes.find((n) => n.id === edge.target);
 
         if (!sourceNode?.position || !targetNode?.position) return null;
 
@@ -217,15 +217,8 @@ export const VirtualizedGraph: React.FC<VirtualizedGraphProps> = ({
       {renderNodes}
 
       {/* Performance warning for large graphs */}
-      {process.env.NODE_ENV === "development" &&
-       nodes.length > performance.maxNodes && (
-        <text
-          x={10}
-          y={height - 20}
-          fill="#f59e0b"
-          fontSize="12"
-          className="pointer-events-none"
-        >
+      {process.env.NODE_ENV === "development" && nodes.length > performance.maxNodes && (
+        <text x={10} y={height - 20} fill="#f59e0b" fontSize="12" className="pointer-events-none">
           Performance Warning: {nodes.length} nodes ({performance.maxNodes} recommended max)
         </text>
       )}

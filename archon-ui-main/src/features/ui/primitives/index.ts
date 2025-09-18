@@ -15,16 +15,19 @@ export * from "./alert-dialog";
 // Export all primitives
 export * from "./button";
 export * from "./card";
+export * from "./checkbox";
 export * from "./combobox";
 export * from "./dialog";
 export * from "./dropdown-menu";
 export * from "./input";
 export * from "./inspector-dialog";
+export { Label, type LabelProps } from "./label";
 export * from "./pill";
 export * from "./select";
 // Export style utilities
 export * from "./styles";
 export * from "./tabs";
+export * from "./textarea";
 export * from "./toast";
 export * from "./toggle-group";
 export * from "./tooltip";

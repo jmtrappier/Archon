@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Story, HierarchyStatus } from "../types";
+import type { HierarchyStatus, Story } from "../types";
 import { StoryKanbanColumn } from "./StoryKanbanColumn";
 
 const STORY_COLUMNS: Array<{
@@ -48,16 +48,19 @@ export const ProjectStoriesBoard = ({
   onStoryEdit,
 }: ProjectStoriesBoardProps) => {
   const storiesByStatus = useMemo(() => {
-    return STORY_COLUMNS.reduce<Record<HierarchyStatus, Story[]>>((acc, column) => {
-      acc[column.status] = stories.filter((story) => story.status === column.status);
-      return acc;
-    }, {
-      todo: [],
-      doing: [],
-      review: [],
-      waiting: [],
-      done: [],
-    });
+    return STORY_COLUMNS.reduce<Record<HierarchyStatus, Story[]>>(
+      (acc, column) => {
+        acc[column.status] = stories.filter((story) => story.status === column.status);
+        return acc;
+      },
+      {
+        todo: [],
+        doing: [],
+        review: [],
+        waiting: [],
+        done: [],
+      },
+    );
   }, [stories]);
 
   return (

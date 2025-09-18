@@ -6,30 +6,30 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { HierarchyStatus, Priority } from "../../shared/types/hierarchy";
 import type {
-  DependencyNode,
   DependencyEdge,
+  DependencyEntityType,
   DependencyGraph,
-  GraphLayout,
+  DependencyNode,
   GraphFilter,
   GraphInteraction,
+  GraphLayout,
   GraphPerformanceOptions,
   GraphQueryParams,
-  DependencyEntityType,
 } from "../types";
-import { useDependencyGraph, useRealtimeDependencyGraph } from "./useDependencyQueries";
 import {
-  calculateLayout,
   calculateEdgePath,
-  calculateLabelPosition,
-  filterGraph,
   calculateGraphMetrics,
+  calculateLabelPosition,
+  calculateLayout,
+  filterGraph,
   getDependencyTypeColor,
   getEntityTypeColor,
   getHierarchyStatusColor,
   getPriorityColor,
 } from "../utils";
-import type { HierarchyStatus, Priority } from "../../shared/types/hierarchy";
+import { useDependencyGraph, useRealtimeDependencyGraph } from "./useDependencyQueries";
 
 // Default graph configuration
 const DEFAULT_LAYOUT: GraphLayout = {
@@ -71,10 +71,7 @@ interface UseDependencyGraphOptions {
   enableInteractions?: boolean;
 }
 
-export function useDependencyGraph(
-  params: GraphQueryParams,
-  options: UseDependencyGraphOptions
-) {
+export function useDependencyGraph(params: GraphQueryParams, options: UseDependencyGraphOptions) {
   // State for graph visualization
   const [layoutedNodes, setLayoutedNodes] = useState<DependencyNode[]>([]);
   const [processedEdges, setProcessedEdges] = useState<DependencyEdge[]>([]);
@@ -104,18 +101,13 @@ export function useDependencyGraph(
       return { filteredNodes: [], filteredEdges: [] };
     }
 
-    const { nodes, edges } = filterGraph(
-      graphQuery.data.nodes,
-      graphQuery.data.edges,
-      filter
-    );
+    const { nodes, edges } = filterGraph(graphQuery.data.nodes, graphQuery.data.edges, filter);
 
     // Apply performance limits
     const limitedNodes = nodes.slice(0, performance.maxNodes);
     const limitedEdges = edges
-      .filter(edge =>
-        limitedNodes.some(n => n.id === edge.source) &&
-        limitedNodes.some(n => n.id === edge.target)
+      .filter(
+        (edge) => limitedNodes.some((n) => n.id === edge.source) && limitedNodes.some((n) => n.id === edge.target),
       )
       .slice(0, performance.maxEdges);
 
@@ -132,26 +124,28 @@ export function useDependencyGraph(
     setIsLayouting(true);
 
     const timeoutId = setTimeout(() => {
-      const layoutedNodesResult = calculateLayout(
-        filteredNodes,
-        filteredEdges,
-        options.width,
-        options.height,
-        layout
-      );
+      const layoutedNodesResult = calculateLayout(filteredNodes, filteredEdges, options.width, options.height, layout);
 
       setLayoutedNodes(layoutedNodesResult);
       setIsLayouting(false);
     }, performance.debounceLayout);
 
     return () => clearTimeout(timeoutId);
-  }, [filteredNodes, filteredEdges, options.width, options.height, layout, options.autoLayout, performance.debounceLayout]);
+  }, [
+    filteredNodes,
+    filteredEdges,
+    options.width,
+    options.height,
+    layout,
+    options.autoLayout,
+    performance.debounceLayout,
+  ]);
 
   // Process edges with paths and styling
   const processedEdgesWithPaths = useMemo(() => {
-    return filteredEdges.map(edge => {
-      const sourceNode = layoutedNodes.find(n => n.id === edge.source);
-      const targetNode = layoutedNodes.find(n => n.id === edge.target);
+    return filteredEdges.map((edge) => {
+      const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
+      const targetNode = layoutedNodes.find((n) => n.id === edge.target);
 
       if (!sourceNode || !targetNode) {
         return edge;
@@ -175,14 +169,14 @@ export function useDependencyGraph(
 
   // Process nodes with styling
   const processedNodesWithStyles = useMemo(() => {
-    return layoutedNodes.map(node => {
+    return layoutedNodes.map((node) => {
       const baseColor = getEntityTypeColor(node.type);
       const statusColor = getHierarchyStatusColor(node.status);
       const priorityColor = node.priority ? getPriorityColor(node.priority) : null;
 
       // Determine node size based on type and connections
-      const incomingCount = filteredEdges.filter(e => e.target === node.id).length;
-      const outgoingCount = filteredEdges.filter(e => e.source === node.id).length;
+      const incomingCount = filteredEdges.filter((e) => e.target === node.id).length;
+      const outgoingCount = filteredEdges.filter((e) => e.source === node.id).length;
       const totalConnections = incomingCount + outgoingCount;
 
       let size: "sm" | "md" | "lg" = "md";
@@ -212,107 +206,120 @@ export function useDependencyGraph(
   }, [processedNodesWithStyles, processedEdges]);
 
   // Interaction handlers
-  const handleNodeClick = useCallback((nodeId: string, event?: MouseEvent) => {
-    if (!options.enableInteractions) return;
+  const handleNodeClick = useCallback(
+    (nodeId: string, event?: MouseEvent) => {
+      if (!options.enableInteractions) return;
 
-    setSelectedNodeId(prevId => prevId === nodeId ? null : nodeId);
-    setSelectedEdgeId(null);
+      setSelectedNodeId((prevId) => (prevId === nodeId ? null : nodeId));
+      setSelectedEdgeId(null);
 
-    // Emit interaction event if handler provided
-    const interaction: GraphInteraction = {
-      type: "node_click",
-      nodeId,
-      position: event ? { x: event.clientX, y: event.clientY } : undefined,
-    };
-  }, [options.enableInteractions]);
+      // Emit interaction event if handler provided
+      const interaction: GraphInteraction = {
+        type: "node_click",
+        nodeId,
+        position: event ? { x: event.clientX, y: event.clientY } : undefined,
+      };
+    },
+    [options.enableInteractions],
+  );
 
-  const handleNodeHover = useCallback((nodeId: string | null) => {
-    if (!options.enableInteractions) return;
-    setHoveredNodeId(nodeId);
-  }, [options.enableInteractions]);
+  const handleNodeHover = useCallback(
+    (nodeId: string | null) => {
+      if (!options.enableInteractions) return;
+      setHoveredNodeId(nodeId);
+    },
+    [options.enableInteractions],
+  );
 
-  const handleEdgeClick = useCallback((edgeId: string, event?: MouseEvent) => {
-    if (!options.enableInteractions) return;
+  const handleEdgeClick = useCallback(
+    (edgeId: string, event?: MouseEvent) => {
+      if (!options.enableInteractions) return;
 
-    setSelectedEdgeId(prevId => prevId === edgeId ? null : edgeId);
-    setSelectedNodeId(null);
+      setSelectedEdgeId((prevId) => (prevId === edgeId ? null : edgeId));
+      setSelectedNodeId(null);
 
-    const interaction: GraphInteraction = {
-      type: "edge_click",
-      edgeId,
-      position: event ? { x: event.clientX, y: event.clientY } : undefined,
-    };
-  }, [options.enableInteractions]);
+      const interaction: GraphInteraction = {
+        type: "edge_click",
+        edgeId,
+        position: event ? { x: event.clientX, y: event.clientY } : undefined,
+      };
+    },
+    [options.enableInteractions],
+  );
 
-  const handleEdgeHover = useCallback((edgeId: string | null) => {
-    if (!options.enableInteractions) return;
-    setHoveredEdgeId(edgeId);
-  }, [options.enableInteractions]);
+  const handleEdgeHover = useCallback(
+    (edgeId: string | null) => {
+      if (!options.enableInteractions) return;
+      setHoveredEdgeId(edgeId);
+    },
+    [options.enableInteractions],
+  );
 
-  const handleCanvasClick = useCallback((event: MouseEvent) => {
-    if (!options.enableInteractions) return;
+  const handleCanvasClick = useCallback(
+    (event: MouseEvent) => {
+      if (!options.enableInteractions) return;
 
-    setSelectedNodeId(null);
-    setSelectedEdgeId(null);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
 
-    const interaction: GraphInteraction = {
-      type: "canvas_click",
-      position: { x: event.clientX, y: event.clientY },
-    };
-  }, [options.enableInteractions]);
+      const interaction: GraphInteraction = {
+        type: "canvas_click",
+        position: { x: event.clientX, y: event.clientY },
+      };
+    },
+    [options.enableInteractions],
+  );
 
   // Node position update (for drag operations)
   const updateNodePosition = useCallback((nodeId: string, x: number, y: number) => {
-    setLayoutedNodes(prevNodes =>
-      prevNodes.map(node =>
-        node.id === nodeId
-          ? { ...node, position: { x, y } }
-          : node
-      )
+    setLayoutedNodes((prevNodes) =>
+      prevNodes.map((node) => (node.id === nodeId ? { ...node, position: { x, y } } : node)),
     );
   }, []);
 
   // Focus on specific node
-  const focusNode = useCallback((nodeId: string, zoom = true) => {
-    const node = processedNodesWithStyles.find(n => n.id === nodeId);
-    if (!node || !node.position) return;
+  const focusNode = useCallback(
+    (nodeId: string, zoom = true) => {
+      const node = processedNodesWithStyles.find((n) => n.id === nodeId);
+      if (!node || !node.position) return;
 
-    setSelectedNodeId(nodeId);
-    setHoveredNodeId(nodeId);
+      setSelectedNodeId(nodeId);
+      setHoveredNodeId(nodeId);
 
-    // Could emit focus event for parent component to handle zooming/panning
-  }, [processedNodesWithStyles]);
+      // Could emit focus event for parent component to handle zooming/panning
+    },
+    [processedNodesWithStyles],
+  );
 
   // Get connected nodes
-  const getConnectedNodes = useCallback((nodeId: string): {
-    incoming: DependencyNode[];
-    outgoing: DependencyNode[];
-  } => {
-    const incoming = processedEdges
-      .filter(e => e.target === nodeId)
-      .map(e => processedNodesWithStyles.find(n => n.id === e.source))
-      .filter(Boolean) as DependencyNode[];
+  const getConnectedNodes = useCallback(
+    (
+      nodeId: string,
+    ): {
+      incoming: DependencyNode[];
+      outgoing: DependencyNode[];
+    } => {
+      const incoming = processedEdges
+        .filter((e) => e.target === nodeId)
+        .map((e) => processedNodesWithStyles.find((n) => n.id === e.source))
+        .filter(Boolean) as DependencyNode[];
 
-    const outgoing = processedEdges
-      .filter(e => e.source === nodeId)
-      .map(e => processedNodesWithStyles.find(n => n.id === e.target))
-      .filter(Boolean) as DependencyNode[];
+      const outgoing = processedEdges
+        .filter((e) => e.source === nodeId)
+        .map((e) => processedNodesWithStyles.find((n) => n.id === e.target))
+        .filter(Boolean) as DependencyNode[];
 
-    return { incoming, outgoing };
-  }, [processedEdges, processedNodesWithStyles]);
+      return { incoming, outgoing };
+    },
+    [processedEdges, processedNodesWithStyles],
+  );
 
   // Reset layout
   const resetLayout = useCallback(() => {
     if (filteredNodes.length === 0) return;
 
     setIsLayouting(true);
-    const layoutedNodesResult = calculateLayout(
-      filteredNodes,
-      filteredEdges,
-      options.width,
-      options.height,
-      layout
-    );
+    const layoutedNodesResult = calculateLayout(filteredNodes, filteredEdges, options.width, options.height, layout);
     setLayoutedNodes(layoutedNodesResult);
     setIsLayouting(false);
   }, [filteredNodes, filteredEdges, options.width, options.height, layout]);

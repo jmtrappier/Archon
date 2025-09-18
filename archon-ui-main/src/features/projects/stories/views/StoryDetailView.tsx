@@ -1,17 +1,18 @@
-import React, { useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Plus, ListTodo, AlertCircle, Link2 } from "lucide-react";
+import { AlertCircle, Link2, ListTodo, Plus } from "lucide-react";
+import type React from "react";
+import { useCallback, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { HierarchyBreadcrumb } from "@/features/ui/components/navigation";
+import { useToast } from "@/features/ui/hooks";
+import { Badge } from "@/features/ui/primitives/badge";
+import { Button } from "@/features/ui/primitives/button";
+import { useEpic } from "../../epics/hooks/useEpicQueries";
 import { HierarchyLayout } from "../../hierarchy/components/HierarchyLayout";
 import { ProgressCard } from "../../hierarchy/components/ProgressCard";
-import { HierarchyBreadcrumb } from "@/features/ui/components/navigation";
 import { useProject } from "../../hooks/useProjectQueries";
-import { useEpic } from "../../epics/hooks/useEpicQueries";
-import { useStory } from "../hooks/useStoryQueries";
-import { useProjectTasks } from "../../tasks/hooks/useTaskQueries";
 import { TaskEditModal } from "../../tasks/components/TaskEditModal";
-import { Button } from "@/features/ui/primitives/button";
-import { Badge } from "@/features/ui/primitives/badge";
-import { useToast } from "@/features/ui/hooks";
+import { useProjectTasks } from "../../tasks/hooks/useTaskQueries";
+import { useStory } from "../hooks/useStoryQueries";
 
 export const StoryDetailView: React.FC = () => {
   const { projectId, epicId, storyId } = useParams<{
@@ -33,11 +34,11 @@ export const StoryDetailView: React.FC = () => {
   const { data: tasks = [], isLoading: tasksLoading, error: tasksError } = useProjectTasks(projectId!);
 
   // Filter only root tasks (not subtasks)
-  const rootTasks = tasks.filter(t => !t.parent_task_id);
+  const rootTasks = tasks.filter((t) => !t.parent_task_id);
 
   // Calculate stats
   const totalTasks = rootTasks.length;
-  const completedTasks = rootTasks.filter(t => t.status === "done").length;
+  const completedTasks = rootTasks.filter((t) => t.status === "done").length;
   const totalSubtasks = rootTasks.reduce((sum, t) => sum + (t.subtask_count || 0), 0);
   const completedSubtasks = rootTasks.reduce((sum, t) => sum + (t.completed_subtasks || 0), 0);
 
@@ -45,25 +46,31 @@ export const StoryDetailView: React.FC = () => {
     navigate(`/projects/${projectId}/epics/${epicId}`);
   }, [navigate, projectId, epicId]);
 
-  const handleTaskClick = useCallback((taskId: string) => {
-    navigate(`/projects/${projectId}/epics/${epicId}/stories/${storyId}/tasks/${taskId}`);
-  }, [navigate, projectId, epicId, storyId]);
+  const handleTaskClick = useCallback(
+    (taskId: string) => {
+      navigate(`/projects/${projectId}/epics/${epicId}/stories/${storyId}/tasks/${taskId}`);
+    },
+    [navigate, projectId, epicId, storyId],
+  );
 
   const handleTaskEdit = useCallback((task: any) => {
     setEditingTask(task);
     setIsTaskModalOpen(true);
   }, []);
 
-  const handleTaskDelete = useCallback(async (taskId: string) => {
-    if (confirm("Are you sure you want to delete this task? This will also delete all its subtasks.")) {
-      try {
-        // TODO: Implement task deletion
-        showToast("Task deletion not yet implemented", "info");
-      } catch (error) {
-        showToast("Failed to delete task", "error");
+  const handleTaskDelete = useCallback(
+    async (taskId: string) => {
+      if (confirm("Are you sure you want to delete this task? This will also delete all its subtasks.")) {
+        try {
+          // TODO: Implement task deletion
+          showToast("Task deletion not yet implemented", "info");
+        } catch (error) {
+          showToast("Failed to delete task", "error");
+        }
       }
-    }
-  }, [showToast]);
+    },
+    [showToast],
+  );
 
   const handleAddTask = useCallback(() => {
     setEditingTask(null);
@@ -77,7 +84,7 @@ export const StoryDetailView: React.FC = () => {
   }, [editingTask, showToast]);
 
   const handleTaskSelect = useCallback((taskId: string, selected: boolean) => {
-    setSelectedTasks(prev => {
+    setSelectedTasks((prev) => {
       const newSet = new Set(prev);
       if (selected) {
         newSet.add(taskId);
@@ -104,9 +111,7 @@ export const StoryDetailView: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 dark:text-red-400">
-            Failed to load story data
-          </p>
+          <p className="text-red-600 dark:text-red-400">Failed to load story data</p>
         </div>
       </div>
     );
@@ -153,12 +158,8 @@ export const StoryDetailView: React.FC = () => {
         {/* Story Details Section */}
         {story?.acceptance_criteria && (
           <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
-              Acceptance Criteria
-            </h3>
-            <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
-              {story.acceptance_criteria}
-            </p>
+            <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">Acceptance Criteria</h3>
+            <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{story.acceptance_criteria}</p>
           </div>
         )}
 
@@ -171,10 +172,7 @@ export const StoryDetailView: React.FC = () => {
             </h3>
             <div className="flex flex-wrap gap-2">
               {story.dependencies.map((dep: any, index: number) => (
-                <Badge
-                  key={index}
-                  className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                >
+                <Badge key={index} className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
                   {dep.type}: {dep.target}
                 </Badge>
               ))}
@@ -186,12 +184,10 @@ export const StoryDetailView: React.FC = () => {
         {rootTasks.length === 0 ? (
           <div className="text-center py-12">
             <ListTodo className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No tasks yet
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No tasks yet</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              Tasks are specific work items that need to be completed for this story.
-              Create your first task to start implementation.
+              Tasks are specific work items that need to be completed for this story. Create your first task to start
+              implementation.
             </p>
             <Button onClick={handleAddTask} className="mx-auto">
               <Plus className="h-4 w-4 mr-2" />
@@ -207,11 +203,7 @@ export const StoryDetailView: React.FC = () => {
                   {selectedTasks.size} task{selectedTasks.size !== 1 ? "s" : ""} selected
                 </span>
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSelectedTasks(new Set())}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedTasks(new Set())}>
                     Clear
                   </Button>
                   <Button
@@ -241,11 +233,13 @@ export const StoryDetailView: React.FC = () => {
                   priority={task.task_order}
                   assignee={task.assignee}
                   childCount={
-                    task.subtask_count ? {
-                      total: task.subtask_count,
-                      completed: task.completed_subtasks || 0,
-                      label: "Subtasks",
-                    } : undefined
+                    task.subtask_count
+                      ? {
+                          total: task.subtask_count,
+                          completed: task.completed_subtasks || 0,
+                          label: "Subtasks",
+                        }
+                      : undefined
                   }
                   onClick={() => handleTaskClick(task.id)}
                   onEdit={() => handleTaskEdit(task)}

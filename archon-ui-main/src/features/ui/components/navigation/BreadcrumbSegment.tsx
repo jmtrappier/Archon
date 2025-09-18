@@ -1,16 +1,15 @@
 import { ChevronRight } from "lucide-react";
-import React from "react";
-import { useCallback, useRef } from "react";
+import React, { useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../../primitives/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../primitives/tooltip";
 import type { BreadcrumbSegment as BreadcrumbSegmentType } from "../../../../contexts/HierarchyContext";
 import {
-  truncateTitle,
-  getHierarchyIcon,
-  getHierarchyDisplayName,
   getAccessibleLabel,
+  getHierarchyDisplayName,
+  getHierarchyIcon,
+  truncateTitle,
 } from "../../../../utils/hierarchy-navigation";
+import { Button } from "../../primitives/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../primitives/tooltip";
 
 export interface BreadcrumbSegmentProps {
   segment: BreadcrumbSegmentType;
@@ -53,17 +52,20 @@ export const BreadcrumbSegment: React.FC<BreadcrumbSegmentProps> = ({
   }, [onClick, segment, navigate]);
 
   // Handle keyboard navigation
-  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
-    if (onKeyDown) {
-      onKeyDown(event, segment);
-      return;
-    }
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (onKeyDown) {
+        onKeyDown(event, segment);
+        return;
+      }
 
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleClick();
-    }
-  }, [onKeyDown, segment, handleClick]);
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handleClick();
+      }
+    },
+    [onKeyDown, segment, handleClick],
+  );
 
   // Get visual styling based on segment properties
   const getSegmentStyles = () => {
@@ -129,9 +131,7 @@ export const BreadcrumbSegment: React.FC<BreadcrumbSegmentProps> = ({
               )}
 
               {/* Title */}
-              <span className="truncate font-medium">
-                {displayTitle}
-              </span>
+              <span className="truncate font-medium">{displayTitle}</span>
 
               {/* Progress Indicator */}
               {showProgress && segment.progress !== undefined && (
@@ -142,11 +142,7 @@ export const BreadcrumbSegment: React.FC<BreadcrumbSegmentProps> = ({
                       style={{ width: `${segment.progress}%` }}
                     />
                   </div>
-                  {!compact && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {segment.progress}%
-                    </span>
-                  )}
+                  {!compact && <span className="text-xs text-gray-500 dark:text-gray-400">{segment.progress}%</span>}
                 </div>
               )}
             </Button>
@@ -168,9 +164,7 @@ export const BreadcrumbSegment: React.FC<BreadcrumbSegmentProps> = ({
               )}
 
               {/* Title */}
-              <span className="truncate">
-                {displayTitle}
-              </span>
+              <span className="truncate">{displayTitle}</span>
 
               {/* Progress Indicator */}
               {showProgress && segment.progress !== undefined && (
@@ -181,11 +175,7 @@ export const BreadcrumbSegment: React.FC<BreadcrumbSegmentProps> = ({
                       style={{ width: `${segment.progress}%` }}
                     />
                   </div>
-                  {!compact && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {segment.progress}%
-                    </span>
-                  )}
+                  {!compact && <span className="text-xs text-gray-500 dark:text-gray-400">{segment.progress}%</span>}
                 </div>
               )}
             </div>
@@ -197,25 +187,16 @@ export const BreadcrumbSegment: React.FC<BreadcrumbSegmentProps> = ({
               {levelDisplayName}: {segment.title}
             </div>
             {segment.progress !== undefined && (
-              <div className="text-xs text-gray-300">
-                Progress: {segment.progress}% complete
-              </div>
+              <div className="text-xs text-gray-300">Progress: {segment.progress}% complete</div>
             )}
-            {segment.clickable && (
-              <div className="text-xs text-gray-400">
-                Click to navigate
-              </div>
-            )}
+            {segment.clickable && <div className="text-xs text-gray-400">Click to navigate</div>}
           </div>
         </TooltipContent>
       </Tooltip>
 
       {/* Separator */}
       {!isLast && (
-        <ChevronRight
-          className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0"
-          aria-hidden="true"
-        />
+        <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" aria-hidden="true" />
       )}
     </div>
   );

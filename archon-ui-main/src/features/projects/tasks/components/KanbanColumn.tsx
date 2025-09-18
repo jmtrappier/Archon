@@ -16,7 +16,7 @@ interface KanbanColumnProps {
   epics?: Epic[];
   items?: (Task | Epic)[];
   projectId: string;
-  dataType?: 'epics' | 'tasks' | 'mixed';
+  dataType?: "epics" | "tasks" | "mixed";
   storyCounts?: Record<string, StoryCounts>;
   onTaskMove: (taskId: string, newStatus: Task["status"]) => void;
   onTaskReorder: (taskId: string, targetIndex: number, status: Task["status"]) => void;
@@ -36,7 +36,7 @@ export const KanbanColumn = ({
   epics = [],
   items = [],
   projectId,
-  dataType = 'tasks',
+  dataType = "tasks",
   storyCounts,
   onTaskMove,
   onTaskReorder,
@@ -54,7 +54,7 @@ export const KanbanColumn = ({
     accept: [HierarchicalItemTypes.TASK, HierarchicalItemTypes.EPIC],
     drop: (item: { id: string; status: Task["status"] | Epic["status"]; type?: string }) => {
       if (item.status !== status) {
-        if (item.type === 'epic') {
+        if (item.type === "epic") {
           // Handle epic moves - for now, call onTaskMove as it handles all status changes
           onTaskMove(item.id, status);
         } else {
@@ -72,7 +72,7 @@ export const KanbanColumn = ({
 
   // Helper function to render items based on data type
   const renderItems = () => {
-    if (dataType === 'epics') {
+    if (dataType === "epics") {
       return epics.map((epic, index) => (
         <EpicCard
           key={epic.id}
@@ -88,7 +88,7 @@ export const KanbanColumn = ({
       ));
     }
 
-    if (dataType === 'tasks') {
+    if (dataType === "tasks") {
       return tasks.map((task, index) => (
         <TaskCard
           key={task.id}
@@ -104,9 +104,9 @@ export const KanbanColumn = ({
       ));
     }
 
-    if (dataType === 'mixed') {
+    if (dataType === "mixed") {
       return items.map((item, index) => {
-        if ('task_order' in item) {
+        if ("task_order" in item) {
           // It's a Task
           const task = item as Task;
           return (
@@ -146,9 +146,9 @@ export const KanbanColumn = ({
   };
 
   const getItemCount = () => {
-    if (dataType === 'epics') return epics.length;
-    if (dataType === 'tasks') return tasks.length;
-    if (dataType === 'mixed') return items.length;
+    if (dataType === "epics") return epics.length;
+    if (dataType === "tasks") return tasks.length;
+    if (dataType === "mixed") return items.length;
     return 0;
   };
 
@@ -177,7 +177,9 @@ export const KanbanColumn = ({
           "relative",
         )}
       >
-        <h3 className={cn("font-mono text-sm font-medium", getColumnColor(status))}>{title} ({getItemCount()})</h3>
+        <h3 className={cn("font-mono text-sm font-medium", getColumnColor(status))}>
+          {title} ({getItemCount()})
+        </h3>
         {/* Column header glow effect */}
         <div
           className={cn("absolute bottom-0 left-[15%] right-[15%] w-[70%] mx-auto h-[1px]", getColumnGlow(status))}
@@ -188,7 +190,7 @@ export const KanbanColumn = ({
       <div className="px-2 flex-1 overflow-y-auto space-y-2 py-3 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
         {getItemCount() === 0 ? (
           <div className={cn("text-center py-8 text-gray-400 dark:text-gray-600 text-sm", "opacity-60")}>
-            No {dataType === 'epics' ? 'EPICs' : dataType === 'tasks' ? 'tasks' : 'items'}
+            No {dataType === "epics" ? "EPICs" : dataType === "tasks" ? "tasks" : "items"}
           </div>
         ) : (
           renderItems()

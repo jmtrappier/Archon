@@ -6,7 +6,7 @@
  */
 
 // Re-export existing task types that are now part of hierarchy
-export type { DatabaseTaskStatus, Assignee, TaskPriority } from "../../tasks/types";
+export type { Assignee, DatabaseTaskStatus, TaskPriority } from "../../tasks/types";
 
 // Base hierarchy status - extends existing DatabaseTaskStatus to include 'waiting'
 export type HierarchyStatus = "todo" | "doing" | "review" | "waiting" | "done";
@@ -77,17 +77,21 @@ export interface Task extends HierarchyItem {
 }
 
 // Task-specific types from existing implementation
-export type TaskSource = {
-  url: string;
-  type: string;
-  relevance: string;
-} | Record<string, unknown>;
+export type TaskSource =
+  | {
+      url: string;
+      type: string;
+      relevance: string;
+    }
+  | Record<string, unknown>;
 
-export type TaskCodeExample = {
-  file: string;
-  function: string;
-  purpose: string;
-} | Record<string, unknown>;
+export type TaskCodeExample =
+  | {
+      file: string;
+      function: string;
+      purpose: string;
+    }
+  | Record<string, unknown>;
 
 // Request types for creating hierarchy items
 export interface CreateEpicRequest {
@@ -233,7 +237,7 @@ export interface ListResponse<T> {
 
 // Error types for hierarchy operations
 export interface HierarchyError {
-  type: 'VALIDATION_ERROR' | 'NOT_FOUND' | 'FORBIDDEN' | 'CIRCULAR_DEPENDENCY' | 'HIERARCHY_CONSTRAINT';
+  type: "VALIDATION_ERROR" | "NOT_FOUND" | "FORBIDDEN" | "CIRCULAR_DEPENDENCY" | "HIERARCHY_CONSTRAINT";
   message: string;
   details?: Record<string, unknown>;
 }

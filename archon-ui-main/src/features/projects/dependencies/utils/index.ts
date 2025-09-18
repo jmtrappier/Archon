@@ -4,5 +4,5 @@
  * Centralized exports for all dependency-related utilities
  */
 
-export * from "./graph-layout";
 export * from "./dependency-utils";
+export * from "./graph-layout";

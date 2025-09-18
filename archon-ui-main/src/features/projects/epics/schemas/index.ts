@@ -13,11 +13,13 @@ export const CreateEpicSchema = z.object({
   mvp_flag: z.boolean().default(false),
 });
 
-export const UpdateEpicSchema = CreateEpicSchema.partial().omit({
-  project_id: true,
-}).extend({
-  status: HierarchyStatusSchema.optional(),
-});
+export const UpdateEpicSchema = CreateEpicSchema.partial()
+  .omit({
+    project_id: true,
+  })
+  .extend({
+    status: HierarchyStatusSchema.optional(),
+  });
 
 export const EpicSchema = z.object({
   id: z.string().uuid("Epic ID must be a valid UUID"),

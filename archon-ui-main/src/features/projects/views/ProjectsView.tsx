@@ -9,6 +9,7 @@ import { NewProjectModal } from "../components/NewProjectModal";
 import { ProjectHeader } from "../components/ProjectHeader";
 import { ProjectList } from "../components/ProjectList";
 import { DocsTab } from "../documents/DocsTab";
+import { EpicDetailView, EpicStoriesView } from "../epics/views";
 import {
   projectKeys,
   useDeleteProject,
@@ -16,12 +17,11 @@ import {
   useTaskCounts,
   useUpdateProject,
 } from "../hooks/useProjectQueries";
-import { TasksTab } from "../tasks/TasksTab";
-import { ProjectDashboard } from "./ProjectDashboard";
-import { EpicDetailView, EpicStoriesView } from "../epics/views";
 import { StoryDetailView } from "../stories/views/StoryDetailView";
+import { TasksTab } from "../tasks/TasksTab";
 import { TaskDetailView } from "../tasks/views/TaskDetailView";
 import type { Project } from "../types";
+import { ProjectDashboard } from "./ProjectDashboard";
 
 interface ProjectsViewProps {
   className?: string;
@@ -64,10 +64,10 @@ export function ProjectsView({ className = "", "data-id": dataId }: ProjectsView
       return "epic";
     }
     if (projectId) {
-      const viewParam = searchParams.get('view');
-      const filterParam = searchParams.get('filter');
+      const viewParam = searchParams.get("view");
+      const filterParam = searchParams.get("filter");
       // If we have view=board or specific filters, show TasksTab instead of ProjectDashboard
-      if (viewParam === 'board' || viewParam === 'table' || filterParam) {
+      if (viewParam === "board" || viewParam === "table" || filterParam) {
         return "project-tasks";
       }
       return "project";

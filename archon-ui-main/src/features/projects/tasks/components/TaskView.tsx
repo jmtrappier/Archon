@@ -1,18 +1,18 @@
-import { ArrowLeft, Calendar, Clock, User, Tag, CheckSquare, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Calendar, CheckSquare, Clock, MoreHorizontal, Tag, User } from "lucide-react";
 import type React from "react";
-import { useCallback, useState, useEffect } from "react";
-import { Button } from "../../../ui/primitives";
-import { HierarchyBreadcrumb } from "../../../ui/components/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { useHierarchyContext } from "../../../../contexts/HierarchyContext";
-import { useTaskActions, useSubtasks } from "../hooks";
-import { useProject } from "../../hooks/useProjectQueries";
+import { HierarchyBreadcrumb } from "../../../ui/components/navigation";
+import { Button } from "../../../ui/primitives";
 import { useEpic } from "../../epics/hooks/useEpicQueries";
+import { useProject } from "../../hooks/useProjectQueries";
 import { useStory } from "../../stories/hooks/useStoryQueries";
-import type { Task, Assignee } from "../types";
-import { getProgressColor, getProgressTextColor, enhanceTaskWithSubtasks } from "../utils";
+import { useSubtasks, useTaskActions } from "../hooks";
+import type { Assignee, Task } from "../types";
+import { enhanceTaskWithSubtasks, getProgressColor, getProgressTextColor } from "../utils";
+import { SubtaskList } from "./SubtaskList";
 import { TaskAssignee } from "./TaskAssignee";
 import { TaskCardActions } from "./TaskCardActions";
-import { SubtaskList } from "./SubtaskList";
 import { TaskEditModal } from "./TaskEditModal";
 
 export interface TaskViewProps {
@@ -88,7 +88,7 @@ export const TaskView: React.FC<TaskViewProps> = ({
         progress: enhancedTask.progress,
       });
       // Clear subtask context since we're at the task level
-      clearFromLevel('subtask');
+      clearFromLevel("subtask");
     }
   }, [task, enhancedTask.progress, setTaskContext, clearFromLevel]);
 
@@ -107,20 +107,17 @@ export const TaskView: React.FC<TaskViewProps> = ({
     (newAssignee: Assignee) => {
       changeAssignee(task.id, newAssignee);
     },
-    [changeAssignee, task.id]
+    [changeAssignee, task.id],
   );
 
   const handleSubtaskEdit = useCallback((subtask: Task) => {
     setEditingSubtask(subtask);
   }, []);
 
-  const handleSubtaskDelete = useCallback(
-    (subtask: Task) => {
-      // Handle subtask deletion - this would typically show a confirmation modal
-      console.log("Delete subtask:", subtask.id);
-    },
-    []
-  );
+  const handleSubtaskDelete = useCallback((subtask: Task) => {
+    // Handle subtask deletion - this would typically show a confirmation modal
+    console.log("Delete subtask:", subtask.id);
+  }, []);
 
   const getStatusColor = (status: Task["status"]) => {
     switch (status) {
@@ -141,11 +138,7 @@ export const TaskView: React.FC<TaskViewProps> = ({
     <>
       <div
         className={`
-          ${
-            isModal
-              ? "fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-              : "w-full"
-          }
+          ${isModal ? "fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" : "w-full"}
         `}
         onClick={isModal ? onClose : undefined}
       >
@@ -169,15 +162,9 @@ export const TaskView: React.FC<TaskViewProps> = ({
               )}
 
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white line-clamp-1">
-                  {task.title}
-                </h2>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white line-clamp-1">{task.title}</h2>
 
-                <span
-                  className={`px-2 py-1 rounded-md text-xs font-medium capitalize ${getStatusColor(
-                    task.status
-                  )}`}
-                >
+                <span className={`px-2 py-1 rounded-md text-xs font-medium capitalize ${getStatusColor(task.status)}`}>
                   {task.status}
                 </span>
               </div>
@@ -215,9 +202,7 @@ export const TaskView: React.FC<TaskViewProps> = ({
               <div className="flex items-center gap-3">
                 <User className="h-4 w-4 text-gray-500" />
                 <div>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Assignee
-                  </div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assignee</div>
                   <TaskAssignee
                     assignee={task.assignee}
                     onAssigneeChange={handleAssigneeChange}
@@ -231,9 +216,7 @@ export const TaskView: React.FC<TaskViewProps> = ({
                 <div className="flex items-center gap-3">
                   <Tag className="h-4 w-4 text-gray-500" />
                   <div>
-                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Feature
-                    </div>
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Feature</div>
                     <span
                       className="inline-block px-2 py-1 text-sm font-medium rounded-md"
                       style={{
@@ -251,9 +234,7 @@ export const TaskView: React.FC<TaskViewProps> = ({
               <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-gray-500" />
                 <div>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Created
-                  </div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Created</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     {new Date(task.created_at).toLocaleDateString()}
                   </div>
@@ -278,18 +259,12 @@ export const TaskView: React.FC<TaskViewProps> = ({
                 <div className="flex items-center gap-4">
                   <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div
-                      className={`h-full transition-all duration-500 ${getProgressColor(
-                        enhancedTask.progress || 0
-                      )}`}
+                      className={`h-full transition-all duration-500 ${getProgressColor(enhancedTask.progress || 0)}`}
                       style={{ width: `${enhancedTask.progress || 0}%` }}
                     />
                   </div>
 
-                  <span
-                    className={`text-sm font-bold ${getProgressTextColor(
-                      enhancedTask.progress || 0
-                    )}`}
-                  >
+                  <span className={`text-sm font-bold ${getProgressTextColor(enhancedTask.progress || 0)}`}>
                     {enhancedTask.progress || 0}%
                   </span>
                 </div>
@@ -299,13 +274,9 @@ export const TaskView: React.FC<TaskViewProps> = ({
             {/* Description */}
             {task.description && (
               <div>
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  Description
-                </h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Description</h3>
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                    {task.description}
-                  </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{task.description}</p>
                 </div>
               </div>
             )}
@@ -322,15 +293,13 @@ export const TaskView: React.FC<TaskViewProps> = ({
             </div>
 
             {/* Sources and Code Examples */}
-            {(task.sources && task.sources.length > 0) && (
+            {task.sources && task.sources.length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  Sources
-                </h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Sources</h3>
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-2">
                   {task.sources.map((source, index) => (
                     <div key={index} className="text-sm text-gray-700 dark:text-gray-300">
-                      {typeof source === 'object' && 'url' in source ? (
+                      {typeof source === "object" && "url" in source ? (
                         <a
                           href={source.url}
                           target="_blank"

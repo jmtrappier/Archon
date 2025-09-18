@@ -1,17 +1,17 @@
-import { ArrowLeft, BookOpen, Grid, List, LayoutGrid, Settings, Download, Filter } from "lucide-react";
+import { ArrowLeft, BookOpen, Download, Filter, Grid, LayoutGrid, List, Settings } from "lucide-react";
 import type React from "react";
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useHierarchyContext } from "../../../../contexts/HierarchyContext";
+import { HierarchyBreadcrumb } from "../../../ui/components/navigation";
+import { useToast } from "../../../ui/hooks/useToast";
 import { Button } from "../../../ui/primitives/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../ui/primitives/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../ui/primitives/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
-import { HierarchyBreadcrumb } from "../../../ui/components/navigation";
-import { useHierarchyContext } from "../../../../contexts/HierarchyContext";
-import { useToast } from "../../../ui/hooks/useToast";
-import { useProject } from "../../hooks/useProjectQueries";
 import { useEpic } from "../../epics/hooks/useEpicQueries";
-import { useEpicStories, useDeleteStory } from "../hooks/useStoryQueries";
+import { useProject } from "../../hooks/useProjectQueries";
+import { useDeleteStory, useEpicStories } from "../hooks/useStoryQueries";
 import type { Story, StoryWithEpic } from "../types";
 import { StoryList } from "./StoryList";
 
@@ -21,7 +21,7 @@ export interface StoryViewProps {
   className?: string;
 }
 
-type ViewMode = 'grid' | 'list' | 'kanban';
+type ViewMode = "grid" | "list" | "kanban";
 
 export const StoryView: React.FC<StoryViewProps> = ({
   epicId: propEpicId,
@@ -40,7 +40,7 @@ export const StoryView: React.FC<StoryViewProps> = ({
   const { setProjectContext, setEpicContext, clearFromLevel } = useHierarchyContext();
 
   // State
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [compactMode, setCompactMode] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -64,7 +64,7 @@ export const StoryView: React.FC<StoryViewProps> = ({
 
   useEffect(() => {
     if (epic) {
-      const completedStories = stories.filter(s => s.status === 'done').length;
+      const completedStories = stories.filter((s) => s.status === "done").length;
       const totalStories = stories.length;
       const progress = totalStories > 0 ? Math.round((completedStories / totalStories) * 100) : 0;
 
@@ -74,7 +74,7 @@ export const StoryView: React.FC<StoryViewProps> = ({
         progress,
       });
       // Clear any story/task context since we're at the story list level
-      clearFromLevel('story');
+      clearFromLevel("story");
     }
   }, [epic, stories, setEpicContext, clearFromLevel]);
 
@@ -106,21 +106,27 @@ export const StoryView: React.FC<StoryViewProps> = ({
     setShowEditModal(true);
   }, []);
 
-  const handleDeleteStory = useCallback(async (story: Story | StoryWithEpic) => {
-    try {
-      await deleteStory.mutateAsync(story.id);
-      showToast(`Story "${story.title}" deleted successfully`, "success");
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to delete story";
-      showToast(errorMessage, "error");
-    }
-  }, [deleteStory, showToast]);
+  const handleDeleteStory = useCallback(
+    async (story: Story | StoryWithEpic) => {
+      try {
+        await deleteStory.mutateAsync(story.id);
+        showToast(`Story "${story.title}" deleted successfully`, "success");
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to delete story";
+        showToast(errorMessage, "error");
+      }
+    },
+    [deleteStory, showToast],
+  );
 
-  const handleViewTasks = useCallback((story: Story | StoryWithEpic) => {
-    if (projectId) {
-      navigate(`/projects/${projectId}/stories/${story.id}/tasks`);
-    }
-  }, [navigate, projectId]);
+  const handleViewTasks = useCallback(
+    (story: Story | StoryWithEpic) => {
+      if (projectId) {
+        navigate(`/projects/${projectId}/stories/${story.id}/tasks`);
+      }
+    },
+    [navigate, projectId],
+  );
 
   // View mode handlers
   const handleViewModeChange = useCallback((mode: ViewMode) => {
@@ -134,13 +140,14 @@ export const StoryView: React.FC<StoryViewProps> = ({
   // Statistics
   const stats = {
     total: stories.length,
-    todo: stories.filter(s => s.status === 'todo').length,
-    doing: stories.filter(s => s.status === 'doing').length,
-    review: stories.filter(s => s.status === 'review').length,
-    waiting: stories.filter(s => s.status === 'waiting').length,
-    done: stories.filter(s => s.status === 'done').length,
-    mvp: stories.filter(s => s.mvp_flag).length,
-    completion: stories.length > 0 ? Math.round((stories.filter(s => s.status === 'done').length / stories.length) * 100) : 0,
+    todo: stories.filter((s) => s.status === "todo").length,
+    doing: stories.filter((s) => s.status === "doing").length,
+    review: stories.filter((s) => s.status === "review").length,
+    waiting: stories.filter((s) => s.status === "waiting").length,
+    done: stories.filter((s) => s.status === "done").length,
+    mvp: stories.filter((s) => s.mvp_flag).length,
+    completion:
+      stories.length > 0 ? Math.round((stories.filter((s) => s.status === "done").length / stories.length) * 100) : 0,
   };
 
   // Loading state
@@ -190,21 +197,14 @@ export const StoryView: React.FC<StoryViewProps> = ({
 
         {/* Header Section */}
         <div className="space-y-4">
-
           {/* Epic Info and Controls */}
           <div className="flex items-start justify-between">
             <div className="space-y-2">
               <div className="flex items-center space-x-3">
                 <BookOpen className="w-6 h-6 text-blue-600" />
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Stories for "{epic.title}"
-                </h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Stories for "{epic.title}"</h1>
               </div>
-              {epic.description && (
-                <p className="text-gray-600 dark:text-gray-400 max-w-2xl">
-                  {epic.description}
-                </p>
-              )}
+              {epic.description && <p className="text-gray-600 dark:text-gray-400 max-w-2xl">{epic.description}</p>}
             </div>
 
             {/* View Controls */}
@@ -214,9 +214,9 @@ export const StoryView: React.FC<StoryViewProps> = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                      variant={viewMode === "grid" ? "default" : "ghost"}
                       size="sm"
-                      onClick={() => handleViewModeChange('grid')}
+                      onClick={() => handleViewModeChange("grid")}
                       className="h-8 w-8 p-0"
                     >
                       <Grid className="w-4 h-4" />
@@ -228,9 +228,9 @@ export const StoryView: React.FC<StoryViewProps> = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      variant={viewMode === "list" ? "default" : "ghost"}
                       size="sm"
-                      onClick={() => handleViewModeChange('list')}
+                      onClick={() => handleViewModeChange("list")}
                       className="h-8 w-8 p-0"
                     >
                       <List className="w-4 h-4" />
@@ -242,9 +242,9 @@ export const StoryView: React.FC<StoryViewProps> = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                      variant={viewMode === "kanban" ? "default" : "ghost"}
                       size="sm"
-                      onClick={() => handleViewModeChange('kanban')}
+                      onClick={() => handleViewModeChange("kanban")}
                       className="h-8 w-8 p-0"
                     >
                       <LayoutGrid className="w-4 h-4" />
@@ -258,7 +258,7 @@ export const StoryView: React.FC<StoryViewProps> = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={compactMode ? 'default' : 'outline'}
+                    variant={compactMode ? "default" : "outline"}
                     size="sm"
                     onClick={handleToggleCompactMode}
                     className="h-8 w-8 p-0"

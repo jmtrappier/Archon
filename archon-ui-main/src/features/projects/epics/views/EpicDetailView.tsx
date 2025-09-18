@@ -1,15 +1,16 @@
-import React, { useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Plus, FileText, AlertCircle, LayoutGrid } from "lucide-react";
+import { AlertCircle, FileText, LayoutGrid, Plus } from "lucide-react";
+import type React from "react";
+import { useCallback, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { HierarchyBreadcrumb } from "@/features/ui/components/navigation";
+import { useToast } from "@/features/ui/hooks";
+import { Button } from "@/features/ui/primitives/button";
 import { HierarchyLayout } from "../../hierarchy/components/HierarchyLayout";
 import { ProgressCard } from "../../hierarchy/components/ProgressCard";
-import { HierarchyBreadcrumb } from "@/features/ui/components/navigation";
 import { useProject } from "../../hooks/useProjectQueries";
-import { useEpic } from "../hooks/useEpicQueries";
-import { useStories } from "../../stories/hooks/useStoryQueries";
 import { StoryModal } from "../../stories/components/StoryModal";
-import { Button } from "@/features/ui/primitives/button";
-import { useToast } from "@/features/ui/hooks";
+import { useStories } from "../../stories/hooks/useStoryQueries";
+import { useEpic } from "../hooks/useEpicQueries";
 
 export const EpicDetailView: React.FC = () => {
   const { projectId, epicId } = useParams<{ projectId: string; epicId: string }>();
@@ -27,7 +28,7 @@ export const EpicDetailView: React.FC = () => {
 
   // Calculate stats
   const totalStories = stories.length;
-  const completedStories = stories.filter(s => s.status === "done").length;
+  const completedStories = stories.filter((s) => s.status === "done").length;
   const totalTasks = stories.reduce((sum, s) => sum + (s.task_count || 0), 0);
   const completedTasks = stories.reduce((sum, s) => sum + (s.completed_tasks || 0), 0);
 
@@ -39,25 +40,31 @@ export const EpicDetailView: React.FC = () => {
     navigate(`/projects/${projectId}?view=board&filter=epics`);
   }, [navigate, projectId]);
 
-  const handleStoryClick = useCallback((storyId: string) => {
-    navigate(`/projects/${projectId}/epics/${epicId}/stories/${storyId}`);
-  }, [navigate, projectId, epicId]);
+  const handleStoryClick = useCallback(
+    (storyId: string) => {
+      navigate(`/projects/${projectId}/epics/${epicId}/stories/${storyId}`);
+    },
+    [navigate, projectId, epicId],
+  );
 
   const handleStoryEdit = useCallback((story: any) => {
     setEditingStory(story);
     setIsStoryModalOpen(true);
   }, []);
 
-  const handleStoryDelete = useCallback(async (storyId: string) => {
-    if (confirm("Are you sure you want to delete this story? This will also delete all its tasks.")) {
-      try {
-        // TODO: Implement story deletion
-        showToast("Story deletion not yet implemented", "info");
-      } catch (error) {
-        showToast("Failed to delete story", "error");
+  const handleStoryDelete = useCallback(
+    async (storyId: string) => {
+      if (confirm("Are you sure you want to delete this story? This will also delete all its tasks.")) {
+        try {
+          // TODO: Implement story deletion
+          showToast("Story deletion not yet implemented", "info");
+        } catch (error) {
+          showToast("Failed to delete story", "error");
+        }
       }
-    }
-  }, [showToast]);
+    },
+    [showToast],
+  );
 
   const handleAddStory = useCallback(() => {
     setEditingStory(null);
@@ -71,7 +78,7 @@ export const EpicDetailView: React.FC = () => {
   }, [editingStory, showToast]);
 
   const handleStorySelect = useCallback((storyId: string, selected: boolean) => {
-    setSelectedStories(prev => {
+    setSelectedStories((prev) => {
       const newSet = new Set(prev);
       if (selected) {
         newSet.add(storyId);
@@ -98,9 +105,7 @@ export const EpicDetailView: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 dark:text-red-400">
-            Failed to load epic data
-          </p>
+          <p className="text-red-600 dark:text-red-400">Failed to load epic data</p>
         </div>
       </div>
     );
@@ -141,12 +146,10 @@ export const EpicDetailView: React.FC = () => {
         {stories.length === 0 ? (
           <div className="text-center py-12">
             <FileText className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No stories yet
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No stories yet</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              Stories are features or requirements that deliver value to users.
-              Create your first story to break down this epic.
+              Stories are features or requirements that deliver value to users. Create your first story to break down
+              this epic.
             </p>
             <div className="flex gap-3 justify-center">
               <Button onClick={handleAddStory} className="">
@@ -168,11 +171,7 @@ export const EpicDetailView: React.FC = () => {
                   {selectedStories.size} stor{selectedStories.size !== 1 ? "ies" : "y"} selected
                 </span>
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSelectedStories(new Set())}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedStories(new Set())}>
                     Clear
                   </Button>
                   <Button

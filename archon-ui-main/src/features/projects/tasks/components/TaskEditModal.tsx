@@ -17,11 +17,11 @@ import {
   SelectValue,
   TextArea,
 } from "../../../ui/primitives";
+import { useProjectStories } from "../../stories/hooks/useStoryQueries";
 import { useTaskEditor } from "../hooks";
 import type { Assignee, Task } from "../types";
 import { FeatureSelect } from "./FeatureSelect";
 import type { Priority } from "./TaskPriority";
-import { useProjectStories } from "../../stories/hooks/useStoryQueries";
 
 interface TaskEditModalProps {
   isModalOpen: boolean;

@@ -3,6 +3,7 @@ import { z } from "zod";
 // Base validation schemas
 export const HierarchyStatusSchema = z.enum(["todo", "doing", "review", "waiting", "done"]);
 export const PrioritySchema = z.enum(["low", "medium", "high", "critical"]);
+export const AssigneeSchema = z.enum(["User", "Archon", "AI IDE Agent"]);
 
 // Story schemas
 export const CreateStorySchema = z.object({
@@ -11,6 +12,7 @@ export const CreateStorySchema = z.object({
   description: z.string().max(10000, "Story description must be less than 10000 characters").default(""),
   priority: PrioritySchema.default("medium"),
   mvp_flag: z.boolean().default(false),
+  assignee: AssigneeSchema.optional(),
 });
 
 export const UpdateStorySchema = CreateStorySchema.partial().extend({

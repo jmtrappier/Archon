@@ -1,14 +1,14 @@
 import { Grid, List, Plus, Settings } from "lucide-react";
 import type React from "react";
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useHierarchyContext } from "../../../../contexts/HierarchyContext";
+import { HierarchyBreadcrumb } from "../../../ui/components/navigation";
 import { Button } from "../../../ui/primitives/button";
 import { ToggleGroup, ToggleGroupItem } from "../../../ui/primitives/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
-import { HierarchyBreadcrumb } from "../../../ui/components/navigation";
-import { useHierarchyContext } from "../../../../contexts/HierarchyContext";
-import { useCreateEpic, useProjectEpics, useDeleteEpic } from "../hooks/useEpicQueries";
 import { useProject } from "../../hooks/useProjectQueries";
-import type { Epic, CreateEpicRequest } from "../types";
+import { useCreateEpic, useDeleteEpic, useProjectEpics } from "../hooks/useEpicQueries";
+import type { CreateEpicRequest, Epic } from "../types";
 import { EpicList } from "./EpicList";
 import { EpicModal } from "./EpicModal";
 
@@ -38,11 +38,7 @@ export const EpicView: React.FC<EpicViewProps> = ({
 
   // React Query hooks
   const { data: project } = useProject(projectId);
-  const {
-    data: epics = [],
-    isLoading,
-    error,
-  } = useProjectEpics(projectId);
+  const { data: epics = [], isLoading, error } = useProjectEpics(projectId);
 
   const createEpic = useCreateEpic(projectId);
   const deleteEpic = useDeleteEpic(projectId);
@@ -55,7 +51,7 @@ export const EpicView: React.FC<EpicViewProps> = ({
         title: project.title,
       });
       // Clear any epic/story/task context since we're at the epic list level
-      clearFromLevel('epic');
+      clearFromLevel("epic");
     }
   }, [project, setProjectContext, clearFromLevel]);
 
@@ -72,26 +68,32 @@ export const EpicView: React.FC<EpicViewProps> = ({
     setDeletingEpic(epic);
   }, []);
 
-  const handleCreateSubmit = useCallback(async (epicData: CreateEpicRequest) => {
-    try {
-      await createEpic.mutateAsync(epicData);
-      setIsCreateModalOpen(false);
-    } catch (error) {
-      console.error("Failed to create epic:", error);
-      // Error is handled by the mutation with toast
-    }
-  }, [createEpic]);
+  const handleCreateSubmit = useCallback(
+    async (epicData: CreateEpicRequest) => {
+      try {
+        await createEpic.mutateAsync(epicData);
+        setIsCreateModalOpen(false);
+      } catch (error) {
+        console.error("Failed to create epic:", error);
+        // Error is handled by the mutation with toast
+      }
+    },
+    [createEpic],
+  );
 
-  const handleEditSubmit = useCallback(async (epicData: Partial<Epic>) => {
-    if (!editingEpic) return;
+  const handleEditSubmit = useCallback(
+    async (epicData: Partial<Epic>) => {
+      if (!editingEpic) return;
 
-    try {
-      // The updateEpic mutation will be handled by EpicModal
-      setEditingEpic(null);
-    } catch (error) {
-      console.error("Failed to update epic:", error);
-    }
-  }, [editingEpic]);
+      try {
+        // The updateEpic mutation will be handled by EpicModal
+        setEditingEpic(null);
+      } catch (error) {
+        console.error("Failed to update epic:", error);
+      }
+    },
+    [editingEpic],
+  );
 
   const handleDeleteConfirm = useCallback(async () => {
     if (!deletingEpic) return;
@@ -127,10 +129,7 @@ export const EpicView: React.FC<EpicViewProps> = ({
         {/* Content skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[180px] bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"
-            />
+            <div key={i} className="h-[180px] bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -164,8 +163,8 @@ export const EpicView: React.FC<EpicViewProps> = ({
   }
 
   const epicCount = epics.length;
-  const completedEpics = epics.filter(epic => epic.status === "done").length;
-  const inProgressEpics = epics.filter(epic => epic.status === "doing").length;
+  const completedEpics = epics.filter((epic) => epic.status === "done").length;
+  const inProgressEpics = epics.filter((epic) => epic.status === "doing").length;
 
   return (
     <TooltipProvider>
@@ -183,14 +182,10 @@ export const EpicView: React.FC<EpicViewProps> = ({
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Epic Management
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Epic Management</h1>
               {epicCount > 0 && (
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md">
-                    {epicCount} total
-                  </span>
+                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md">{epicCount} total</span>
                   <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md">
                     {inProgressEpics} in progress
                   </span>
@@ -275,9 +270,7 @@ export const EpicView: React.FC<EpicViewProps> = ({
           <div className="mt-8 p-4 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200/50 dark:border-blue-700/50">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                  Epic Progress Overview
-                </h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Epic Progress Overview</h3>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   Track the overall progress of your project epics
                 </p>
@@ -311,13 +304,7 @@ export const EpicView: React.FC<EpicViewProps> = ({
           isOpen={isCreateModalOpen || !!editingEpic || !!deletingEpic}
           onClose={handleCloseModals}
           projectId={projectId}
-          mode={
-            deletingEpic
-              ? "delete"
-              : editingEpic
-              ? "edit"
-              : "create"
-          }
+          mode={deletingEpic ? "delete" : editingEpic ? "edit" : "create"}
           epic={editingEpic || deletingEpic || undefined}
           onSubmit={editingEpic ? handleEditSubmit : handleCreateSubmit}
           onDeleteConfirm={handleDeleteConfirm}

@@ -10,10 +10,10 @@ import { useCallback, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
 import type { DependencyEdge as DependencyEdgeType, DependencyType } from "../types";
 import {
-  getDependencyTypeColor,
   getDependencyStatusColor,
-  getDependencyTypeLabel,
   getDependencyStatusLabel,
+  getDependencyTypeColor,
+  getDependencyTypeLabel,
 } from "../utils";
 
 export interface DependencyEdgeProps {
@@ -58,17 +58,23 @@ export const DependencyEdge: React.FC<DependencyEdgeProps> = ({
   }, [edge.status, typeColor]);
 
   // Handle interactions
-  const handleClick = useCallback((event: React.MouseEvent) => {
-    if (!isInteractive) return;
-    event.stopPropagation();
-    onEdgeClick?.(edge.id, event);
-  }, [isInteractive, onEdgeClick, edge.id]);
+  const handleClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (!isInteractive) return;
+      event.stopPropagation();
+      onEdgeClick?.(edge.id, event);
+    },
+    [isInteractive, onEdgeClick, edge.id],
+  );
 
-  const handleDoubleClick = useCallback((event: React.MouseEvent) => {
-    if (!isInteractive) return;
-    event.stopPropagation();
-    onEdgeDoubleClick?.(edge.id, event);
-  }, [isInteractive, onEdgeDoubleClick, edge.id]);
+  const handleDoubleClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (!isInteractive) return;
+      event.stopPropagation();
+      onEdgeDoubleClick?.(edge.id, event);
+    },
+    [isInteractive, onEdgeDoubleClick, edge.id],
+  );
 
   const handleMouseEnter = useCallback(() => {
     if (!isInteractive) return;
@@ -103,7 +109,7 @@ export const DependencyEdge: React.FC<DependencyEdgeProps> = ({
 
     if (isQuadratic) {
       // Format: M x1 y1 Q cx cy x2 y2
-      const coords = pathParts.filter(p => !isNaN(Number(p))).map(Number);
+      const coords = pathParts.filter((p) => !isNaN(Number(p))).map(Number);
       if (coords.length >= 6) {
         [x1, y1] = [coords[0], coords[1]];
         [x2, y2] = [coords[4], coords[5]];
@@ -112,7 +118,7 @@ export const DependencyEdge: React.FC<DependencyEdgeProps> = ({
       }
     } else {
       // Format: M x1 y1 L x2 y2
-      const coords = pathParts.filter(p => !isNaN(Number(p))).map(Number);
+      const coords = pathParts.filter((p) => !isNaN(Number(p))).map(Number);
       if (coords.length >= 4) {
         [x1, y1] = [coords[0], coords[1]];
         [x2, y2] = [coords[2], coords[3]];
@@ -204,11 +210,7 @@ export const DependencyEdge: React.FC<DependencyEdgeProps> = ({
               orient="auto"
               markerUnits="strokeWidth"
             >
-              <path
-                d="M0,0 L0,6 L9,3 z"
-                fill={edgeColor}
-                opacity={edge.status === "resolved" ? 0.5 : 0.8}
-              />
+              <path d="M0,0 L0,6 L9,3 z" fill={edgeColor} opacity={edge.status === "resolved" ? 0.5 : 0.8} />
             </marker>
           </defs>
         )}

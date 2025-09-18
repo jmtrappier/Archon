@@ -1,13 +1,17 @@
-import { Home, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
-import React from "react";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { ChevronLeft, ChevronRight, Home, MoreHorizontal } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Button } from "../../primitives/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../primitives/tooltip";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../primitives/dropdown-menu";
-import { useHierarchyContext } from "../../../../contexts/HierarchyContext";
 import type { BreadcrumbSegment } from "../../../../contexts/HierarchyContext";
+import { useHierarchyContext } from "../../../../contexts/HierarchyContext";
 import { createBreadcrumbSegments, getHierarchyDepth } from "../../../../utils/hierarchy-navigation";
+import { Button } from "../../primitives/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../primitives/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../primitives/tooltip";
 import { MemoizedBreadcrumbSegment } from "./BreadcrumbSegment";
 
 export interface HierarchyBreadcrumbProps {
@@ -56,57 +60,63 @@ export const HierarchyBreadcrumb: React.FC<HierarchyBreadcrumbProps> = ({
     };
 
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [segments]);
 
   // Home navigation handler
   const handleHomeClick = useCallback(() => {
-    navigate('/');
+    navigate("/");
   }, [navigate]);
 
   // Segment click handler
-  const handleSegmentClick = useCallback((segment: BreadcrumbSegment) => {
-    if (onSegmentClick) {
-      onSegmentClick(segment);
-    } else if (segment.clickable && segment.url) {
-      navigate(segment.url);
-    }
-  }, [onSegmentClick, navigate]);
+  const handleSegmentClick = useCallback(
+    (segment: BreadcrumbSegment) => {
+      if (onSegmentClick) {
+        onSegmentClick(segment);
+      } else if (segment.clickable && segment.url) {
+        navigate(segment.url);
+      }
+    },
+    [onSegmentClick, navigate],
+  );
 
   // Keyboard navigation handler
-  const handleKeyDown = useCallback((event: React.KeyboardEvent, segment: BreadcrumbSegment) => {
-    if (!enableKeyboardNavigation) return;
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent, segment: BreadcrumbSegment) => {
+      if (!enableKeyboardNavigation) return;
 
-    const currentIndex = segments.findIndex(s => s.id === segment.id);
+      const currentIndex = segments.findIndex((s) => s.id === segment.id);
 
-    switch (event.key) {
-      case 'ArrowLeft':
-        event.preventDefault();
-        if (currentIndex > 0) {
-          const prevSegment = segments[currentIndex - 1];
-          if (prevSegment.clickable && prevSegment.url) {
-            navigate(prevSegment.url);
+      switch (event.key) {
+        case "ArrowLeft":
+          event.preventDefault();
+          if (currentIndex > 0) {
+            const prevSegment = segments[currentIndex - 1];
+            if (prevSegment.clickable && prevSegment.url) {
+              navigate(prevSegment.url);
+            }
           }
-        }
-        break;
+          break;
 
-      case 'ArrowRight':
-        event.preventDefault();
-        if (currentIndex < segments.length - 1) {
-          const nextSegment = segments[currentIndex + 1];
-          if (nextSegment.clickable && nextSegment.url) {
-            navigate(nextSegment.url);
+        case "ArrowRight":
+          event.preventDefault();
+          if (currentIndex < segments.length - 1) {
+            const nextSegment = segments[currentIndex + 1];
+            if (nextSegment.clickable && nextSegment.url) {
+              navigate(nextSegment.url);
+            }
           }
-        }
-        break;
+          break;
 
-      case 'Home':
-        event.preventDefault();
-        handleHomeClick();
-        break;
-    }
-  }, [segments, navigate, handleHomeClick, enableKeyboardNavigation]);
+        case "Home":
+          event.preventDefault();
+          handleHomeClick();
+          break;
+      }
+    },
+    [segments, navigate, handleHomeClick, enableKeyboardNavigation],
+  );
 
   // Determine which segments to show based on available space
   const getVisibleSegments = () => {
@@ -129,7 +139,7 @@ export const HierarchyBreadcrumb: React.FC<HierarchyBreadcrumbProps> = ({
     const visibleSegments = [
       remainingSegments[0],
       ...remainingSegments.slice(-Math.max(0, maxVisible - 1)),
-      lastSegment
+      lastSegment,
     ];
 
     const hiddenSegments = remainingSegments.slice(1, remainingSegments.length - Math.max(0, maxVisible - 1));
@@ -177,21 +187,15 @@ export const HierarchyBreadcrumb: React.FC<HierarchyBreadcrumbProps> = ({
             </TooltipContent>
           </Tooltip>
 
-          <ChevronRight
-            className="h-4 w-4 text-gray-400 dark:text-gray-500"
-            aria-hidden="true"
-          />
+          <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
         </>
       )}
 
       {/* Breadcrumb Segments Container */}
-      <div
-        ref={segmentsRef}
-        className="flex items-center gap-2 flex-1 min-w-0"
-      >
+      <div ref={segmentsRef} className="flex items-center gap-2 flex-1 min-w-0">
         {visibleSegments.map((segment, index) => {
           const isLast = index === visibleSegments.length - 1;
-          const actualIndex = segments.findIndex(s => s.id === segment.id);
+          const actualIndex = segments.findIndex((s) => s.id === segment.id);
           const isActive = isLast;
 
           return (
@@ -218,26 +222,17 @@ export const HierarchyBreadcrumb: React.FC<HierarchyBreadcrumbProps> = ({
                           disabled={!hiddenSegment.clickable}
                           className="flex items-center gap-2"
                         >
-                          <span className="text-sm">
-                            {showIcons && getHierarchyIcon(hiddenSegment.level)}
-                          </span>
-                          <span className="flex-1 truncate">
-                            {hiddenSegment.title}
-                          </span>
+                          <span className="text-sm">{showIcons && getHierarchyIcon(hiddenSegment.level)}</span>
+                          <span className="flex-1 truncate">{hiddenSegment.title}</span>
                           {hiddenSegment.progress !== undefined && (
-                            <span className="text-xs text-gray-500">
-                              {hiddenSegment.progress}%
-                            </span>
+                            <span className="text-xs text-gray-500">{hiddenSegment.progress}%</span>
                           )}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  <ChevronRight
-                    className="h-4 w-4 text-gray-400 dark:text-gray-500"
-                    aria-hidden="true"
-                  />
+                  <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
                 </>
               )}
 
@@ -294,17 +289,17 @@ export const HierarchyBreadcrumb: React.FC<HierarchyBreadcrumbProps> = ({
 // Helper function used in dropdown (moved outside component for performance)
 const getHierarchyIcon = (level: string): string => {
   switch (level) {
-    case 'project':
-      return '📁';
-    case 'epic':
-      return '🎯';
-    case 'story':
-      return '📝';
-    case 'task':
-      return '☑️';
-    case 'subtask':
-      return '▪️';
+    case "project":
+      return "📁";
+    case "epic":
+      return "🎯";
+    case "story":
+      return "📝";
+    case "task":
+      return "☑️";
+    case "subtask":
+      return "▪️";
     default:
-      return '•';
+      return "•";
   }
 };

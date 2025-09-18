@@ -55,7 +55,7 @@ export const SubtaskItem: React.FC<SubtaskItemProps> = ({
     (newAssignee: Assignee) => {
       changeAssignee(subtask.id, newAssignee);
     },
-    [changeAssignee, subtask.id]
+    [changeAssignee, subtask.id],
   );
 
   const handleToggleExpand = useCallback(() => {
@@ -73,7 +73,7 @@ export const SubtaskItem: React.FC<SubtaskItemProps> = ({
       title: subtask.title,
       parentTaskId: parentTaskId,
       index,
-      projectId: projectId
+      projectId: projectId,
     },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
@@ -89,7 +89,7 @@ export const SubtaskItem: React.FC<SubtaskItemProps> = ({
         index: number;
         parentTaskId: string;
       },
-      monitor
+      monitor,
     ) => {
       if (!monitor.isOver({ shallow: true })) return;
       if (draggedItem.id === subtask.id) return;
@@ -165,7 +165,7 @@ export const SubtaskItem: React.FC<SubtaskItemProps> = ({
         {/* Priority indicator */}
         <div
           className={`absolute left-0 top-0 bottom-0 w-[2px] ${getOrderColor(
-            subtask.task_order
+            subtask.task_order,
           )} ${getOrderGlow(subtask.task_order)} rounded-l-lg opacity-70`}
         />
 
@@ -178,34 +178,22 @@ export const SubtaskItem: React.FC<SubtaskItemProps> = ({
               onClick={handleToggleExpand}
               className="h-6 w-6 p-0 min-w-0 flex-shrink-0"
             >
-              <ChevronRight
-                className={`h-3 w-3 transition-transform duration-200 ${
-                  isExpanded ? "rotate-90" : ""
-                }`}
-              />
+              <ChevronRight className={`h-3 w-3 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} />
             </Button>
           )}
 
           {/* Status indicator dot */}
           <div className="flex items-center mt-1 flex-shrink-0">
-            <div
-              className={`w-2 h-2 rounded-full ${getStatusDot(
-                subtask.status
-              )}`}
-            />
+            <div className={`w-2 h-2 rounded-full ${getStatusDot(subtask.status)}`} />
           </div>
 
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <h5 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {subtask.title}
-                </h5>
+                <h5 className="text-sm font-medium text-gray-900 dark:text-white truncate">{subtask.title}</h5>
                 {subtask.description && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                    {subtask.description}
-                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{subtask.description}</p>
                 )}
                 {subtask.feature && (
                   <span
@@ -241,9 +229,7 @@ export const SubtaskItem: React.FC<SubtaskItemProps> = ({
                 onAssigneeChange={handleAssigneeChange}
                 isLoading={isUpdating}
               />
-              <span className="text-xs text-gray-500 capitalize">
-                {subtask.status}
-              </span>
+              <span className="text-xs text-gray-500 capitalize">{subtask.status}</span>
             </div>
           </div>
         </div>

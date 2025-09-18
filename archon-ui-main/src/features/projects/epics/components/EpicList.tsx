@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
 import { useCreateEpic, useProjectEpics, useUpdateEpicStatus } from "../hooks/useEpicQueries";
 import type { Epic, EpicFilters, EpicSortOptions, HierarchyStatus, Priority } from "../types";
-import { EPIC_STATUS_ORDER, EPIC_PRIORITY_ORDER } from "../utils/epic-styles";
+import { EPIC_PRIORITY_ORDER, EPIC_STATUS_ORDER } from "../utils/epic-styles";
 import { EpicCard } from "./EpicCard";
 
 export interface EpicListProps {
@@ -67,10 +67,7 @@ export const EpicList: React.FC<EpicListProps> = ({
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       result = result.filter(
-        (epic) =>
-          epic.title.toLowerCase().includes(query) ||
-          epic.description?.toLowerCase().includes(query) ||
-          false,
+        (epic) => epic.title.toLowerCase().includes(query) || epic.description?.toLowerCase().includes(query) || false,
       );
     }
 
@@ -219,12 +216,7 @@ export const EpicList: React.FC<EpicListProps> = ({
             {selectedEpics.size > 0 && (
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {selectedEpics.size} epic{selectedEpics.size > 1 ? "s" : ""} selected
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearSelection}
-                  className="ml-2 text-xs h-6 px-2"
-                >
+                <Button variant="ghost" size="sm" onClick={handleClearSelection} className="ml-2 text-xs h-6 px-2">
                   Clear
                 </Button>
               </p>
@@ -233,12 +225,7 @@ export const EpicList: React.FC<EpicListProps> = ({
 
           <div className="flex items-center gap-2">
             {hasActiveFilters && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearFilters}
-                className="text-xs"
-              >
+              <Button variant="outline" size="sm" onClick={handleClearFilters} className="text-xs">
                 Clear Filters
               </Button>
             )}
@@ -323,27 +310,25 @@ export const EpicList: React.FC<EpicListProps> = ({
         {showSorting && (
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
             <span>Sort by:</span>
-            {(["title", "created_at", "updated_at", "priority", "progress", "status"] as const).map(
-              (field) => (
-                <Button
-                  key={field}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSortChange(field)}
-                  className={`gap-1 text-xs h-7 px-2 ${
-                    sortOptions.field === field ? "bg-gray-100 dark:bg-gray-700" : ""
-                  }`}
-                >
-                  {field.replace("_", " ").charAt(0).toUpperCase() + field.replace("_", " ").slice(1)}
-                  {sortOptions.field === field &&
-                    (sortOptions.direction === "asc" ? (
-                      <SortAsc className="w-3 h-3" />
-                    ) : (
-                      <SortDesc className="w-3 h-3" />
-                    ))}
-                </Button>
-              ),
-            )}
+            {(["title", "created_at", "updated_at", "priority", "progress", "status"] as const).map((field) => (
+              <Button
+                key={field}
+                variant="ghost"
+                size="sm"
+                onClick={() => handleSortChange(field)}
+                className={`gap-1 text-xs h-7 px-2 ${
+                  sortOptions.field === field ? "bg-gray-100 dark:bg-gray-700" : ""
+                }`}
+              >
+                {field.replace("_", " ").charAt(0).toUpperCase() + field.replace("_", " ").slice(1)}
+                {sortOptions.field === field &&
+                  (sortOptions.direction === "asc" ? (
+                    <SortAsc className="w-3 h-3" />
+                  ) : (
+                    <SortDesc className="w-3 h-3" />
+                  ))}
+              </Button>
+            ))}
           </div>
         )}
 
@@ -352,10 +337,7 @@ export const EpicList: React.FC<EpicListProps> = ({
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-[180px] bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"
-                />
+                <div key={i} className="h-[180px] bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
               ))}
             </div>
           ) : filteredAndSortedEpics.length > 0 ? (

@@ -30,9 +30,7 @@ export interface EpicsResponse {
 export const epicService = {
   async listEpics(projectId: string): Promise<Epic[]> {
     try {
-      const response = await callAPIWithETag<EpicsResponse>(
-        `/api/projects/${projectId}/epics`
-      );
+      const response = await callAPIWithETag<EpicsResponse>(`/api/projects/${projectId}/epics`);
       return response?.data || [];
     } catch (error) {
       console.error(`Failed to list epics for project ${projectId}:`, error);
@@ -52,13 +50,10 @@ export const epicService = {
 
   async createEpic(projectId: string, data: Partial<Epic>): Promise<Epic> {
     try {
-      const response = await callAPIWithETag<Epic>(
-        `/api/projects/${projectId}/epics`,
-        {
-          method: "POST",
-          body: JSON.stringify(data),
-        }
-      );
+      const response = await callAPIWithETag<Epic>(`/api/projects/${projectId}/epics`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
 
       // Invalidate cache
       invalidateETagCache(`/api/projects/${projectId}/epics`);

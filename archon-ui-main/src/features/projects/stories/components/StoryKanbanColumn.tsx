@@ -1,10 +1,10 @@
 import { useRef } from "react";
 import { useDrop } from "react-dnd";
 import { cn } from "../../../ui/primitives/styles";
-import { StoryCard } from "./StoryCard";
-import { StoryItemTypes } from "../utils/story-styles";
-import type { Story } from "../types";
 import type { HierarchyStatus } from "../../shared/types/hierarchy";
+import type { Story } from "../types";
+import { StoryItemTypes } from "../utils/story-styles";
+import { StoryCard } from "./StoryCard";
 
 interface StoryKanbanColumnProps {
   status: HierarchyStatus;
@@ -86,7 +86,7 @@ export const StoryKanbanColumn = ({
         isOver &&
           "shadow-[inset_0_2px_20px_rgba(34,211,238,0.15)] dark:shadow-[inset_0_2px_30px_rgba(34,211,238,0.25)]",
         isOver && "backdrop-blur-md",
-        className
+        className,
       )}
     >
       {/* Column Header */}

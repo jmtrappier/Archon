@@ -6,30 +6,30 @@
  */
 
 import {
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Move,
   Filter,
-  Settings,
   Maximize2,
   Minimize2,
-  Search,
+  Move,
   RefreshCw,
+  RotateCcw,
+  Search,
+  Settings,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { Button } from "../../../ui/primitives/button";
-import { Input } from "../../../ui/primitives/input";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "../../../ui/primitives/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/primitives/select";
+import { Button } from "../../../ui/primitives/button";
 import { Checkbox } from "../../../ui/primitives/checkbox";
+import { Input } from "../../../ui/primitives/input";
 import { Label } from "../../../ui/primitives/label";
-import { DependencyNode } from "./DependencyNode";
-import { DependencyEdge } from "./DependencyEdge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/primitives/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../ui/primitives/tooltip";
 import { useDependencyGraph } from "../hooks";
-import type { GraphQueryParams, GraphLayout } from "../types";
+import type { GraphLayout, GraphQueryParams } from "../types";
+import { DependencyEdge } from "./DependencyEdge";
+import { DependencyNode } from "./DependencyNode";
 
 export interface DependencyGraphProps {
   projectId: string;
@@ -95,22 +95,25 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
   // Filter state
   const [searchQuery, setSearchQuery] = useState(initialFilter?.searchQuery ?? "");
   const [selectedEntityTypes, setSelectedEntityTypes] = useState<Set<string>>(
-    new Set(initialFilter?.entityTypes ?? ["epic", "story", "task"])
+    new Set(initialFilter?.entityTypes ?? ["epic", "story", "task"]),
   );
   const [selectedDependencyTypes, setSelectedDependencyTypes] = useState<Set<string>>(
-    new Set(initialFilter?.dependencyTypes ?? ["blocks", "depends_on", "related_to"])
+    new Set(initialFilter?.dependencyTypes ?? ["blocks", "depends_on", "related_to"]),
   );
   const [showOnlyConnected, setShowOnlyConnected] = useState(false);
 
   // Graph query parameters
-  const graphParams: GraphQueryParams = useMemo(() => ({
-    project_id: projectId,
-    entity_types: Array.from(selectedEntityTypes) as ("epic" | "story" | "task")[],
-    max_depth: 5,
-    include_subtasks: true,
-    focus_entity_id: focusEntityId,
-    focus_entity_type: focusEntityType,
-  }), [projectId, selectedEntityTypes, focusEntityId, focusEntityType]);
+  const graphParams: GraphQueryParams = useMemo(
+    () => ({
+      project_id: projectId,
+      entity_types: Array.from(selectedEntityTypes) as ("epic" | "story" | "task")[],
+      max_depth: 5,
+      include_subtasks: true,
+      focus_entity_id: focusEntityId,
+      focus_entity_type: focusEntityType,
+    }),
+    [projectId, selectedEntityTypes, focusEntityId, focusEntityType],
+  );
 
   // Graph hook with filters
   const {
@@ -153,32 +156,41 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
   });
 
   // Handle node interactions
-  const handleNodeInteraction = useCallback((nodeId: string, event: React.MouseEvent) => {
-    handleNodeClick(nodeId, event.nativeEvent);
-    const node = nodes.find(n => n.id === nodeId);
-    if (node) {
-      onNodeClick?.(nodeId, node.type);
-    }
-  }, [handleNodeClick, nodes, onNodeClick]);
+  const handleNodeInteraction = useCallback(
+    (nodeId: string, event: React.MouseEvent) => {
+      handleNodeClick(nodeId, event.nativeEvent);
+      const node = nodes.find((n) => n.id === nodeId);
+      if (node) {
+        onNodeClick?.(nodeId, node.type);
+      }
+    },
+    [handleNodeClick, nodes, onNodeClick],
+  );
 
   // Handle edge interactions
-  const handleEdgeInteraction = useCallback((edgeId: string, event: React.MouseEvent) => {
-    handleEdgeClick(edgeId, event.nativeEvent);
-    onEdgeClick?.(edgeId);
-  }, [handleEdgeClick, onEdgeClick]);
+  const handleEdgeInteraction = useCallback(
+    (edgeId: string, event: React.MouseEvent) => {
+      handleEdgeClick(edgeId, event.nativeEvent);
+      onEdgeClick?.(edgeId);
+    },
+    [handleEdgeClick, onEdgeClick],
+  );
 
   // Navigation handler
-  const handleNavigateToEntity = useCallback((entityId: string, entityType: string) => {
-    onNavigateToEntity?.(entityId, entityType);
-  }, [onNavigateToEntity]);
+  const handleNavigateToEntity = useCallback(
+    (entityId: string, entityType: string) => {
+      onNavigateToEntity?.(entityId, entityType);
+    },
+    [onNavigateToEntity],
+  );
 
   // Zoom controls
   const handleZoomIn = useCallback(() => {
-    setZoom(prev => Math.min(prev * 1.2, 3));
+    setZoom((prev) => Math.min(prev * 1.2, 3));
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    setZoom(prev => Math.max(prev / 1.2, 0.1));
+    setZoom((prev) => Math.max(prev / 1.2, 0.1));
   }, []);
 
   const handleResetView = useCallback(() => {
@@ -195,12 +207,15 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
     event.preventDefault();
   }, []);
 
-  const handleMouseMove = useCallback((event: React.MouseEvent) => {
-    if (!isDragging) return;
+  const handleMouseMove = useCallback(
+    (event: React.MouseEvent) => {
+      if (!isDragging) return;
 
-    setPanX(prev => prev + event.movementX);
-    setPanY(prev => prev + event.movementY);
-  }, [isDragging]);
+      setPanX((prev) => prev + event.movementX);
+      setPanY((prev) => prev + event.movementY);
+    },
+    [isDragging],
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
@@ -208,12 +223,12 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
 
   // Fullscreen toggle
   const toggleFullscreen = useCallback(() => {
-    setIsFullscreen(prev => !prev);
+    setIsFullscreen((prev) => !prev);
   }, []);
 
   // Filter handlers
   const handleEntityTypeToggle = useCallback((type: string, checked: boolean) => {
-    setSelectedEntityTypes(prev => {
+    setSelectedEntityTypes((prev) => {
       const newSet = new Set(prev);
       if (checked) {
         newSet.add(type);
@@ -225,7 +240,7 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
   }, []);
 
   const handleDependencyTypeToggle = useCallback((type: string, checked: boolean) => {
-    setSelectedDependencyTypes(prev => {
+    setSelectedDependencyTypes((prev) => {
       const newSet = new Set(prev);
       if (checked) {
         newSet.add(type);
@@ -311,12 +326,7 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => refetch()}
-                    disabled={isRefetching}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => refetch()} disabled={isRefetching}>
                     <RefreshCw className={`w-4 h-4 ${isRefetching ? "animate-spin" : ""}`} />
                   </Button>
                 </TooltipTrigger>
@@ -325,7 +335,7 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => setShowFilters(prev => !prev)}>
+                  <Button variant="ghost" size="sm" onClick={() => setShowFilters((prev) => !prev)}>
                     <Filter className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
@@ -369,14 +379,12 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
                       { value: "epic", label: "Epics" },
                       { value: "story", label: "Stories" },
                       { value: "task", label: "Tasks" },
-                    ].map(type => (
+                    ].map((type) => (
                       <div key={type.value} className="flex items-center space-x-2">
                         <Checkbox
                           id={`entity-${type.value}`}
                           checked={selectedEntityTypes.has(type.value)}
-                          onCheckedChange={(checked) =>
-                            handleEntityTypeToggle(type.value, checked as boolean)
-                          }
+                          onCheckedChange={(checked) => handleEntityTypeToggle(type.value, checked as boolean)}
                         />
                         <Label htmlFor={`entity-${type.value}`} className="text-sm">
                           {type.label}
@@ -394,14 +402,12 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
                       { value: "blocks", label: "Blocks" },
                       { value: "depends_on", label: "Depends On" },
                       { value: "related_to", label: "Related To" },
-                    ].map(type => (
+                    ].map((type) => (
                       <div key={type.value} className="flex items-center space-x-2">
                         <Checkbox
                           id={`dep-${type.value}`}
                           checked={selectedDependencyTypes.has(type.value)}
-                          onCheckedChange={(checked) =>
-                            handleDependencyTypeToggle(type.value, checked as boolean)
-                          }
+                          onCheckedChange={(checked) => handleDependencyTypeToggle(type.value, checked as boolean)}
                         />
                         <Label htmlFor={`dep-${type.value}`} className="text-sm">
                           {type.label}
@@ -480,19 +486,8 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
         >
           {/* Background grid */}
           <defs>
-            <pattern
-              id="grid"
-              width="20"
-              height="20"
-              patternUnits="userSpaceOnUse"
-            >
-              <path
-                d="M 20 0 L 0 0 0 20"
-                fill="none"
-                stroke="gray"
-                strokeWidth="0.5"
-                opacity="0.3"
-              />
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="gray" strokeWidth="0.5" opacity="0.3" />
             </pattern>
           </defs>
 
@@ -500,7 +495,7 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
 
           <g transform={transform}>
             {/* Render edges first (behind nodes) */}
-            {edges.map(edge => (
+            {edges.map((edge) => (
               <DependencyEdge
                 key={edge.id}
                 edge={edge}
@@ -515,7 +510,7 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
             ))}
 
             {/* Render nodes on top */}
-            {nodes.map(node => (
+            {nodes.map((node) => (
               <DependencyNode
                 key={node.id}
                 node={node}

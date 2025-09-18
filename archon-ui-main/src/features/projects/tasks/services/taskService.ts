@@ -275,7 +275,7 @@ export const taskService = {
   /**
    * Create a subtask under a parent task
    */
-  async createSubtask(parentTaskId: string, subtaskData: Omit<CreateTaskRequest, 'parent_task_id'>): Promise<Task> {
+  async createSubtask(parentTaskId: string, subtaskData: Omit<CreateTaskRequest, "parent_task_id">): Promise<Task> {
     try {
       const fullSubtaskData: CreateTaskRequest = {
         ...subtaskData,

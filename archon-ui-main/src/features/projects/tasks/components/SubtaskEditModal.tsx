@@ -9,6 +9,7 @@
  */
 
 import { memo, useCallback, useEffect, useState } from "react";
+import { useToast } from "../../../ui/hooks/useToast";
 import {
   Button,
   Dialog,
@@ -22,9 +23,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "../../../ui/primitives";
-import { useToast } from "../../../ui/hooks/useToast";
 
 // Note: Using plain textarea as we need to import it separately
 const Textarea = ({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
@@ -33,6 +33,7 @@ const Textarea = ({ className, ...props }: React.TextareaHTMLAttributes<HTMLText
     {...props}
   />
 );
+
 import { useCreateSubtask, useUpdateTask } from "../hooks";
 import type { Assignee, Task } from "../types";
 

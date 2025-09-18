@@ -5,7 +5,7 @@
  * Follows glassmorphism design patterns from existing Epic/Story/Task cards
  */
 
-import { BarChart3, Flag, Users, ChevronRight } from "lucide-react";
+import { BarChart3, ChevronRight, Flag, Users } from "lucide-react";
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import { Badge } from "../../../ui/primitives/badge";
@@ -14,10 +14,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../
 import type { DependencyNode as DependencyNodeType } from "../types";
 import {
   getEntityTypeColor,
-  getHierarchyStatusColor,
-  getPriorityColor,
   getEntityTypeLabel,
+  getHierarchyStatusColor,
   getNodeSize,
+  getPriorityColor,
 } from "../utils";
 
 export interface DependencyNodeProps {
@@ -47,20 +47,26 @@ export const DependencyNode: React.FC<DependencyNodeProps> = ({
   const nodeSize = useMemo(() => getNodeSize(node.type), [node.type]);
   const entityColor = useMemo(() => getEntityTypeColor(node.type), [node.type]);
   const statusColor = useMemo(() => getHierarchyStatusColor(node.status), [node.status]);
-  const priorityColor = useMemo(() => node.priority ? getPriorityColor(node.priority) : null, [node.priority]);
+  const priorityColor = useMemo(() => (node.priority ? getPriorityColor(node.priority) : null), [node.priority]);
 
   // Handle interactions
-  const handleClick = useCallback((event: React.MouseEvent) => {
-    if (!isInteractive) return;
-    event.stopPropagation();
-    onNodeClick?.(node.id, event);
-  }, [isInteractive, onNodeClick, node.id]);
+  const handleClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (!isInteractive) return;
+      event.stopPropagation();
+      onNodeClick?.(node.id, event);
+    },
+    [isInteractive, onNodeClick, node.id],
+  );
 
-  const handleDoubleClick = useCallback((event: React.MouseEvent) => {
-    if (!isInteractive) return;
-    event.stopPropagation();
-    onNodeDoubleClick?.(node.id, event);
-  }, [isInteractive, onNodeDoubleClick, node.id]);
+  const handleDoubleClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (!isInteractive) return;
+      event.stopPropagation();
+      onNodeDoubleClick?.(node.id, event);
+    },
+    [isInteractive, onNodeDoubleClick, node.id],
+  );
 
   const handleMouseEnter = useCallback(() => {
     if (!isInteractive) return;
@@ -72,10 +78,13 @@ export const DependencyNode: React.FC<DependencyNodeProps> = ({
     onNodeHover?.(null);
   }, [isInteractive, onNodeHover]);
 
-  const handleNavigate = useCallback((event: React.MouseEvent) => {
-    event.stopPropagation();
-    onNavigateToEntity?.(node.id, node.type);
-  }, [onNavigateToEntity, node.id, node.type]);
+  const handleNavigate = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation();
+      onNavigateToEntity?.(node.id, node.type);
+    },
+    [onNavigateToEntity, node.id, node.type],
+  );
 
   // Node size based on importance and connections
   const sizeMultiplier = useMemo(() => {
@@ -106,11 +115,12 @@ export const DependencyNode: React.FC<DependencyNodeProps> = ({
   // Glassmorphism styling
   const baseCardStyles = `
     backdrop-blur-lg rounded-xl border transition-all duration-200 ease-in-out
-    ${isSelected
-      ? "border-blue-500 shadow-[0_0_16px_rgba(59,130,246,0.5)] bg-blue-50/40 dark:bg-blue-900/30"
-      : isHighlighted
-      ? "border-indigo-400/60 shadow-[0_0_12px_rgba(99,102,241,0.3)]"
-      : "border-gray-200 dark:border-gray-700"
+    ${
+      isSelected
+        ? "border-blue-500 shadow-[0_0_16px_rgba(59,130,246,0.5)] bg-blue-50/40 dark:bg-blue-900/30"
+        : isHighlighted
+          ? "border-indigo-400/60 shadow-[0_0_12px_rgba(99,102,241,0.3)]"
+          : "border-gray-200 dark:border-gray-700"
     }
     ${isInteractive ? "cursor-pointer hover:shadow-lg" : "cursor-default"}
     ${isDragging ? "opacity-60 scale-95" : "opacity-100 scale-100"}
@@ -157,11 +167,7 @@ export const DependencyNode: React.FC<DependencyNodeProps> = ({
         onMouseLeave={handleMouseLeave}
       >
         {/* Node background with glassmorphism effect */}
-        <foreignObject
-          width={scaledWidth}
-          height={scaledHeight}
-          className="overflow-hidden"
-        >
+        <foreignObject width={scaledWidth} height={scaledHeight} className="overflow-hidden">
           <div
             className={`${baseCardStyles} ${backgroundGradient} ${entityStyles.bgOpacity} w-full h-full relative overflow-hidden`}
             onClick={handleClick}

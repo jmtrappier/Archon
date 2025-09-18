@@ -1,13 +1,14 @@
-import React, { useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Plus, Package2, AlertCircle } from "lucide-react";
+import { AlertCircle, Package2, Plus } from "lucide-react";
+import type React from "react";
+import { useCallback, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useToast } from "@/features/ui/hooks";
+import { Button } from "@/features/ui/primitives/button";
+import { EpicModal } from "../epics/components/EpicModal";
+import { useEpics } from "../epics/hooks/useEpicQueries";
 import { HierarchyLayout } from "../hierarchy/components/HierarchyLayout";
 import { ProgressCard } from "../hierarchy/components/ProgressCard";
 import { useProject } from "../hooks/useProjectQueries";
-import { useEpics } from "../epics/hooks/useEpicQueries";
-import { EpicModal } from "../epics/components/EpicModal";
-import { Button } from "@/features/ui/primitives/button";
-import { useToast } from "@/features/ui/hooks";
 
 export const ProjectDashboard: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -24,32 +25,36 @@ export const ProjectDashboard: React.FC = () => {
 
   // Calculate overall stats
   const totalEpics = epics.length;
-  const completedEpics = epics.filter(e => e.status === "done").length;
+  const completedEpics = epics.filter((e) => e.status === "done").length;
   const totalStories = epics.reduce((sum, e) => sum + (e.story_count || 0), 0);
   const completedStories = epics.reduce((sum, e) => sum + (e.completed_stories || 0), 0);
-  const overallProgress = totalStories > 0
-    ? Math.round((completedStories / totalStories) * 100)
-    : 0;
+  const overallProgress = totalStories > 0 ? Math.round((completedStories / totalStories) * 100) : 0;
 
-  const handleEpicClick = useCallback((epicId: string) => {
-    navigate(`/projects/${projectId}/epics/${epicId}`);
-  }, [navigate, projectId]);
+  const handleEpicClick = useCallback(
+    (epicId: string) => {
+      navigate(`/projects/${projectId}/epics/${epicId}`);
+    },
+    [navigate, projectId],
+  );
 
   const handleEpicEdit = useCallback((epic: any) => {
     setEditingEpic(epic);
     setIsEpicModalOpen(true);
   }, []);
 
-  const handleEpicDelete = useCallback(async (epicId: string) => {
-    if (confirm("Are you sure you want to delete this epic? This will also delete all its stories and tasks.")) {
-      try {
-        // TODO: Implement epic deletion
-        showToast("Epic deletion not yet implemented", "info");
-      } catch (error) {
-        showToast("Failed to delete epic", "error");
+  const handleEpicDelete = useCallback(
+    async (epicId: string) => {
+      if (confirm("Are you sure you want to delete this epic? This will also delete all its stories and tasks.")) {
+        try {
+          // TODO: Implement epic deletion
+          showToast("Epic deletion not yet implemented", "info");
+        } catch (error) {
+          showToast("Failed to delete epic", "error");
+        }
       }
-    }
-  }, [showToast]);
+    },
+    [showToast],
+  );
 
   const handleAddEpic = useCallback(() => {
     setEditingEpic(null);
@@ -63,7 +68,7 @@ export const ProjectDashboard: React.FC = () => {
   }, [editingEpic, showToast]);
 
   const handleEpicSelect = useCallback((epicId: string, selected: boolean) => {
-    setSelectedEpics(prev => {
+    setSelectedEpics((prev) => {
       const newSet = new Set(prev);
       if (selected) {
         newSet.add(epicId);
@@ -90,9 +95,7 @@ export const ProjectDashboard: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 dark:text-red-400">
-            Failed to load project data
-          </p>
+          <p className="text-red-600 dark:text-red-400">Failed to load project data</p>
         </div>
       </div>
     );
@@ -117,12 +120,10 @@ export const ProjectDashboard: React.FC = () => {
         {epics.length === 0 ? (
           <div className="text-center py-12">
             <Package2 className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No epics yet
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No epics yet</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              Epics are large features or initiatives that contain multiple user stories.
-              Create your first epic to get started.
+              Epics are large features or initiatives that contain multiple user stories. Create your first epic to get
+              started.
             </p>
             <Button onClick={handleAddEpic} className="mx-auto">
               <Plus className="h-4 w-4 mr-2" />
@@ -138,11 +139,7 @@ export const ProjectDashboard: React.FC = () => {
                   {selectedEpics.size} epic{selectedEpics.size !== 1 ? "s" : ""} selected
                 </span>
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSelectedEpics(new Set())}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedEpics(new Set())}>
                     Clear
                   </Button>
                   <Button

@@ -1,12 +1,12 @@
-import { Tag, CheckSquare } from "lucide-react";
+import { CheckSquare, Tag } from "lucide-react";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { useTaskActions } from "../hooks";
 import type { Assignee, Task } from "../types";
-import { getOrderColor, getOrderGlow, ItemTypes } from "../utils/task-styles";
-import { HierarchicalItemTypes, HierarchicalDragWrapper, type DraggedTask } from "./HierarchicalDragDrop";
 import { getProgressColor, getProgressTextColor } from "../utils";
+import { getOrderColor, getOrderGlow, ItemTypes } from "../utils/task-styles";
+import { type DraggedTask, HierarchicalDragWrapper, HierarchicalItemTypes } from "./HierarchicalDragDrop";
 import { TaskAssignee } from "./TaskAssignee";
 import { TaskCardActions } from "./TaskCardActions";
 import { type Priority, TaskPriority } from "./TaskPriority";
@@ -79,10 +79,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       type: HierarchicalItemTypes.TASK,
       id: task.id,
       title: task.title,
-      storyId: task.story_id || 'unknown',
+      storyId: task.story_id || "unknown",
       status: task.status,
       projectId: projectId,
-      index: index
+      index: index,
     },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
@@ -236,16 +236,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 {/* Progress bar */}
                 <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div
-                    className={`h-full transition-all duration-300 ${getProgressColor(
-                      task.progress || 0
-                    )}`}
+                    className={`h-full transition-all duration-300 ${getProgressColor(task.progress || 0)}`}
                     style={{ width: `${task.progress || 0}%` }}
                   />
                 </div>
 
-                <span className={`font-medium ${getProgressTextColor(task.progress || 0)}`}>
-                  {task.progress || 0}%
-                </span>
+                <span className={`font-medium ${getProgressTextColor(task.progress || 0)}`}>{task.progress || 0}%</span>
               </div>
             </div>
           )}

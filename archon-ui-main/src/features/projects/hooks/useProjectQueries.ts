@@ -34,7 +34,7 @@ export function useProjects() {
 export function useProject(projectId: string | undefined) {
   const { data: projects = [], isLoading, error } = useProjects();
 
-  const project = projectId ? projects.find(p => p.id === projectId) : undefined;
+  const project = projectId ? projects.find((p) => p.id === projectId) : undefined;
 
   return {
     data: project,
