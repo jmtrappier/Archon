@@ -4,7 +4,7 @@
 --
 -- ⚠️  CETTE VERSION EST POUR LES NOUVEAUX UTILISATEURS
 -- ⚠️  Si vous avez déjà exécuté SAFE_TRAXIS_MIGRATION.sql,
---     utilisez seulement UNIQUE_CODES_MIGRATION.sql
+--     utilisez seulement BRAINSTORMING_STATUS_MIGRATION.sql
 --
 -- INSTRUCTIONS POUR NOUVELLE INSTALLATION :
 -- 1. Ouvrez Supabase SQL Editor
@@ -15,13 +15,18 @@
 -- CONTENU :
 -- 1. Structure hiérarchique BMAD (Epics, Stories, Tasks étendues)
 -- 2. Système de nomenclature unique (E-01, S-01-01, T-01-01-01)
--- 3. Contraintes, indexes, vues et fonctions complètes
+-- 3. Statut "brainstorming" pour EPICs et STORIEs
+-- 4. Contraintes, indexes, vues et fonctions complètes
 --
 -- SYSTÈME DE NOMENCLATURE :
 -- EPIC:    E-XX        (E-01, E-02, E-03...)
 -- STORY:   S-XX-YY     (S-01-01, S-01-02, S-02-01...)
 -- TASK:    T-XX-YY-ZZ  (T-01-01-01, T-01-01-02...)
 -- SUBTASK: ST-XX-YY-ZZ-AA (ST-01-01-01-01...)
+--
+-- WORKFLOW STATUTS :
+-- EPICs/STORIEs: brainstorming → todo → doing → review → done
+-- TASKs/SUBTASKs: todo → doing → review → done
 --
 -- =====================================================
 
@@ -31,7 +36,7 @@ CREATE TABLE IF NOT EXISTS archon_epics (
     project_id UUID NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    status VARCHAR(50) DEFAULT 'planning',
+    status VARCHAR(50) DEFAULT 'brainstorming',
     priority INTEGER DEFAULT 50,
     progress_percentage INTEGER DEFAULT 0,
     start_date TIMESTAMP WITH TIME ZONE,
@@ -59,7 +64,7 @@ CREATE TABLE IF NOT EXISTS archon_stories (
     user_story TEXT,
     acceptance_criteria TEXT[],
     story_points INTEGER,
-    status VARCHAR(50) DEFAULT 'backlog',
+    status VARCHAR(50) DEFAULT 'brainstorming',
     priority INTEGER DEFAULT 50,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -415,8 +420,8 @@ ON CONFLICT (migration_name) DO NOTHING;
 -- =====================================================
 --
 -- STRUCTURE CRÉÉE :
--- ✅ archon_epics (17 colonnes avec codes)
--- ✅ archon_stories (19 colonnes avec codes)
+-- ✅ archon_epics (17 colonnes avec codes, statut brainstorming)
+-- ✅ archon_stories (19 colonnes avec codes, statut brainstorming)
 -- ✅ archon_tasks étendue (+15 colonnes avec codes)
 -- ✅ Contraintes d'unicité hiérarchiques
 -- ✅ Auto-génération codes E-XX, S-XX-YY, T-XX-YY-ZZ
@@ -424,15 +429,21 @@ ON CONFLICT (migration_name) DO NOTHING;
 -- ✅ 14 indexes de performance
 -- ✅ Plus jamais de doublons !
 --
+-- WORKFLOW STATUTS :
+-- ✅ EPICs: brainstorming (défaut) → todo → doing → review → done
+-- ✅ STORIEs: brainstorming (défaut) → todo → doing → review → done
+-- ✅ TASKs: todo (défaut) → doing → review → done
+--
 -- EXEMPLES D'USAGE :
--- INSERT INTO archon_epics (project_id, title) VALUES (...);    -- Auto: E-01
--- INSERT INTO archon_stories (epic_id, title) VALUES (...);     -- Auto: S-01-01
--- INSERT INTO archon_tasks (story_id, title) VALUES (...);      -- Auto: T-01-01-01
+-- INSERT INTO archon_epics (project_id, title) VALUES (...);    -- Auto: E-01, status='brainstorming'
+-- INSERT INTO archon_stories (epic_id, title) VALUES (...);     -- Auto: S-01-01, status='brainstorming'
+-- INSERT INTO archon_tasks (story_id, title) VALUES (...);      -- Auto: T-01-01-01, status='todo'
 --
 -- PROCHAINES ÉTAPES :
 -- 1. Redémarrer : docker-compose restart
--- 2. Implémenter EpicService et StoryService
--- 3. Mettre à jour les APIs REST
--- 4. Interface utilisateur pour hiérarchie
+-- 2. Ajouter statut 'brainstorming' à l'ENUM task_status (via BRAINSTORMING_STATUS_MIGRATION.sql)
+-- 3. Implémenter EpicService et StoryService avec nouveau workflow
+-- 4. Mettre à jour les APIs REST et frontend
+-- 5. Interface utilisateur pour hiérarchie avec statut brainstorming
 --
 -- =====================================================
