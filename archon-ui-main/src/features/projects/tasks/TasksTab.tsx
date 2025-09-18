@@ -1,69 +1,75 @@
-import { Filter, LayoutGrid, Plus, Table } from "lucide-react";
+import { Filter, LayoutGrid, Plus, Table, GitBranch } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DeleteConfirmModal } from "../../ui/components/DeleteConfirmModal";
 import { Button } from "../../ui/primitives";
 import { cn, glassmorphism } from "../../ui/primitives/styles";
+import { EpicModal } from "../epics/components/EpicModal";
 import { useProjectEpics, useStoryCountsForAllEpics } from "../epics/hooks/useEpicQueries";
 import type { Epic } from "../epics/types";
-import { EpicModal } from "../epics/components/EpicModal";
-import { useProjectStories, useUpdateStoryStatus } from "../stories/hooks/useStoryQueries";
-import type { Story, HierarchyStatus } from "../stories/types";
-import { StoryModal } from "../stories/components/StoryModal";
 import { ProjectStoriesBoard } from "../stories/components/ProjectStoriesBoard";
 import { ProjectStoriesTable } from "../stories/components/ProjectStoriesTable";
+import { StoryModal } from "../stories/components/StoryModal";
+import { useProjectStories, useUpdateStoryStatus } from "../stories/hooks/useStoryQueries";
+import type { HierarchyStatus, Story } from "../stories/types";
 import { TaskEditModal, TaskView } from "./components";
 import { useDeleteTask, useProjectTasks, useUpdateTask } from "./hooks";
 import type { Task } from "./types";
 import { getReorderTaskOrder, ORDER_INCREMENT, validateTaskOrder } from "./utils";
-import { BoardView, TableView } from "./views";
+import { BoardView, TableView, TreeView } from "./views";
 
 interface TasksTabProps {
   projectId: string;
 }
 
-type ViewFilter = 'all' | 'epics' | 'stories' | 'tasks';
+type ViewFilter = "all" | "epics" | "stories" | "tasks";
 
 export const TasksTab = ({ projectId }: TasksTabProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<"table" | "board">("board");
-  const [viewFilter, setViewFilter] = useState<ViewFilter>('all');
+  const [viewMode, setViewMode] = useState<"table" | "board" | "tree">("board");
+  const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
 
   // Sync with URL parameters
   useEffect(() => {
-    const urlView = searchParams.get('view');
-    const urlFilter = searchParams.get('filter');
+    const urlView = searchParams.get("view");
+    const urlFilter = searchParams.get("filter");
 
-    if (urlView === 'table' || urlView === 'board') {
+    if (urlView === "table" || urlView === "board" || urlView === "tree") {
       setViewMode(urlView);
     }
 
-    if (urlFilter === 'epics' || urlFilter === 'stories' || urlFilter === 'tasks' || urlFilter === 'all') {
+    if (urlFilter === "epics" || urlFilter === "stories" || urlFilter === "tasks" || urlFilter === "all") {
       setViewFilter(urlFilter);
     }
   }, [searchParams]);
 
   // Update URL when view or filter changes
-  const handleViewModeChange = useCallback((mode: 'table' | 'board') => {
-    setViewMode(mode);
-    setSearchParams(prev => {
-      const newParams = new URLSearchParams(prev);
-      newParams.set('view', mode);
-      return newParams;
-    });
-  }, [setSearchParams]);
+  const handleViewModeChange = useCallback(
+    (mode: "table" | "board" | "tree") => {
+      setViewMode(mode);
+      setSearchParams((prev) => {
+        const newParams = new URLSearchParams(prev);
+        newParams.set("view", mode);
+        return newParams;
+      });
+    },
+    [setSearchParams],
+  );
 
-  const handleFilterChange = useCallback((filter: ViewFilter) => {
-    setViewFilter(filter);
-    setSearchParams(prev => {
-      const newParams = new URLSearchParams(prev);
-      newParams.set('filter', filter);
-      return newParams;
-    });
-  }, [setSearchParams]);
+  const handleFilterChange = useCallback(
+    (filter: ViewFilter) => {
+      setViewFilter(filter);
+      setSearchParams((prev) => {
+        const newParams = new URLSearchParams(prev);
+        newParams.set("filter", filter);
+        return newParams;
+      });
+    },
+    [setSearchParams],
+  );
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -81,6 +87,9 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
 
   // Fetch tasks, epics and stories using TanStack Query
   const { data: tasks = [], isLoading: isLoadingTasks } = useProjectTasks(projectId);
+  // Get subtasks (tasks with parent_task_id)
+  const subtasks = tasks.filter((task: Task) => task.parent_task_id);
+  const topLevelTasks = tasks.filter((task: Task) => !task.parent_task_id);
   const { data: epics = [], isLoading: isLoadingEpics } = useProjectEpics(projectId);
   const { data: stories = [], isLoading: isLoadingStories } = useProjectStories(projectId);
   const { data: storyCounts = {}, isLoading: isLoadingStoryCounts } = useStoryCountsForAllEpics();
@@ -138,14 +147,17 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
 
   const handleEpicDelete = (epic: Epic) => {
     // For now, we'll just show the Epic edit modal - delete functionality can be added later
-    console.log('Epic delete requested for:', epic.title);
+    console.log("Epic delete requested for:", epic.title);
     // TODO: Implement Epic delete functionality
   };
 
-  const handleEpicViewStories = useCallback((epic: Epic) => {
-    // Navigate to epic stories view using React Router
-    navigate(`/projects/${projectId}/epics/${epic.id}/stories`);
-  }, [navigate, projectId]);
+  const handleEpicViewStories = useCallback(
+    (epic: Epic) => {
+      // Navigate to epic stories view using React Router
+      navigate(`/projects/${projectId}/epics/${epic.id}/stories`);
+    },
+    [navigate, projectId],
+  );
 
   // Story modal management functions
   const openCreateStoryModal = () => {
@@ -173,9 +185,12 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
     setIsStoryModalOpen(true);
   }, []);
 
-  const handleStoryMove = useCallback((storyId: string, newStatus: HierarchyStatus) => {
-    updateStoryStatusMutation.mutate({ storyId, status: newStatus });
-  }, [updateStoryStatusMutation]);
+  const handleStoryMove = useCallback(
+    (storyId: string, newStatus: HierarchyStatus) => {
+      updateStoryStatusMutation.mutate({ storyId, status: newStatus });
+    },
+    [updateStoryStatusMutation],
+  );
 
   // Delete modal management functions
   const openDeleteModal = (task: Task) => {
@@ -297,8 +312,6 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
     }
   };
 
-
-
   const boardDataType: "epics" | "tasks" | "mixed" =
     viewFilter === "epics" ? "epics" : viewFilter === "tasks" ? "tasks" : "mixed";
 
@@ -313,19 +326,27 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="min-h-[70vh] relative">
-        {/* Main content - Table or Board view */}
+        {/* Main content - Table, Board or Tree view */}
         <div className="relative h-[calc(100vh-220px)] overflow-auto">
-          {viewMode === "table" ? (
-            viewFilter === 'stories' ? (
-              <ProjectStoriesTable
-                stories={stories as Story[]}
-                epics={epics as Epic[]}
-                onStoryEdit={handleStoryEdit}
-              />
+          {viewMode === "tree" ? (
+            <TreeView
+              projectId={projectId}
+              epics={epics as Epic[]}
+              stories={stories as Story[]}
+              tasks={topLevelTasks as Task[]}
+              subtasks={subtasks as Task[]}
+              isLoading={isLoadingTasks || isLoadingEpics || isLoadingStories}
+              onTaskClick={openTaskView}
+              onEpicClick={handleEpicEdit}
+              onStoryClick={handleStoryEdit}
+            />
+          ) : viewMode === "table" ? (
+            viewFilter === "stories" ? (
+              <ProjectStoriesTable stories={stories as Story[]} epics={epics as Epic[]} onStoryEdit={handleStoryEdit} />
             ) : (
               <TableView
-                tasks={boardDataType === 'epics' ? [] : (tasks as Task[])}
-                epics={boardDataType === 'tasks' ? [] : (epics as Epic[])}
+                tasks={boardDataType === "epics" ? [] : (tasks as Task[])}
+                epics={boardDataType === "tasks" ? [] : (epics as Epic[])}
                 projectId={projectId}
                 dataType={boardDataType}
                 onTaskView={openTaskView}
@@ -335,29 +356,27 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
                 onTaskUpdate={updateTaskInline}
               />
             )
+          ) : viewFilter === "stories" ? (
+            <ProjectStoriesBoard
+              stories={stories as Story[]}
+              onStoryMove={handleStoryMove}
+              onStoryEdit={handleStoryEdit}
+            />
           ) : (
-            viewFilter === 'stories' ? (
-              <ProjectStoriesBoard
-                stories={stories as Story[]}
-                onStoryMove={handleStoryMove}
-                onStoryEdit={handleStoryEdit}
-              />
-            ) : (
-              <BoardView
-                tasks={boardDataType === 'epics' ? [] : (tasks as Task[])}
-                epics={boardDataType === 'tasks' ? [] : (epics as Epic[])}
-                projectId={projectId}
-                dataType={boardDataType}
-                storyCounts={storyCounts}
-                onTaskMove={moveTask}
-                onTaskReorder={handleTaskReorder}
-                onTaskEdit={openTaskView}
-                onTaskDelete={openDeleteModal}
-                onEpicEdit={handleEpicEdit}
-                onEpicDelete={handleEpicDelete}
-                onEpicViewStories={handleEpicViewStories}
-              />
-            )
+            <BoardView
+              tasks={boardDataType === "epics" ? [] : (tasks as Task[])}
+              epics={boardDataType === "tasks" ? [] : (epics as Epic[])}
+              projectId={projectId}
+              dataType={boardDataType}
+              storyCounts={storyCounts}
+              onTaskMove={moveTask}
+              onTaskReorder={handleTaskReorder}
+              onTaskEdit={openTaskView}
+              onTaskDelete={openDeleteModal}
+              onEpicEdit={handleEpicEdit}
+              onEpicDelete={handleEpicDelete}
+              onEpicViewStories={handleEpicViewStories}
+            />
           )}
         </div>
 
@@ -423,21 +442,29 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
 
 // Extracted ViewControls component using Radix primitives
 interface ViewControlsProps {
-  viewMode: "table" | "board";
+  viewMode: "table" | "board" | "tree";
   viewFilter: ViewFilter;
-  onViewChange: (mode: "table" | "board") => void;
+  onViewChange: (mode: "table" | "board" | "tree") => void;
   onFilterChange: (filter: ViewFilter) => void;
   onAddTask: () => void;
   onAddEpic: () => void;
   onAddStory: () => void;
 }
 
-const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAddTask, onAddEpic, onAddStory }: ViewControlsProps) => {
+const ViewControls = ({
+  viewMode,
+  viewFilter,
+  onViewChange,
+  onFilterChange,
+  onAddTask,
+  onAddEpic,
+  onAddStory,
+}: ViewControlsProps) => {
   const filterOptions = [
-    { value: 'all' as ViewFilter, label: 'All', icon: '🎯' },
-    { value: 'epics' as ViewFilter, label: 'EPICs', icon: '📋' },
-    { value: 'stories' as ViewFilter, label: 'Stories', icon: '📖' },
-    { value: 'tasks' as ViewFilter, label: 'Tasks', icon: '✅' },
+    { value: "all" as ViewFilter, label: "All", icon: "🎯" },
+    { value: "epics" as ViewFilter, label: "EPICs", icon: "📋" },
+    { value: "stories" as ViewFilter, label: "Stories", icon: "📖" },
+    { value: "tasks" as ViewFilter, label: "Tasks", icon: "✅" },
   ];
   return (
     <div className="fixed bottom-6 left-0 right-0 flex justify-center z-50 pointer-events-none">
@@ -477,16 +504,14 @@ const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAd
                   />
                 )}
               </button>
-              {index < filterOptions.length - 1 && (
-                <div className="w-px h-6 bg-gray-300 dark:bg-gray-700" />
-              )}
+              {index < filterOptions.length - 1 && <div className="w-px h-6 bg-gray-300 dark:bg-gray-700" />}
             </React.Fragment>
           ))}
         </div>
         {/* Add Buttons with Glassmorphism - Conditional based on filter */}
         <div className="flex items-center gap-2">
           {/* Add Epic Button - show for 'epics' or 'all' filter */}
-          {(viewFilter === 'epics' || viewFilter === 'all') && (
+          {(viewFilter === "epics" || viewFilter === "all") && (
             <Button
               onClick={onAddEpic}
               variant="outline"
@@ -515,7 +540,7 @@ const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAd
           )}
 
           {/* Add Story Button - show for 'stories' or 'all' filter */}
-          {(viewFilter === 'stories' || viewFilter === 'all') && (
+          {(viewFilter === "stories" || viewFilter === "all") && (
             <Button
               onClick={onAddStory}
               variant="outline"
@@ -544,7 +569,7 @@ const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAd
           )}
 
           {/* Add Task Button - show for 'tasks' or 'all' filter */}
-          {(viewFilter === 'tasks' || viewFilter === 'all') && (
+          {(viewFilter === "tasks" || viewFilter === "all") && (
             <Button
               onClick={onAddTask}
               variant="outline"
@@ -626,6 +651,30 @@ const ViewControls = ({ viewMode, viewFilter, onViewChange, onFilterChange, onAd
                   "bg-purple-500",
                   "shadow-[0_0_10px_2px_rgba(168,85,247,0.4)]",
                   "dark:shadow-[0_0_20px_5px_rgba(168,85,247,0.7)]",
+                )}
+              />
+            )}
+          </button>
+          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700" />
+          <button
+            type="button"
+            onClick={() => onViewChange("tree")}
+            className={cn(
+              "px-5 py-2.5 flex items-center gap-2 relative transition-all duration-300",
+              viewMode === "tree"
+                ? "text-cyan-600 dark:text-cyan-400"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300",
+            )}
+          >
+            <GitBranch className="w-4 h-4" />
+            <span>Tree</span>
+            {viewMode === "tree" && (
+              <span
+                className={cn(
+                  "absolute bottom-0 left-[15%] right-[15%] w-[70%] mx-auto h-[2px]",
+                  "bg-cyan-500",
+                  "shadow-[0_0_10px_2px_rgba(34,211,238,0.4)]",
+                  "dark:shadow-[0_0_20px_5px_rgba(34,211,238,0.7)]",
                 )}
               />
             )}
