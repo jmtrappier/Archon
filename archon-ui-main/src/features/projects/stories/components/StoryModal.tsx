@@ -282,7 +282,11 @@ export const StoryModal: React.FC<StoryModalProps> = ({
                 name="epic_id"
                 control={control}
                 render={({ field }) => (
-                  <Select value={field.value || ""} onValueChange={field.onChange} disabled={isSaving}>
+                  <Select
+                    value={field.value ?? undefined}
+                    onValueChange={(value) => field.onChange(value)}
+                    disabled={isSaving}
+                  >
                     <SelectTrigger aria-invalid={!!errors.epic_id}>
                       <SelectValue placeholder="Select an EPIC" />
                     </SelectTrigger>
@@ -395,15 +399,15 @@ export const StoryModal: React.FC<StoryModalProps> = ({
               control={control}
               render={({ field }) => (
                 <Select
-                  value={field.value || ""}
-                  onValueChange={(value) => field.onChange(value === "" ? undefined : value)}
+                  value={field.value ?? undefined}
+                  onValueChange={(value) => field.onChange(value === "__unassigned__" ? undefined : value)}
                   disabled={isSaving}
                 >
                   <SelectTrigger aria-invalid={!!errors.assignee}>
                     <SelectValue placeholder="Select assignee (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="__unassigned__">Unassigned</SelectItem>
                     <SelectItem value="User">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-blue-500" />
