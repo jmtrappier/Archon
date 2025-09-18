@@ -7,10 +7,11 @@ Ce fichier fournit les directives pour Codex lors du travail sur le projet Archo
 
 1. **VÉRIFIER** la disponibilité du serveur MCP Archon
 2. **UTILISER** Archon comme système de gestion principal
-3. **TodoWrite** uniquement pour suivi personnel APRÈS configuration Archon
-4. **RETENIR** systématiquement le nom et l'ID du projet pour éviter les erreurs entre sessions
+3. **NE PAS** créer ou mettre à jour des documents locaux pour la planification (stories, tâches, suivis) : toute création/modification doit passer par `archon:manage_task` / `archon:manage_project`
+4. **TodoWrite** uniquement pour suivi personnel APRÈS configuration Archon
+5. **RETENIR** systématiquement le nom et l'ID du projet pour éviter les erreurs entre sessions
 
-**VIOLATION** : Si vous utilisez TodoWrite en premier, vous violez cette règle. Arrêtez et recommencez avec Archon.
+**VIOLATION** : Si vous utilisez TodoWrite en premier ou si vous stockez une story/plan hors MCP Archon, vous violez cette règle. Arrêtez et recommencez avec Archon.
 
 ## Politique d'exécution Docker
 - **Serveurs & tests** : ne jamais lancer `npm run dev`, `uv run python -m src.server.main` ou tout autre service réseau directement sur l'hôte. Démarrer l'application, les API et les tests e2e exclusivement via les conteneurs Docker fournis (ex. `make dev-docker`, `docker compose --profile backend up -d`).
@@ -19,13 +20,14 @@ Ce fichier fournit les directives pour Codex lors du travail sur le projet Archo
 ## Localisation des Informations Projet
 
 ### Répertoire Principal de Documentation
-**IMPORTANT** : Toutes les informations relatives au projet se trouvent dans le dossier `/traxis` et ses sous-dossiers :
+**IMPORTANT** : Toutes les informations relatives au projet se trouvent dans le dossier `/traxis` et ses sous-dossiers. Toutefois, la gestion opérationnelle (stories, statuts, ordonnancement) doit rester centralisée dans MCP Archon.
 
 - `/traxis/PRPs/` - Documents de planification et spécifications
 - `/traxis/architecture/` - Documentation architecture technique
 - `/traxis/brainstorming/` - Sessions de brainstorming et idées
 - `/traxis/migration/` - Scripts et plans de migration
 - `/traxis/tests/` - Plans de tests et validations
+- 🚫 **Ne jamais** stocker de nouvelles stories/tasks dans ce dépôt : utilisez systématiquement MCP Archon pour créer ou mettre à jour ces éléments.
 
 ### Sources d'Information Critiques
 
