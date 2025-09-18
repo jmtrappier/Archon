@@ -311,9 +311,9 @@ export const dependencyService = {
   },
 
   /**
-   * Private helper to invalidate dependency-related caches
+   * Helper to invalidate dependency-related caches
    */
-  private invalidateDependencyCaches(dependency: Dependency): void {
+  invalidateDependencyCaches(dependency: Dependency): void {
     // Invalidate project dependency cache
     if (dependency.from_entity?.project_id) {
       invalidateETagCache(`/api/projects/${dependency.from_entity.project_id}/dependencies`);

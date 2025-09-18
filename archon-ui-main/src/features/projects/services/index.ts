@@ -11,3 +11,4 @@ export * from "../shared/api";
 export { taskService } from "../tasks/services/taskService";
 // Export project-specific services
 export { projectService } from "./projectService";
+export { hierarchyService } from "./hierarchyService";

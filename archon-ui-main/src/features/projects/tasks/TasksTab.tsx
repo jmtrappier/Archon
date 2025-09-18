@@ -331,11 +331,6 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
           {viewMode === "tree" ? (
             <TreeView
               projectId={projectId}
-              epics={epics as Epic[]}
-              stories={stories as Story[]}
-              tasks={topLevelTasks as Task[]}
-              subtasks={subtasks as Task[]}
-              isLoading={isLoadingTasks || isLoadingEpics || isLoadingStories}
               onTaskClick={openTaskView}
               onEpicClick={handleEpicEdit}
               onStoryClick={handleStoryEdit}
