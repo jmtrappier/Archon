@@ -29,7 +29,7 @@ type ViewFilter = "all" | "epics" | "stories" | "tasks";
 export const TasksTab = ({ projectId }: TasksTabProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<"table" | "board" | "tree">("board");
+  const [viewMode, setViewMode] = useState<"table" | "board" | "tree">("tree");
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
 
   // Sync with URL parameters
@@ -45,6 +45,16 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
       setViewFilter(urlFilter);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!searchParams.get("view")) {
+      setSearchParams((prev) => {
+        const newParams = new URLSearchParams(prev);
+        newParams.set("view", "tree");
+        return newParams;
+      });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Update URL when view or filter changes
   const handleViewModeChange = useCallback(
