@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Epic } from "../../epics/types";
+import type { StoryCounts } from "../../stories/types";
 import { KanbanColumn } from "../components/KanbanColumn";
 import type { Task } from "../types";
 
@@ -8,6 +9,7 @@ interface BoardViewProps {
   epics: Epic[];
   projectId: string;
   dataType: 'epics' | 'tasks' | 'mixed';
+  storyCounts?: Record<string, StoryCounts>;
   onTaskMove: (taskId: string, newStatus: Task["status"]) => void;
   onTaskReorder: (taskId: string, targetIndex: number, status: Task["status"]) => void;
   onTaskEdit?: (task: Task) => void;
@@ -22,6 +24,7 @@ export const BoardView = ({
   epics,
   projectId,
   dataType,
+  storyCounts,
   onTaskMove,
   onTaskReorder,
   onTaskEdit,
@@ -93,6 +96,7 @@ export const BoardView = ({
               items={dataType === 'mixed' ? getItemsByStatus(status) : []}
               projectId={projectId}
               dataType={dataType}
+              storyCounts={storyCounts}
               onTaskMove={onTaskMove}
               onTaskReorder={onTaskReorder}
               onTaskEdit={onTaskEdit}

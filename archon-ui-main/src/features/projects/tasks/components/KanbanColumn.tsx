@@ -3,6 +3,7 @@ import { useDrop } from "react-dnd";
 import { cn } from "../../../ui/primitives/styles";
 import { EpicCard } from "../../epics/components/EpicCard";
 import type { Epic } from "../../epics/types";
+import type { StoryCounts } from "../../stories/types";
 import type { Task } from "../types";
 import { getColumnColor, getColumnGlow, ItemTypes } from "../utils/task-styles";
 import { HierarchicalItemTypes } from "./HierarchicalDragDrop";
@@ -16,6 +17,7 @@ interface KanbanColumnProps {
   items?: (Task | Epic)[];
   projectId: string;
   dataType?: 'epics' | 'tasks' | 'mixed';
+  storyCounts?: Record<string, StoryCounts>;
   onTaskMove: (taskId: string, newStatus: Task["status"]) => void;
   onTaskReorder: (taskId: string, targetIndex: number, status: Task["status"]) => void;
   onTaskEdit?: (task: Task) => void;
@@ -35,6 +37,7 @@ export const KanbanColumn = ({
   items = [],
   projectId,
   dataType = 'tasks',
+  storyCounts,
   onTaskMove,
   onTaskReorder,
   onTaskEdit,
@@ -80,6 +83,7 @@ export const KanbanColumn = ({
           onEdit={onEpicEdit}
           onDelete={onEpicDelete}
           onViewStories={onEpicViewStories}
+          storyCounts={storyCounts}
         />
       ));
     }
@@ -130,6 +134,8 @@ export const KanbanColumn = ({
               onEpicReorder={() => {}} // TODO: Implement epic reordering
               onEdit={onEpicEdit}
               onDelete={onEpicDelete}
+              onViewStories={onEpicViewStories}
+              storyCounts={storyCounts}
             />
           );
         }
