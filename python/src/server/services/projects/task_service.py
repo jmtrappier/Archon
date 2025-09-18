@@ -1351,3 +1351,354 @@ class TaskService:
         except Exception as e:
             logger.error(f"Error updating task with hierarchy validation: {str(e)}")
             return False, {"error": f"Error updating task with hierarchy validation: {str(e)}"}
+
+    async def reorder_tasks_in_story(
+        self,
+        story_id: str,
+        ordered_task_ids: list[str],
+    ) -> tuple[bool, dict[str, Any]]:
+        """Reorder root-level tasks within a story."""
+        if not ordered_task_ids:
+            return False, {"error": "task_ids list cannot be empty"}
+
+        try:
+            response = (
+                self.supabase_client.table("archon_tasks")
+                .select("id")
+                .eq("story_id", story_id)
+                .eq("parent_task_id", None)
+                .execute()
+            )
+
+            existing_task_ids = [task["id"] for task in (response.data or []) if task.get("id")]
+
+            if not existing_task_ids:
+                return False, {"error": f"Story {story_id} has no tasks to reorder"}
+
+            missing_ids = [task_id for task_id in ordered_task_ids if task_id not in existing_task_ids]
+            if missing_ids:
+                return False, {
+                    "error": "One or more tasks do not belong to the target story",
+                    "missing_task_ids": missing_ids,
+                }
+
+            final_order = ordered_task_ids + [task_id for task_id in existing_task_ids if task_id not in ordered_task_ids]
+            reorder_timestamp = datetime.now().isoformat()
+
+            for index, task_id in enumerate(final_order, start=1):
+                self.supabase_client.table("archon_tasks").update(
+                    {
+                        "task_order": index,
+                        "updated_at": reorder_timestamp,
+                    }
+                ).eq("id", task_id).execute()
+
+            updated_response = (
+                self.supabase_client.table("archon_tasks")
+                .select("*")
+                .eq("story_id", story_id)
+                .eq("parent_task_id", None)
+                .order("task_order", desc=False)
+                .execute()
+            )
+
+            tasks = updated_response.data or []
+            logger.info(f"Reordered {len(final_order)} tasks within story {story_id}")
+
+            return True, {"tasks": tasks}
+
+        except Exception as e:
+            logger.error(f"Error reordering tasks in story {story_id}: {str(e)}")
+            return False, {"error": f"Error reordering tasks in story: {str(e)}"}
+
+    async def reorder_subtasks_in_task(
+        self,
+        parent_task_id: str,
+        ordered_subtask_ids: list[str],
+    ) -> tuple[bool, dict[str, Any]]:
+        """Reorder subtasks within a parent task."""
+        if not ordered_subtask_ids:
+            return False, {"error": "subtask_ids list cannot be empty"}
+
+        try:
+            response = (
+                self.supabase_client.table("archon_tasks")
+                .select("id")
+                .eq("parent_task_id", parent_task_id)
+                .execute()
+            )
+
+            existing_subtask_ids = [task["id"] for task in (response.data or []) if task.get("id")]
+
+            if not existing_subtask_ids:
+                return False, {"error": f"Task {parent_task_id} has no subtasks to reorder"}
+
+            missing_ids = [task_id for task_id in ordered_subtask_ids if task_id not in existing_subtask_ids]
+            if missing_ids:
+                return False, {
+                    "error": "One or more subtasks do not belong to the target parent",
+                    "missing_subtask_ids": missing_ids,
+                }
+
+            final_order = ordered_subtask_ids + [task_id for task_id in existing_subtask_ids if task_id not in ordered_subtask_ids]
+            reorder_timestamp = datetime.now().isoformat()
+
+            for index, task_id in enumerate(final_order, start=1):
+                self.supabase_client.table("archon_tasks").update(
+                    {
+                        "task_order": index,
+                        "updated_at": reorder_timestamp,
+                    }
+                ).eq("id", task_id).execute()
+
+            updated_response = (
+                self.supabase_client.table("archon_tasks")
+                .select("*")
+                .eq("parent_task_id", parent_task_id)
+                .order("task_order", desc=False)
+                .execute()
+            )
+
+            subtasks = updated_response.data or []
+            logger.info(f"Reordered {len(final_order)} subtasks within parent task {parent_task_id}")
+
+            return True, {"subtasks": subtasks}
+
+        except Exception as e:
+            logger.error(f"Error reordering subtasks in task {parent_task_id}: {str(e)}")
+            return False, {"error": f"Error reordering subtasks in task: {str(e)}"}
+
+    async def move_task_to_story(
+        self,
+        task_id: str,
+        target_story_id: str,
+        *,
+        target_position: int | None = None,
+        moved_by: str | None = None,
+    ) -> tuple[bool, dict[str, Any]]:
+        """Move a root-level task to another story."""
+        try:
+            task_response = (
+                self.supabase_client.table("archon_tasks")
+                .select("id, story_id, parent_task_id, project_id, epic_id")
+                .eq("id", task_id)
+                .single()
+                .execute()
+            )
+
+            task = task_response.data
+            if not task:
+                return False, {"error": f"Task with ID {task_id} not found"}
+
+            if task.get("parent_task_id"):
+                return False, {"error": "move_task_to_story only supports root tasks", "task_id": task_id}
+
+            if task.get("story_id") == target_story_id:
+                return True, {"task": task, "changed": False}
+
+            story_response = (
+                self.supabase_client.table("archon_stories")
+                .select("id, epic_id, project_id")
+                .eq("id", target_story_id)
+                .single()
+                .execute()
+            )
+
+            if not story_response.data:
+                return False, {"error": f"Story with ID {target_story_id} not found"}
+
+            target_story = story_response.data
+
+            next_order_response = (
+                self.supabase_client.table("archon_tasks")
+                .select("task_order")
+                .eq("story_id", target_story_id)
+                .eq("parent_task_id", None)
+                .order("task_order", desc=True)
+                .limit(1)
+                .execute()
+            )
+
+            if next_order_response.data:
+                order_values = [row.get("task_order") for row in next_order_response.data if row.get("task_order") is not None]
+                next_order = (max(order_values) if order_values else 0) + 1
+            else:
+                next_order = 1
+
+            update_success, update_result = await self.update_task_with_hierarchy_validation(
+                task_id=task_id,
+                parent_task_id=None,
+                story_id=target_story_id,
+                task_order=next_order,
+                epic_id=target_story.get("epic_id"),
+                project_id=target_story.get("project_id") or task.get("project_id"),
+            )
+
+            if not update_success:
+                return update_result
+
+            updated_task = update_result["task"]
+            old_story_id = task.get("story_id")
+
+            from src.server.services.projects.story_service import StoryService
+
+            story_service = StoryService(self.supabase_client)
+            try:
+                if old_story_id and old_story_id != target_story_id:
+                    await story_service.calculate_story_progress(old_story_id)
+                await story_service.calculate_story_progress(target_story_id)
+            except Exception as progress_error:
+                logger.warning(
+                    f"Failed to recalculate story progress during task move | task_id={task_id} | error={progress_error}"
+                )
+
+            reordered_task = updated_task
+            if target_position is not None:
+                tasks_resp = (
+                    self.supabase_client.table("archon_tasks")
+                    .select("id")
+                    .eq("story_id", target_story_id)
+                    .eq("parent_task_id", None)
+                    .order("task_order", desc=False)
+                    .execute()
+                )
+
+                task_ids = [row["id"] for row in (tasks_resp.data or []) if row.get("id")]
+
+                if task_id not in task_ids:
+                    task_ids.append(task_id)
+
+                task_ids = [tid for tid in task_ids if tid != task_id]
+                insert_index = max(0, min(target_position, len(task_ids)))
+                task_ids.insert(insert_index, task_id)
+
+                reorder_success, reorder_result = await self.reorder_tasks_in_story(target_story_id, task_ids)
+                if reorder_success:
+                    for task_row in reorder_result.get("tasks", []):
+                        if task_row.get("id") == task_id:
+                            reordered_task = task_row
+                            break
+
+            logger.info(
+                f"Task {task_id} moved from story {old_story_id} to {target_story_id} "
+                f"by {moved_by or 'system'} | position={target_position}"
+            )
+
+            return True, {
+                "task": reordered_task,
+                "old_story_id": old_story_id,
+                "new_story_id": target_story_id,
+                "moved_by": moved_by or "system",
+            }
+
+        except Exception as e:
+            logger.error(f"Error moving task {task_id} to story {target_story_id}: {str(e)}")
+            return False, {"error": f"Error moving task: {str(e)}"}
+
+    async def move_subtask_to_parent(
+        self,
+        task_id: str,
+        target_parent_id: str,
+        *,
+        target_position: int | None = None,
+        moved_by: str | None = None,
+    ) -> tuple[bool, dict[str, Any]]:
+        """Move a subtask under a different parent task."""
+        try:
+            subtask_response = (
+                self.supabase_client.table("archon_tasks")
+                .select("id, story_id, parent_task_id, project_id, epic_id")
+                .eq("id", task_id)
+                .single()
+                .execute()
+            )
+
+            subtask = subtask_response.data
+            if not subtask:
+                return False, {"error": f"Task with ID {task_id} not found"}
+
+            parent_response = (
+                self.supabase_client.table("archon_tasks")
+                .select("id, story_id, project_id, epic_id")
+                .eq("id", target_parent_id)
+                .single()
+                .execute()
+            )
+
+            parent_task = parent_response.data
+            if not parent_task:
+                return False, {"error": f"Parent task with ID {target_parent_id} not found"}
+
+            target_story_id = parent_task.get("story_id")
+
+            next_order_response = (
+                self.supabase_client.table("archon_tasks")
+                .select("task_order")
+                .eq("parent_task_id", target_parent_id)
+                .order("task_order", desc=True)
+                .limit(1)
+                .execute()
+            )
+
+            if next_order_response.data:
+                order_values = [row.get("task_order") for row in next_order_response.data if row.get("task_order") is not None]
+                next_order = (max(order_values) if order_values else 0) + 1
+            else:
+                next_order = 1
+
+            update_success, update_result = await self.update_task_with_hierarchy_validation(
+                task_id=task_id,
+                parent_task_id=target_parent_id,
+                story_id=target_story_id,
+                task_order=next_order,
+                epic_id=parent_task.get("epic_id"),
+                project_id=parent_task.get("project_id") or subtask.get("project_id"),
+            )
+
+            if not update_success:
+                return update_result
+
+            updated_task = update_result["task"]
+            old_parent_id = subtask.get("parent_task_id")
+
+            reordered_task = updated_task
+            if target_position is not None:
+                subtasks_resp = (
+                    self.supabase_client.table("archon_tasks")
+                    .select("id")
+                    .eq("parent_task_id", target_parent_id)
+                    .order("task_order", desc=False)
+                    .execute()
+                )
+
+                subtask_ids = [row["id"] for row in (subtasks_resp.data or []) if row.get("id")]
+
+                if task_id not in subtask_ids:
+                    subtask_ids.append(task_id)
+
+                subtask_ids = [sid for sid in subtask_ids if sid != task_id]
+                insert_index = max(0, min(target_position, len(subtask_ids)))
+                subtask_ids.insert(insert_index, task_id)
+
+                reorder_success, reorder_result = await self.reorder_subtasks_in_task(target_parent_id, subtask_ids)
+                if reorder_success:
+                    for task_row in reorder_result.get("subtasks", []):
+                        if task_row.get("id") == task_id:
+                            reordered_task = task_row
+                            break
+
+            logger.info(
+                f"Subtask {task_id} moved from parent {old_parent_id} to {target_parent_id} "
+                f"by {moved_by or 'system'} | position={target_position}"
+            )
+
+            return True, {
+                "task": reordered_task,
+                "old_parent_task_id": old_parent_id,
+                "new_parent_task_id": target_parent_id,
+                "moved_by": moved_by or "system",
+            }
+
+        except Exception as e:
+            logger.error(f"Error moving subtask {task_id} to parent {target_parent_id}: {str(e)}")
+            return False, {"error": f"Error moving subtask: {str(e)}"}

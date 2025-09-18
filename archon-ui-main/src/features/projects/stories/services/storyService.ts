@@ -312,6 +312,43 @@ export const storyService = {
   },
 
   /**
+   * Move a story to a different epic with optional positioning
+   */
+  async moveStoryToEpic(
+    storyId: string,
+    targetEpicId: string,
+    options?: { position?: number; movedBy?: string },
+  ): Promise<Story> {
+    try {
+      const payload: Record<string, unknown> = {
+        target_epic_id: targetEpicId,
+      };
+
+      if (options?.position !== undefined) {
+        payload.target_position = options.position;
+      }
+
+      if (options?.movedBy) {
+        payload.moved_by = options.movedBy;
+      }
+
+      const response = await callAPIWithETag<{ story: Story }>(`/api/stories/${storyId}/move`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+
+      // Invalidate caches that depend on story ordering
+      invalidateETagCache(`/api/epics/${targetEpicId}/stories`);
+      invalidateETagCache(`/api/stories/${storyId}`);
+
+      return response.story;
+    } catch (error) {
+      console.error(`Failed to move story ${storyId} to epic ${targetEpicId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
    * Alias for getStoriesByEpic for backward compatibility
    */
   async listStories(epicId: string, params?: StoryQueryParams): Promise<Story[]> {

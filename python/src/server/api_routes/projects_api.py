@@ -115,6 +115,16 @@ class UpdateStoryRequest(BaseModel):
     # mvp_flag: bool | None = None  # Not in TRAXIS schema
 
 
+class ReorderStoriesRequest(BaseModel):
+    story_ids: list[str]
+
+
+class MoveStoryRequest(BaseModel):
+    target_epic_id: str
+    target_position: int | None = None
+    moved_by: str | None = None
+
+
 @router.get("/projects")
 async def list_projects(
     response: Response,
@@ -970,6 +980,31 @@ async def list_epic_stories(
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
+@router.put("/epics/{epic_id}/stories/reorder")
+async def reorder_epic_stories(epic_id: str, request: ReorderStoriesRequest):
+    """Reorder stories within an epic."""
+    try:
+        story_service = StoryService()
+        success, result = await story_service.reorder_stories_in_epic(epic_id, request.story_ids)
+
+        if not success:
+            detail = result.get("error") if isinstance(result, dict) else result
+            # Treat missing stories as bad request to encourage clients to refresh
+            raise HTTPException(status_code=400, detail=result if isinstance(result, dict) else {"error": detail})
+
+        logfire.info(
+            f"Stories reordered | epic_id={epic_id} | count={len(request.story_ids)}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to reorder stories | error={str(e)} | epic_id={epic_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
 @router.post("/epics/{epic_id}/stories")
 async def create_epic_story(epic_id: str, request: CreateStoryRequest):
     """Create a new story for an epic."""
@@ -1111,6 +1146,38 @@ async def update_story(story_id: str, request: UpdateStoryRequest):
         raise
     except Exception as e:
         logfire.error(f"Failed to update story | error={str(e)} | story_id={story_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.put("/stories/{story_id}/move")
+async def move_story(story_id: str, request: MoveStoryRequest):
+    """Move a story to a different epic and optionally reposition it."""
+    try:
+        story_service = StoryService()
+        success, result = await story_service.move_story_to_epic(
+            story_id=story_id,
+            target_epic_id=request.target_epic_id,
+            target_position=request.target_position,
+            moved_by=request.moved_by,
+        )
+
+        if not success:
+            detail = result if isinstance(result, dict) else {"error": result}
+            message = detail.get("error", "")
+            if "not found" in message.lower():
+                raise HTTPException(status_code=404, detail=detail)
+            raise HTTPException(status_code=400, detail=detail)
+
+        logfire.info(
+            f"Story moved | story_id={story_id} | target_epic_id={request.target_epic_id} | position={request.target_position}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to move story | error={str(e)} | story_id={story_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
@@ -1693,6 +1760,60 @@ async def create_task(request: CreateTaskRequest):
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
+@router.put("/stories/{story_id}/tasks/reorder")
+async def reorder_story_tasks(story_id: str, request: ReorderTasksRequest):
+    """Reorder root-level tasks within a story."""
+    try:
+        task_service = TaskService()
+        success, result = await task_service.reorder_tasks_in_story(story_id, request.task_ids)
+
+        if not success:
+            detail = result if isinstance(result, dict) else {"error": result}
+            message = detail.get("error", "")
+            if "not found" in message.lower():
+                raise HTTPException(status_code=404, detail=detail)
+            raise HTTPException(status_code=400, detail=detail)
+
+        logfire.info(
+            f"Tasks reordered | story_id={story_id} | count={len(request.task_ids)}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to reorder tasks | error={str(e)} | story_id={story_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.put("/tasks/{task_id}/subtasks/reorder")
+async def reorder_task_subtasks(task_id: str, request: ReorderSubtasksRequest):
+    """Reorder subtasks within a parent task."""
+    try:
+        task_service = TaskService()
+        success, result = await task_service.reorder_subtasks_in_task(task_id, request.subtask_ids)
+
+        if not success:
+            detail = result if isinstance(result, dict) else {"error": result}
+            message = detail.get("error", "")
+            if "not found" in message.lower():
+                raise HTTPException(status_code=404, detail=detail)
+            raise HTTPException(status_code=400, detail=detail)
+
+        logfire.info(
+            f"Subtasks reordered | parent_task_id={task_id} | count={len(request.subtask_ids)}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to reorder subtasks | error={str(e)} | parent_task_id={task_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
 @router.get("/tasks")
 async def list_tasks(
     status: str | None = None,
@@ -1844,6 +1965,21 @@ class UpdateTaskRequest(BaseModel):
     feature: str | None = None
 
 
+class ReorderTasksRequest(BaseModel):
+    task_ids: list[str]
+
+
+class ReorderSubtasksRequest(BaseModel):
+    subtask_ids: list[str]
+
+
+class MoveTaskRequest(BaseModel):
+    target_story_id: str | None = None
+    target_parent_task_id: str | None = None
+    target_position: int | None = None
+    moved_by: str | None = None
+
+
 class CreateDocumentRequest(BaseModel):
     document_type: str
     title: str
@@ -1913,6 +2049,50 @@ async def update_task(task_id: str, request: UpdateTaskRequest):
         raise
     except Exception as e:
         logfire.error(f"Failed to update task | error={str(e)} | task_id={task_id}")
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+@router.put("/tasks/{task_id}/move")
+async def move_task(task_id: str, request: MoveTaskRequest):
+    """Move a task either to another story or under a different parent."""
+    try:
+        task_service = TaskService()
+
+        if request.target_parent_task_id:
+            success, result = await task_service.move_subtask_to_parent(
+                task_id=task_id,
+                target_parent_id=request.target_parent_task_id,
+                target_position=request.target_position,
+                moved_by=request.moved_by,
+            )
+        elif request.target_story_id:
+            success, result = await task_service.move_task_to_story(
+                task_id=task_id,
+                target_story_id=request.target_story_id,
+                target_position=request.target_position,
+                moved_by=request.moved_by,
+            )
+        else:
+            raise HTTPException(status_code=400, detail={"error": "target_story_id or target_parent_task_id is required"})
+
+        if not success:
+            detail = result if isinstance(result, dict) else {"error": result}
+            message = detail.get("error", "")
+            if "not found" in message.lower():
+                raise HTTPException(status_code=404, detail=detail)
+            raise HTTPException(status_code=400, detail=detail)
+
+        logfire.info(
+            f"Task moved | task_id={task_id} | target_story={request.target_story_id} | "
+            f"target_parent={request.target_parent_task_id} | position={request.target_position}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logfire.error(f"Failed to move task | error={str(e)} | task_id={task_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 

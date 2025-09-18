@@ -63,15 +63,27 @@ export const useCreateStory = (epicId: string) => {
       priority: string;
       status: HierarchyStatus;
       mvp_flag: boolean;
+      epic_id?: string;
+      assignee?: string;
     }) => {
-      return apiCall(`/api/epics/${epicId}/stories`, {
+      const targetEpicId = storyData.epic_id ?? epicId;
+      if (!targetEpicId) {
+        throw new Error("Cannot create story: missing epic_id");
+      }
+
+      const { epic_id: _, ...payload } = storyData;
+
+      return apiCall(`/api/epics/${targetEpicId}/stories`, {
         method: "POST",
-        body: JSON.stringify(storyData),
+        body: JSON.stringify(payload),
       });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      const targetEpicId = variables.epic_id ?? epicId;
+      if (targetEpicId) {
+        queryClient.invalidateQueries({ queryKey: ["stories", targetEpicId] });
+      }
       // Invalidate and refetch story queries
-      queryClient.invalidateQueries({ queryKey: ["stories", epicId] });
       queryClient.invalidateQueries({ queryKey: ["project-stories"] });
       queryClient.invalidateQueries({ queryKey: ["stories"] });
     },

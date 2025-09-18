@@ -12,7 +12,7 @@ Compliant with:
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, List, Optional
 from uuid import UUID, uuid4
 import traceback
 
@@ -564,6 +564,184 @@ class StoryService:
         except Exception as e:
             logger.error(f"Error calculating story progress: {str(e)}")
             return False, {"error": f"Error calculating story progress: {str(e)}"}
+
+    async def move_story_to_epic(
+        self,
+        story_id: str,
+        target_epic_id: str,
+        *,
+        target_position: int | None = None,
+        moved_by: str | None = None,
+    ) -> tuple[bool, dict[str, Any]]:
+        """Move a story to a new epic and optionally position it within the new collection."""
+        try:
+            story_response = (
+                self.supabase_client.table("archon_stories")
+                .select("id, epic_id, project_id, story_order")
+                .eq("id", story_id)
+                .single()
+                .execute()
+            )
+
+            story = story_response.data
+            if not story:
+                return False, {"error": f"Story with ID {story_id} not found"}
+
+            current_epic_id = story.get("epic_id")
+            if current_epic_id == target_epic_id:
+                return True, {"story": story, "changed": False}
+
+            epic_response = (
+                self.supabase_client.table("archon_epics")
+                .select("id, project_id")
+                .eq("id", target_epic_id)
+                .single()
+                .execute()
+            )
+
+            if not epic_response.data:
+                return False, {"error": f"Epic with ID {target_epic_id} not found"}
+
+            target_project_id = epic_response.data["project_id"]
+
+            max_order_response = (
+                self.supabase_client.table("archon_stories")
+                .select("story_order")
+                .eq("epic_id", target_epic_id)
+                .order("story_order", desc=True)
+                .limit(1)
+                .execute()
+            )
+
+            if max_order_response.data:
+                max_order_values = [row.get("story_order") for row in max_order_response.data if row.get("story_order") is not None]
+                next_order = (max(max_order_values) if max_order_values else 0) + 1
+            else:
+                next_order = 1
+
+            moved_at = datetime.now().isoformat()
+            update_response = (
+                self.supabase_client.table("archon_stories")
+                .update(
+                    {
+                        "epic_id": target_epic_id,
+                        "project_id": target_project_id,
+                        "story_order": next_order,
+                        "updated_at": moved_at,
+                    }
+                )
+                .eq("id", story_id)
+                .execute()
+            )
+
+            if not update_response.data:
+                return False, {"error": f"Failed to move story {story_id} to epic {target_epic_id}"}
+
+            moved_story = update_response.data[0]
+            reordered_story = moved_story
+
+            if target_position is not None:
+                stories_resp = (
+                    self.supabase_client.table("archon_stories")
+                    .select("id")
+                    .eq("epic_id", target_epic_id)
+                    .order("story_order", desc=False)
+                    .execute()
+                )
+
+                target_order_list = [row["id"] for row in (stories_resp.data or []) if row.get("id")]
+
+                if story_id not in target_order_list:
+                    target_order_list.append(story_id)
+
+                target_order_list = [sid for sid in target_order_list if sid != story_id]
+                insert_index = max(0, min(target_position, len(target_order_list)))
+                target_order_list.insert(insert_index, story_id)
+
+                reorder_success, reorder_result = await self.reorder_stories_in_epic(target_epic_id, target_order_list)
+                if reorder_success:
+                    for story_row in reorder_result.get("stories", []):
+                        if story_row.get("id") == story_id:
+                            reordered_story = story_row
+                            break
+
+            logger.info(
+                f"Story {story_id} moved from epic {current_epic_id} to {target_epic_id} "
+                f"by {moved_by or 'system'} | position={target_position}"
+            )
+
+            return True, {
+                "story": reordered_story,
+                "old_epic_id": current_epic_id,
+                "new_epic_id": target_epic_id,
+                "moved_by": moved_by or "system",
+                "moved_at": moved_at,
+            }
+
+        except Exception as e:
+            logger.error(f"Error moving story {story_id} to epic {target_epic_id}: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return False, {"error": f"Error moving story: {str(e)}"}
+
+    async def reorder_stories_in_epic(
+        self,
+        epic_id: str,
+        ordered_story_ids: list[str],
+    ) -> tuple[bool, dict[str, Any]]:
+        """Reorder stories within an epic according to the provided identifiers."""
+        if not ordered_story_ids:
+            return False, {"error": "story_ids list cannot be empty"}
+
+        try:
+            response = (
+                self.supabase_client.table("archon_stories")
+                .select("id")
+                .eq("epic_id", epic_id)
+                .execute()
+            )
+
+            existing_story_ids = [story["id"] for story in (response.data or []) if story.get("id")]
+
+            if not existing_story_ids:
+                return False, {"error": f"Epic {epic_id} has no stories to reorder"}
+
+            missing_ids = [story_id for story_id in ordered_story_ids if story_id not in existing_story_ids]
+            if missing_ids:
+                return False, {
+                    "error": "One or more stories do not belong to the target epic",
+                    "missing_story_ids": missing_ids,
+                }
+
+            final_order = ordered_story_ids + [story_id for story_id in existing_story_ids if story_id not in ordered_story_ids]
+            reorder_timestamp = datetime.now().isoformat()
+
+            for index, story_id in enumerate(final_order, start=1):
+                self.supabase_client.table("archon_stories").update(
+                    {
+                        "story_order": index,
+                        "updated_at": reorder_timestamp,
+                    }
+                ).eq("id", story_id).execute()
+
+            updated_response = (
+                self.supabase_client.table("archon_stories")
+                .select("*")
+                .eq("epic_id", epic_id)
+                .order("story_order", desc=False)
+                .execute()
+            )
+
+            stories = updated_response.data or []
+            logger.info(
+                f"Reordered {len(final_order)} stories within epic {epic_id}"
+            )
+
+            return True, {"stories": stories}
+
+        except Exception as e:
+            logger.error(f"Error reordering stories in epic {epic_id}: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return False, {"error": f"Error reordering stories in epic: {str(e)}"}
 
     async def get_story_tasks_count(self, story_id: str) -> tuple[bool, dict[str, Any]]:
         """
