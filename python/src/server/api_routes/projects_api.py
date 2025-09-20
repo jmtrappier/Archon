@@ -859,15 +859,7 @@ async def update_epic(epic_id: str, request: UpdateEpicRequest):
 
         # Use EpicService to update the epic
         epic_service = EpicService()
-        success, result = await epic_service.update_epic(epic_id, **update_fields)
-
-        if not success:
-            if "not found" in result.get("error", "").lower():
-                raise HTTPException(status_code=404, detail=result.get("error"))
-            else:
-                raise HTTPException(status_code=500, detail=result)
-
-        updated_epic = result["epic"]
+        updated_epic = await epic_service.update_epic(epic_id, update_fields)
 
         logfire.info(
             f"Epic updated successfully | epic_id={epic_id} | project_id={updated_epic.get('project_id')} | updated_fields={list(update_fields.keys())}"

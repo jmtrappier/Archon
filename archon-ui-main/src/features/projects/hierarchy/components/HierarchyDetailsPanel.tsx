@@ -1,15 +1,26 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Loader2, MapPinned, Pin, Eye, Edit3 } from "lucide-react";
+import { ExternalLink, Loader2, MapPinned, Pin, Eye, Edit3, Save, X } from "lucide-react";
 import { Button } from "@/features/ui/primitives";
 import { Badge } from "@/features/ui/primitives/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/primitives/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/features/ui/primitives/select";
 import type { HierarchyViewMode } from "../hooks/useHierarchyData";
 import type { HierarchyTreeNode } from "../../services/hierarchyService";
 import { dependencyService } from "../../dependencies/services/dependencyService";
 import type { Dependency } from "../../dependencies/types";
 import { cn } from "@/lib/utils";
 import { NodeDetailsModal } from "./NodeDetailsModal";
+import { useUpdateTask } from "../../tasks/hooks/useTaskQueries";
+import { useUpdateStory } from "../../stories/hooks/useStoryQueries";
+import { useUpdateEpic } from "../../epics/hooks/useEpicQueries";
+// import { toast } from "sonner"; // Temporarily disabled
 
 const TYPE_LABEL: Record<HierarchyTreeNode["type"], string> = {
   project: "Project",
@@ -41,6 +52,27 @@ const PRIORITY_BADGE: Record<string, string> = {
   high: "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300",
   critical: "bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300",
 };
+
+const PRIORITY_OPTIONS = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "critical", label: "Critical" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "todo", label: "Todo" },
+  { value: "doing", label: "In Progress" },
+  { value: "review", label: "In Review" },
+  { value: "waiting", label: "Waiting" },
+  { value: "done", label: "Done" },
+];
+
+const ASSIGNEE_OPTIONS = [
+  { value: "User", label: "User" },
+  { value: "Archon", label: "Archon" },
+  { value: "AI IDE Agent", label: "AI IDE Agent" },
+];
 
 const mapNodeToDependencyType = (node: HierarchyTreeNode): "project" | "epic" | "story" | "task" | null => {
   if (node.type === "project") return "project";
@@ -99,6 +131,94 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
 }) => {
   const { data: dependencies = [], isLoading: isLoadingDependencies } = useNodeDependencies(node, projectId);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditingInline, setIsEditingInline] = useState(false);
+  // Initialize editing fields based on current node
+  const [editingFields, setEditingFields] = useState(() => ({
+    status: node?.status || "todo",
+    priority: node?.priority || "medium",
+    assignee: (node as any)?.assignee || "User",
+  }));
+
+  // Update hooks for different node types
+  const updateTaskMutation = useUpdateTask(projectId);
+  const updateStoryMutation = useUpdateStory("");
+  const updateEpicMutation = useUpdateEpic(projectId);
+
+  // Update editing fields when node changes, but only if not currently editing
+  React.useEffect(() => {
+    if (node && !isEditingInline) {
+      setEditingFields({
+        status: node.status || "todo",
+        priority: node.priority || "medium",
+        assignee: (node as any)?.assignee || "User",
+      });
+    }
+  }, [node, isEditingInline]);
+
+  const handleInlineUpdate = React.useCallback(async (field: string, value: string) => {
+    if (!node) return;
+
+    const updates: any = {
+      [field]: value,
+    };
+
+    try {
+      if (node.type === "task" || node.type === "subtask") {
+        await updateTaskMutation.mutateAsync({
+          taskId: node.id,
+          updates,
+        });
+        console.log(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`);
+      } else if (node.type === "story") {
+        await updateStoryMutation.mutateAsync({
+          storyId: node.id,
+          updates,
+        });
+        console.log(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`);
+      } else if (node.type === "epic") {
+        await updateEpicMutation.mutateAsync({
+          epicId: node.id,
+          updates,
+        });
+        console.log(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`);
+      }
+    } catch (error) {
+      console.error(`Failed to update ${field}:`, error);
+      console.error(`Failed to update ${field}`);
+      // Reset to original value on error
+      setEditingFields(prev => ({
+        ...prev,
+        [field]: node[field as keyof typeof node] || prev[field as keyof typeof prev],
+      }));
+    }
+  }, [node, updateTaskMutation, updateStoryMutation, updateEpicMutation]);
+
+  // Use ref to store timeout IDs for debouncing
+  const timeoutRefs = React.useRef<Record<string, NodeJS.Timeout>>({});
+
+  // Handle field changes with immediate UI update and debounced backend update
+  const handleFieldChange = React.useCallback((field: string, value: string) => {
+    // Immediately update the UI state
+    setEditingFields(prev => ({ ...prev, [field]: value }));
+
+    // Clear any existing timeout for this field
+    if (timeoutRefs.current[field]) {
+      clearTimeout(timeoutRefs.current[field]);
+    }
+
+    // Debounce the backend update to prevent rapid-fire API calls
+    timeoutRefs.current[field] = setTimeout(() => {
+      handleInlineUpdate(field, value);
+      delete timeoutRefs.current[field];
+    }, 500);
+  }, [handleInlineUpdate]);
+
+  // Cleanup timeouts on unmount
+  React.useEffect(() => {
+    return () => {
+      Object.values(timeoutRefs.current).forEach(clearTimeout);
+    };
+  }, []);
 
   const dependencySummary = useMemo(() => {
     const summary = { blocks: 0, depends_on: 0, related_to: 0 };
@@ -125,19 +245,104 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">{node.title}</CardTitle>
-            <Badge className="uppercase text-[10px] tracking-wide text-slate-500">{TYPE_LABEL[node.type]}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge className="uppercase text-[10px] tracking-wide text-slate-500">{TYPE_LABEL[node.type]}</Badge>
+              {!isEditingInline && node.type !== "project" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingInline(true)}
+                  className="h-6 w-6 p-0"
+                >
+                  <Edit3 className="h-3 w-3" />
+                </Button>
+              )}
+              {isEditingInline && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingInline(false)}
+                  className="h-6 w-6 p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            {node.status && (
+            {/* Status field - editable inline */}
+            {node.status && !isEditingInline && (
               <Badge className={cn("capitalize", statusBadge ?? "bg-slate-100 text-slate-600")}>
                 {node.status}
               </Badge>
             )}
-            {node.priority && (
+            {node.status && isEditingInline && (
+              <Select
+                value={editingFields.status}
+                onValueChange={(value) => handleFieldChange("status", value)}
+              >
+                <SelectTrigger className="h-6 w-32 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Priority field - editable inline */}
+            {node.priority && !isEditingInline && (
               <Badge className={cn("capitalize", priorityBadge ?? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300")}>
                 {node.priority}
               </Badge>
             )}
+            {node.priority && isEditingInline && (
+              <Select
+                value={editingFields.priority}
+                onValueChange={(value) => handleFieldChange("priority", value)}
+              >
+                <SelectTrigger className="h-6 w-28 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRIORITY_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Assignee field - editable inline for tasks/subtasks */}
+            {(node.type === "task" || node.type === "subtask") && !isEditingInline && (node as any).assignee && (
+              <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                {(node as any).assignee}
+              </Badge>
+            )}
+            {(node.type === "task" || node.type === "subtask") && isEditingInline && (
+              <Select
+                value={editingFields.assignee}
+                onValueChange={(value) => handleFieldChange("assignee", value)}
+              >
+                <SelectTrigger className="h-6 w-32 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASSIGNEE_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Non-editable fields */}
             {typeof node.progress === "number" && (
               <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 Progress {Math.round(node.progress)}%

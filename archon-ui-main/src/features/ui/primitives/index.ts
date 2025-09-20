@@ -13,6 +13,7 @@
 export * from "./alert-dialog";
 
 // Export all primitives
+export * from "./badge";
 export * from "./button";
 export * from "./card";
 export * from "./checkbox";
