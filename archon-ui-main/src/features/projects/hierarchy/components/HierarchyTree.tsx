@@ -1,6 +1,10 @@
 import type { HierarchyTreeNode } from "../../services/hierarchyService";
 import type { FilterVisibilityMode } from "../hooks/useHierarchyFilters";
 import { HierarchyNode } from "./HierarchyNode";
+import { TreeNodeDraggable } from "./TreeNodeDraggable";
+import { useTreeDragDrop } from "../hooks/useTreeDragDrop";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 interface HierarchyTreeProps {
   nodes: HierarchyTreeNode[];
@@ -11,6 +15,8 @@ interface HierarchyTreeProps {
   matchingNodeIds: Set<string>;
   descendantMatches: Map<string, boolean>;
   visibilityMode: FilterVisibilityMode;
+  projectId: string;
+  enableDragDrop?: boolean;
 }
 
 const hasMatch = (node: HierarchyTreeNode, matchingNodeIds: Set<string>, descendantMatches: Map<string, boolean>): boolean =>
@@ -43,6 +49,10 @@ const renderTree = (
     matchingNodeIds: Set<string>;
     descendantMatches: Map<string, boolean>;
     visibilityMode: FilterVisibilityMode;
+    enableDragDrop?: boolean;
+    onMove?: (source: any, target: any) => Promise<void>;
+    onReorder?: (nodeId: string, nodeType: string, newOrder: number) => Promise<void>;
+    canDrop?: (source: any, target: any) => boolean;
   },
   depth = 0,
 ): JSX.Element[] => {
@@ -57,7 +67,7 @@ const renderTree = (
 
     const isDimmed = !props.matchingNodeIds.has(node.nodeId) && props.visibilityMode === "dim";
 
-    const currentNode = (
+    const nodeElement = (
       <HierarchyNode
         key={node.nodeId}
         node={node}
@@ -70,6 +80,21 @@ const renderTree = (
         visibilityMode={props.visibilityMode}
         isDimmed={isDimmed}
       />
+    );
+
+    const currentNode = props.enableDragDrop ? (
+      <TreeNodeDraggable
+        key={node.nodeId}
+        node={node}
+        onMove={props.onMove}
+        onReorder={(nodeId, newOrder) => props.onReorder?.(nodeId, node.type, newOrder)}
+        canDrop={props.canDrop}
+        isDraggingEnabled={props.enableDragDrop}
+      >
+        {nodeElement}
+      </TreeNodeDraggable>
+    ) : (
+      nodeElement
     );
 
     if (!hasChildren || !isExpanded) {
@@ -92,14 +117,40 @@ export const HierarchyTree: React.FC<HierarchyTreeProps> = ({
   matchingNodeIds,
   descendantMatches,
   visibilityMode,
+  projectId,
+  enableDragDrop = false,
 }) => {
+  const { handleMove, handleReorder, canDrop } = useTreeDragDrop(projectId);
+
   if (!nodes.length) {
     return <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">No hierarchy data available.</div>;
   }
 
-  return (
+  const treeContent = (
     <div role="tree" aria-multiselectable={false} className="space-y-1">
-      {renderTree(nodes, { expandedNodes, onToggle, onSelect, selectedNodeId, matchingNodeIds, descendantMatches, visibilityMode })}
+      {renderTree(nodes, {
+        expandedNodes,
+        onToggle,
+        onSelect,
+        selectedNodeId,
+        matchingNodeIds,
+        descendantMatches,
+        visibilityMode,
+        enableDragDrop,
+        onMove: handleMove,
+        onReorder: handleReorder,
+        canDrop,
+      })}
     </div>
   );
+
+  if (enableDragDrop) {
+    return (
+      <DndProvider backend={HTML5Backend}>
+        {treeContent}
+      </DndProvider>
+    );
+  }
+
+  return treeContent;
 };

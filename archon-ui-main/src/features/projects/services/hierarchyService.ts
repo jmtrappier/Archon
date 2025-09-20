@@ -58,6 +58,8 @@ export const hierarchyService = {
     const params = new URLSearchParams();
     if (options?.includeTasks === false) {
       params.append("include_tasks", "false");
+    } else if (options?.includeTasks === true) {
+      params.append("include_tasks", "true");
     }
     if (options?.includeArchived) {
       params.append("include_archived", "true");

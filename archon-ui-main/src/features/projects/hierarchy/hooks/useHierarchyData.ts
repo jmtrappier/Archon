@@ -9,6 +9,7 @@ export type HierarchyViewMode = "hierarchy" | "dependencies";
 export interface UseHierarchyDataOptions {
   projectId: string;
   includeArchived?: boolean;
+  includeTasks?: boolean;
   viewMode?: HierarchyViewMode;
 }
 
@@ -34,8 +35,8 @@ export interface UseHierarchyDataResult {
 
 export const hierarchyQueryKeys = {
   all: ["project-hierarchy"] as const,
-  detail: (projectId: string, includeArchived?: boolean) =>
-    [...hierarchyQueryKeys.all, projectId, includeArchived ? "archived" : "active"] as const,
+  detail: (projectId: string, includeArchived?: boolean, includeTasks?: boolean) =>
+    [...hierarchyQueryKeys.all, projectId, includeArchived ? "archived" : "active", includeTasks ? "with-tasks" : "no-tasks"] as const,
 };
 
 interface HierarchyNodeInput {
@@ -188,7 +189,7 @@ const normalizeHierarchyResponse = (response: Awaited<ReturnType<typeof hierarch
   return mapHierarchy([projectNode], null, 0);
 };
 
-export const useHierarchyData = ({ projectId, includeArchived }: UseHierarchyDataOptions): UseHierarchyDataResult => {
+export const useHierarchyData = ({ projectId, includeArchived, includeTasks = true }: UseHierarchyDataOptions): UseHierarchyDataResult => {
   const { refetchInterval } = useSmartPolling(10000);
 
   const {
@@ -197,8 +198,8 @@ export const useHierarchyData = ({ projectId, includeArchived }: UseHierarchyDat
     error,
     isError,
   } = useQuery({
-    queryKey: hierarchyQueryKeys.detail(projectId, includeArchived),
-    queryFn: () => hierarchyService.getProjectHierarchy(projectId, { includeArchived }),
+    queryKey: hierarchyQueryKeys.detail(projectId, includeArchived, includeTasks),
+    queryFn: () => hierarchyService.getProjectHierarchy(projectId, { includeArchived, includeTasks }),
     enabled: Boolean(projectId),
     refetchInterval,
     staleTime: 10000,

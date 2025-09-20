@@ -40,6 +40,7 @@ export const TreeView: React.FC<TreeViewProps> = ({ projectId, onEpicClick, onSt
   const { tree, flatNodes, metadata, isLoading, isError, error } = useHierarchyData({
     projectId,
     includeArchived: filterState.includeArchived,
+    includeTasks: true, // Explicitly include tasks and subtasks
   });
 
   useEffect(() => {
@@ -176,6 +177,8 @@ export const TreeView: React.FC<TreeViewProps> = ({ projectId, onEpicClick, onSt
             matchingNodeIds={matchingIds}
             descendantMatches={descendantMatches}
             visibilityMode={visibilityMode}
+            projectId={projectId}
+            enableDragDrop={true}
           />
         </div>
       </div>
