@@ -1517,7 +1517,7 @@ async def get_project_hierarchy(
     include_archived: bool = False,
     if_none_match: str | None = Header(None)
 ):
-    """Get complete project hierarchy: Project > Epics > Stories > Tasks with ETag support."""
+    """Get complete project hierarchy: Project > Epics > Stories > Tasks > Subtasks with ETag support."""
     try:
         logfire.debug(
             f"Getting project hierarchy | project_id={project_id} | include_tasks={include_tasks} | include_archived={include_archived} | etag={if_none_match}"
@@ -1565,6 +1565,30 @@ async def get_project_hierarchy(
                         )
                         if task_success:
                             story["tasks"] = task_result.get("tasks", [])
+
+                            # Get all subtasks for this story's tasks in one efficient query
+                            if story["tasks"]:
+                                task_ids = [task["id"] for task in story["tasks"]]
+
+                                # Build a query to get all subtasks for all tasks at once
+                                subtasks_query = task_service.supabase_client.table("archon_tasks").select("*").in_("parent_task_id", task_ids)
+
+                                if not include_archived:
+                                    subtasks_query = subtasks_query.or_("archived.is.null,archived.is.false")
+
+                                subtasks_response = subtasks_query.order("parent_task_id", desc=False).order("task_order", desc=False).execute()
+
+                                # Group subtasks by parent_task_id
+                                subtasks_by_parent = {}
+                                for subtask in subtasks_response.data or []:
+                                    parent_id = subtask["parent_task_id"]
+                                    if parent_id not in subtasks_by_parent:
+                                        subtasks_by_parent[parent_id] = []
+                                    subtasks_by_parent[parent_id].append(subtask)
+
+                                # Assign subtasks to their parent tasks
+                                for task in story["tasks"]:
+                                    task["subtasks"] = subtasks_by_parent.get(task["id"], [])
                         else:
                             story["tasks"] = []
             else:
@@ -1586,6 +1610,12 @@ async def get_project_hierarchy(
                     for epic in epics
                     for story in epic.get("stories", [])
                 ) if include_tasks else 0,
+                "subtask_count": sum(
+                    len(task.get("subtasks", []))
+                    for epic in epics
+                    for story in epic.get("stories", [])
+                    for task in story.get("tasks", [])
+                ) if include_tasks else 0,
                 "include_tasks": include_tasks,
                 "include_archived": include_archived
             }
@@ -1596,6 +1626,8 @@ async def get_project_hierarchy(
             "project_id": project_id,
             "epic_count": len(epics),
             "story_count": sum(len(epic.get("stories", [])) for epic in epics),
+            "task_count": hierarchy["metadata"]["task_count"],
+            "subtask_count": hierarchy["metadata"]["subtask_count"],
             "include_tasks": include_tasks,
             "include_archived": include_archived
         }
@@ -1616,7 +1648,7 @@ async def get_project_hierarchy(
         response.headers["Last-Modified"] = datetime.utcnow().isoformat()
 
         logfire.debug(
-            f"Project hierarchy retrieved | project_id={project_id} | epic_count={len(epics)} | story_count={hierarchy['metadata']['story_count']} | etag={current_etag}"
+            f"Project hierarchy retrieved | project_id={project_id} | epic_count={len(epics)} | story_count={hierarchy['metadata']['story_count']} | task_count={hierarchy['metadata']['task_count']} | subtask_count={hierarchy['metadata']['subtask_count']} | etag={current_etag}"
         )
 
         return hierarchy
