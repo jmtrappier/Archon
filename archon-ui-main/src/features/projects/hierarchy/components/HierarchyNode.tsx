@@ -13,6 +13,13 @@ const STATUS_COLORS: Record<string, string> = {
   done: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
 };
 
+const PRIORITY_COLORS: Record<string, string> = {
+  low: "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300",
+  medium: "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300",
+  high: "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300",
+  critical: "bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300",
+};
+
 const TYPE_COLORS: Record<HierarchyTreeNode["type"], string> = {
   project: "text-gray-600",
   epic: "text-purple-500",
@@ -132,6 +139,13 @@ export const HierarchyNode: React.FC<HierarchyNodeProps> = ({
             )}
           </div>
         </div>
+
+        {/* Priority */}
+        {node.priority && (
+          <Badge className={cn("capitalize text-xs", PRIORITY_COLORS[node.priority] ?? PRIORITY_COLORS.medium)}>
+            {node.priority}
+          </Badge>
+        )}
 
         {/* Status */}
         {node.status && (

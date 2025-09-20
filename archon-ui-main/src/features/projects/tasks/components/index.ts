@@ -16,4 +16,5 @@ export { TaskCard } from "./TaskCard";
 export { TaskCardActions } from "./TaskCardActions";
 export { TaskEditModal } from "./TaskEditModal";
 export { TaskPriority as TaskPriorityComponent } from "./TaskPriority";
+export { TaskStatus } from "./TaskStatus";
 export { TaskView } from "./TaskView";
