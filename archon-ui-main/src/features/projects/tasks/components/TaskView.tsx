@@ -105,6 +105,11 @@ export const TaskView: React.FC<TaskViewProps> = ({
 
   const handleAssigneeChange = useCallback(
     (newAssignee: Assignee) => {
+      console.log("📝 TaskView.handleAssigneeChange called", {
+        taskId: task.id,
+        oldAssignee: task.assignee,
+        newAssignee
+      });
       changeAssignee(task.id, newAssignee);
     },
     [changeAssignee, task.id],
@@ -334,7 +339,18 @@ export const TaskView: React.FC<TaskViewProps> = ({
           isOpen={isEditingTask}
           onClose={() => setIsEditingTask(false)}
           onSubmit={async (updates) => {
+            console.log("📝 TaskView.TaskEditModal.onSubmit called", {
+              taskId: task.id,
+              updates,
+              originalTask: {
+                status: task.status,
+                priority: task.priority,
+                assignee: task.assignee
+              }
+            });
+
             if (onTaskUpdate) {
+              console.log("📝 TaskView calling onTaskUpdate", { taskId: task.id, updates });
               onTaskUpdate(task.id, updates);
             }
             setIsEditingTask(false);

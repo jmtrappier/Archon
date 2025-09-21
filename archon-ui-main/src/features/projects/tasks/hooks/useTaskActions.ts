@@ -13,6 +13,17 @@ export const useTaskActions = (projectId: string): UseTaskActionsReturn => {
   // Assignee change handler
   const changeAssignee = useCallback(
     (taskId: string, newAssignee: string) => {
+      console.log("🔧 useTaskActions.changeAssignee called", {
+        taskId,
+        newAssignee,
+        assigneeAsType: newAssignee as Assignee
+      });
+
+      console.log("🔧 useTaskActions calling updateTaskMutation.mutate", {
+        taskId,
+        updates: { assignee: newAssignee as Assignee }
+      });
+
       updateTaskMutation.mutate({
         taskId,
         updates: { assignee: newAssignee as Assignee },

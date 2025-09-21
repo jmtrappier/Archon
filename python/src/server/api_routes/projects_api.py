@@ -1513,7 +1513,7 @@ async def get_project_hierarchy(
     """Get complete project hierarchy: Project > Epics > Stories > Tasks > Subtasks with ETag support."""
     try:
         logfire.debug(
-            f"Getting project hierarchy | project_id={project_id} | include_tasks={include_tasks} | include_archived={include_archived} | etag={if_none_match}"
+            f"🚀 API get_project_hierarchy called | project_id={project_id} | include_tasks={include_tasks} | include_archived={include_archived} | etag={if_none_match}"
         )
 
         # Get project
@@ -1614,17 +1614,17 @@ async def get_project_hierarchy(
             }
         }
 
-        # Generate ETag from hierarchy structure
+        # 🎯 FIX: Generate ETag from complete hierarchy content, not just counts
+        # This ensures that any changes to task priority, status, assignee, etc. will generate a new ETag
+        logfire.debug(f"🚀 API generating ETag from complete hierarchy content | project_id={project_id}")
         etag_data = {
             "project_id": project_id,
-            "epic_count": len(epics),
-            "story_count": sum(len(epic.get("stories", [])) for epic in epics),
-            "task_count": hierarchy["metadata"]["task_count"],
-            "subtask_count": hierarchy["metadata"]["subtask_count"],
             "include_tasks": include_tasks,
-            "include_archived": include_archived
+            "include_archived": include_archived,
+            "hierarchy_content": hierarchy  # Include the complete hierarchy content
         }
         current_etag = generate_etag(etag_data)
+        logfire.debug(f"🚀 API generated new ETag | project_id={project_id} | etag={current_etag}")
 
         # Check if client's ETag matches (304 Not Modified)
         if check_etag(if_none_match, current_etag):
@@ -1632,7 +1632,7 @@ async def get_project_hierarchy(
             response.headers["ETag"] = current_etag
             response.headers["Cache-Control"] = "no-cache, must-revalidate"
             response.headers["Last-Modified"] = datetime.utcnow().isoformat()
-            logfire.debug(f"Hierarchy unchanged, returning 304 | project_id={project_id} | etag={current_etag}")
+            logfire.debug(f"🚀 API hierarchy unchanged, returning 304 | project_id={project_id} | etag={current_etag}")
             return None
 
         # Set ETag headers for successful response
@@ -1641,7 +1641,7 @@ async def get_project_hierarchy(
         response.headers["Last-Modified"] = datetime.utcnow().isoformat()
 
         logfire.debug(
-            f"Project hierarchy retrieved | project_id={project_id} | epic_count={len(epics)} | story_count={hierarchy['metadata']['story_count']} | task_count={hierarchy['metadata']['task_count']} | subtask_count={hierarchy['metadata']['subtask_count']} | etag={current_etag}"
+            f"🚀 API project hierarchy retrieved | project_id={project_id} | epic_count={len(epics)} | story_count={hierarchy['metadata']['story_count']} | task_count={hierarchy['metadata']['task_count']} | subtask_count={hierarchy['metadata']['subtask_count']} | etag={current_etag}"
         )
 
         return hierarchy
@@ -1649,7 +1649,8 @@ async def get_project_hierarchy(
     except HTTPException:
         raise
     except Exception as e:
-        logfire.error(f"Failed to get project hierarchy | error={str(e)} | project_id={project_id}")
+        logfire.error(f"🚀 API get_project_hierarchy ERROR | project_id={project_id} | error={str(e)}")
+        logger.error(f"Failed to get project hierarchy | error={str(e)} | project_id={project_id}")
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
@@ -2042,6 +2043,8 @@ class RestoreVersionRequest(BaseModel):
 async def update_task(task_id: str, request: UpdateTaskRequest):
     """Update a task."""
     try:
+        logfire.info(f"🚀 API update_task called | task_id={task_id} | request={request}")
+
         # Build update fields dictionary
         update_fields = {}
         if request.title is not None:
@@ -2059,11 +2062,17 @@ async def update_task(task_id: str, request: UpdateTaskRequest):
         if request.priority is not None:
             update_fields["priority"] = request.priority
 
+        logfire.info(f"🚀 API update_task built update_fields | task_id={task_id} | update_fields={update_fields}")
+
         # Use TaskService to update the task
         task_service = TaskService()
+        logfire.info(f"🚀 API update_task calling task_service.update_task | task_id={task_id} | update_fields={update_fields}")
         success, result = await task_service.update_task(task_id, update_fields)
 
+        logfire.info(f"🚀 API update_task task_service.update_task returned | task_id={task_id} | success={success} | result={result}")
+
         if not success:
+            logfire.error(f"🚀 API update_task task_service failed | task_id={task_id} | error={result}")
             if "not found" in result.get("error", "").lower():
                 raise HTTPException(status_code=404, detail=result.get("error"))
             else:
@@ -2072,10 +2081,12 @@ async def update_task(task_id: str, request: UpdateTaskRequest):
         updated_task = result["task"]
 
         logfire.info(
-            f"Task updated successfully | task_id={task_id} | project_id={updated_task.get('project_id')} | updated_fields={list(update_fields.keys())}"
+            f"🚀 API update_task success | task_id={task_id} | project_id={updated_task.get('project_id')} | updated_fields={list(update_fields.keys())} | returned_task={updated_task}"
         )
 
-        return {"message": "Task updated successfully", "task": updated_task}
+        response = {"message": "Task updated successfully", "task": updated_task}
+        logfire.info(f"🚀 API update_task returning response | task_id={task_id} | response={response}")
+        return response
 
     except HTTPException:
         raise
@@ -2522,3 +2533,97 @@ async def restore_project_version(
             f"Failed to restore version | error={str(e)} | project_id={project_id} | field_name={field_name} | version_number={version_number}"
         )
         raise HTTPException(status_code=500, detail={"error": str(e)})
+
+
+# ==================== MIGRATION ENDPOINT (TEMPORARY) ====================
+
+@router.post("/admin/fix-waiting-status")
+async def fix_waiting_status():
+    """
+    TEMPORARY ENDPOINT: Add 'waiting' to task_status enum to fix HTTP 500 errors
+    when saving tasks with 'waiting' status.
+
+    This resolves the mismatch between frontend (expects 'waiting') and
+    database (only has 'brainstorming', 'todo', 'doing', 'review', 'done').
+    """
+    try:
+        logfire.info("🔧 Starting fix_waiting_status migration")
+
+        # Use TaskService to get database connection
+        task_service = TaskService()
+
+        # Check current enum values using direct database query
+        check_sql = """
+            SELECT enumlabel
+            FROM pg_enum
+            WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'task_status')
+            ORDER BY enumsortorder;
+        """
+
+        # Execute query through TaskService's database connection
+        current_values = []
+        try:
+            # Get database connection pool from TaskService
+            async with task_service.db_pool.acquire() as conn:
+                # Check current enum values
+                rows = await conn.fetch(check_sql)
+                current_values = [row['enumlabel'] for row in rows]
+
+                logfire.info(f"📋 Current task_status enum values: {current_values}")
+
+                if 'waiting' in current_values:
+                    return {
+                        "success": True,
+                        "message": "Status 'waiting' already exists in task_status enum",
+                        "current_values": current_values
+                    }
+
+                # Add 'waiting' to the enum
+                add_enum_sql = "ALTER TYPE task_status ADD VALUE 'waiting' AFTER 'review';"
+                await conn.execute(add_enum_sql)
+
+                # Verify the addition
+                verify_rows = await conn.fetch(check_sql)
+                updated_values = [row['enumlabel'] for row in verify_rows]
+
+                logfire.info(f"✅ Successfully added 'waiting' status. New values: {updated_values}")
+
+                return {
+                    "success": True,
+                    "message": "Successfully added 'waiting' status to task_status enum",
+                    "previous_values": current_values,
+                    "updated_values": updated_values,
+                    "fix_applied": "The 'En attente' (waiting) status now works without HTTP 500 errors"
+                }
+
+        except Exception as db_error:
+            error_msg = str(db_error)
+            if "already exists" in error_msg.lower():
+                return {
+                    "success": True,
+                    "message": "Status 'waiting' already exists in task_status enum",
+                    "note": "No migration needed"
+                }
+
+            logfire.error(f"❌ Database error: {error_msg}")
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": f"Database error: {error_msg}",
+                    "solution": "Try running the migration manually in Supabase SQL editor",
+                    "sql_command": "ALTER TYPE task_status ADD VALUE 'waiting' AFTER 'review';"
+                }
+            )
+
+    except Exception as e:
+        error_msg = str(e)
+        logfire.error(f"❌ Failed to fix waiting status: {error_msg}")
+
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": f"Failed to add waiting status to enum: {error_msg}",
+                "solution": "Try running the migration manually in Supabase SQL editor",
+                "sql_command": "ALTER TYPE task_status ADD VALUE 'waiting' AFTER 'review';"
+            }
+        )

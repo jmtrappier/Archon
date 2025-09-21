@@ -116,6 +116,14 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
   };
 
   const openTaskView = (task: Task) => {
+    console.log("📋 TasksTab.openTaskView called", {
+      taskId: task.id,
+      taskTitle: task.title,
+      taskStatus: task.status,
+      taskPriority: task.priority,
+      taskAssignee: task.assignee,
+      fullTask: task
+    });
     setViewingTask(task);
   };
 
@@ -305,6 +313,12 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
 
   // Inline update for task fields
   const updateTaskInline = async (taskId: string, updates: Partial<Task>) => {
+    console.log("📋 TasksTab.updateTaskInline called", {
+      taskId,
+      updates,
+      originalUpdates: updates
+    });
+
     try {
       // Validate task_order if present (ensures integer precision)
       const processedUpdates = { ...updates };
@@ -312,12 +326,19 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
         processedUpdates.task_order = validateTaskOrder(processedUpdates.task_order);
       }
 
+      console.log("📋 TasksTab.updateTaskInline calling updateTaskMutation.mutateAsync", {
+        taskId,
+        processedUpdates
+      });
+
       await updateTaskMutation.mutateAsync({
         taskId,
         updates: processedUpdates,
       });
+
+      console.log("📋 TasksTab.updateTaskInline updateTaskMutation.mutateAsync completed successfully");
     } catch (error) {
-      console.error("Failed to update task:", error, { taskId, updates });
+      console.error("📋 TasksTab.updateTaskInline ERROR:", error, { taskId, updates });
       // Error toast handled by mutation
     }
   };

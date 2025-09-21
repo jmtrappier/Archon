@@ -119,12 +119,24 @@ export const TreeView: React.FC<TreeViewProps> = ({ projectId, onEpicClick, onSt
 
   const handleOpenDetails = useCallback(
     (node: HierarchyTreeNode) => {
+      console.log("🌳 TreeView.handleOpenDetails called", {
+        nodeType: node.type,
+        nodeId: node.id,
+        nodeTitle: node.title,
+        nodeStatus: node.status,
+        nodePriority: node.priority,
+        nodeAssignee: node.assignee
+      });
+
       const raw = node.raw;
       if (node.type === "epic" && onEpicClick) {
+        console.log("🌳 TreeView calling onEpicClick", { epic: raw });
         onEpicClick(raw as Epic);
       } else if (node.type === "story" && onStoryClick) {
+        console.log("🌳 TreeView calling onStoryClick", { story: raw });
         onStoryClick(raw as Story);
       } else if ((node.type === "task" || node.type === "subtask") && onTaskClick) {
+        console.log("🌳 TreeView calling onTaskClick", { task: raw });
         onTaskClick(raw as Task);
       }
     },

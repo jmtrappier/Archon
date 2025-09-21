@@ -414,6 +414,8 @@ class TaskService:
             Tuple of (success, result_dict)
         """
         try:
+            logger.info(f"🔧 TaskService.update_task START | task_id={task_id} | update_fields={update_fields}")
+
             # Build update data
             update_data = {"updated_at": datetime.now().isoformat()}
 
@@ -427,12 +429,14 @@ class TaskService:
             if "status" in update_fields:
                 is_valid, error_msg = self.validate_status(update_fields["status"])
                 if not is_valid:
+                    logger.error(f"Status validation failed: {error_msg}")
                     return False, {"error": error_msg}
                 update_data["status"] = update_fields["status"]
 
             if "assignee" in update_fields:
                 is_valid, error_msg = self.validate_assignee(update_fields["assignee"])
                 if not is_valid:
+                    logger.error(f"Assignee validation failed: {error_msg}")
                     return False, {"error": error_msg}
                 update_data["assignee"] = update_fields["assignee"]
 
@@ -445,7 +449,9 @@ class TaskService:
             if "priority" in update_fields:
                 is_valid_priority, priority_result = self.validate_priority(update_fields["priority"])
                 if not is_valid_priority:
+                    logger.error(f"Priority validation failed: {priority_result}")
                     return False, {"error": priority_result}
+                logger.info(f"Priority validation success: {update_fields['priority']} -> {priority_result}")
                 update_data["priority"] = priority_result
 
             if "story_id" in update_fields:
@@ -455,6 +461,7 @@ class TaskService:
                 update_data["parent_task_id"] = update_fields["parent_task_id"]
 
             # Update task
+            logger.info(f"🔧 TaskService.update_task calling Supabase update | task_id={task_id} | update_data={update_data}")
             response = (
                 self.supabase_client.table("archon_tasks")
                 .update(update_data)
@@ -462,16 +469,18 @@ class TaskService:
                 .execute()
             )
 
+            logger.info(f"🔧 TaskService.update_task Supabase response | task_id={task_id} | response_data_count={len(response.data) if response.data else 0}")
+
             if response.data:
                 task = response.data[0]
-
-
+                logger.info(f"🔧 TaskService.update_task SUCCESS | task_id={task_id} | task_data={task}")
                 return True, {"task": task, "message": "Task updated successfully"}
             else:
+                logger.error(f"🔧 TaskService.update_task NO DATA RETURNED | task_id={task_id}")
                 return False, {"error": f"Task with ID {task_id} not found"}
 
         except Exception as e:
-            logger.error(f"Error updating task: {e}")
+            logger.error(f"🔧 TaskService.update_task EXCEPTION | task_id={task_id} | error={e} | error_type={type(e).__name__}")
             return False, {"error": f"Error updating task: {str(e)}"}
 
     async def archive_task(

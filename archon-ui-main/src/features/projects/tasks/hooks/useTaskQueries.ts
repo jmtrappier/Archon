@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSmartPolling } from "../../../ui/hooks";
 import { useToast } from "../../../ui/hooks/useToast";
 import { projectKeys } from "../../hooks/useProjectQueries";
+import { hierarchyQueryKeys } from "../../hierarchy/hooks/useHierarchyData";
+import { invalidateETagCache } from "../../shared/apiWithEtag";
 import { taskService } from "../services";
 import type { CreateTaskRequest, Task, UpdateTaskRequest } from "../types";
 
@@ -118,46 +120,103 @@ export function useUpdateTask(projectId: string) {
   const { showToast } = useToast();
 
   return useMutation<Task, Error, { taskId: string; updates: UpdateTaskRequest }, { previousTasks?: Task[] }>({
-    mutationFn: ({ taskId, updates }: { taskId: string; updates: UpdateTaskRequest }) =>
-      taskService.updateTask(taskId, updates),
+    mutationFn: ({ taskId, updates }: { taskId: string; updates: UpdateTaskRequest }) => {
+      console.log("⚛️ useUpdateTask.mutationFn called", { taskId, updates });
+      return taskService.updateTask(taskId, updates);
+    },
     onMutate: async ({ taskId, updates }) => {
+      console.log("⚛️ useUpdateTask.onMutate called", { taskId, updates });
+
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: taskKeys.all(projectId) });
+      console.log("⚛️ useUpdateTask.onMutate queries cancelled");
 
       // Snapshot the previous value
       const previousTasks = queryClient.getQueryData<Task[]>(taskKeys.all(projectId));
+      console.log("⚛️ useUpdateTask.onMutate previousTasks captured", { count: previousTasks?.length });
 
       // Optimistically update
       queryClient.setQueryData<Task[]>(taskKeys.all(projectId), (old) => {
         if (!old) return old;
-        return old.map((task) => (task.id === taskId ? { ...task, ...updates } : task));
+        const updated = old.map((task) => (task.id === taskId ? { ...task, ...updates } : task));
+        console.log("⚛️ useUpdateTask.onMutate optimistic update applied", {
+          taskId,
+          updates,
+          foundTask: !!old.find(t => t.id === taskId)
+        });
+        return updated;
       });
 
       return { previousTasks };
     },
     onError: (error, variables, context) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error("Failed to update task:", error, { variables });
+      console.error("⚛️ useUpdateTask.onError called", { error, variables, contextHasPrevious: !!context?.previousTasks });
+
       // Rollback on error
       if (context?.previousTasks) {
+        console.log("⚛️ useUpdateTask.onError rolling back optimistic update");
         queryClient.setQueryData(taskKeys.all(projectId), context.previousTasks);
       }
       showToast(`Failed to update task: ${errorMessage}`, "error");
+
       // Refetch on error to ensure consistency
+      console.log("⚛️ useUpdateTask.onError invalidating queries");
       queryClient.invalidateQueries({ queryKey: taskKeys.all(projectId) });
       queryClient.invalidateQueries({ queryKey: projectKeys.taskCounts() });
     },
     onSuccess: (data, { updates }) => {
+      console.log("⚛️ useUpdateTask.onSuccess called", {
+        taskId: data.id,
+        updates,
+        returnedData: {
+          id: data.id,
+          status: data.status,
+          priority: data.priority,
+          assignee: data.assignee
+        }
+      });
+
       // Merge server response to keep timestamps and computed fields in sync
-      queryClient.setQueryData<Task[]>(taskKeys.all(projectId), (old) =>
-        old ? old.map((t) => (t.id === data.id ? data : t)) : old,
-      );
+      queryClient.setQueryData<Task[]>(taskKeys.all(projectId), (old) => {
+        const result = old ? old.map((t) => (t.id === data.id ? data : t)) : old;
+        console.log("⚛️ useUpdateTask.onSuccess setQueryData for taskKeys.all", {
+          taskId: data.id,
+          foundInOld: !!old?.find(t => t.id === data.id),
+          oldCount: old?.length,
+          resultCount: Array.isArray(result) ? result.length : 'not-array'
+        });
+        return result;
+      });
+
+      // 🎯 FIX: Force refetch instead of just invalidating for TreeView
+      console.log("⚛️ useUpdateTask.onSuccess force refetching hierarchy queries");
+      
+      // Invalidate and immediately refetch all hierarchy queries
+      queryClient.invalidateQueries({ queryKey: hierarchyQueryKeys.all });
+      queryClient.refetchQueries({ 
+        queryKey: hierarchyQueryKeys.detail(projectId, false, true) // TreeView: includeArchived=false, includeTasks=true
+      });
+      queryClient.refetchQueries({ 
+        queryKey: hierarchyQueryKeys.detail(projectId, true, true) // Also archived version
+      });
+
+      // 🎯 FIX: Clear ETag cache more thoroughly and force fresh data
+      console.log("⚛️ useUpdateTask.onSuccess clearing ETag caches and forcing fresh data");
+      invalidateETagCache(`/api/projects/${projectId}/hierarchy`);
+      invalidateETagCache(`/api/projects/${projectId}/hierarchy?include_tasks=true`);
+      invalidateETagCache(`/api/projects/${projectId}/hierarchy?include_tasks=true&include_archived=false`);
+      invalidateETagCache(`/api/projects/${projectId}/hierarchy?include_tasks=true&include_archived=true`);
+
       // Only invalidate counts if status changed (which affects counts)
       if (updates.status) {
+        console.log("⚛️ useUpdateTask.onSuccess status changed, invalidating counts");
         queryClient.invalidateQueries({ queryKey: projectKeys.taskCounts() });
         // Show toast for significant status changes
         showToast(`Task moved to ${updates.status}`, "success");
       }
+
+      console.log("⚛️ useUpdateTask.onSuccess completed");
     },
   });
 }

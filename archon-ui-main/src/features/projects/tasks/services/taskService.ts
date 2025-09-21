@@ -72,25 +72,59 @@ export const taskService = {
    * Update an existing task
    */
   async updateTask(taskId: string, updates: UpdateTaskRequest): Promise<Task> {
+    console.log("🌐 taskService.updateTask called", {
+      taskId,
+      updates,
+      originalUpdates: updates
+    });
+
     // Validate input
     const validation = validateUpdateTask(updates);
     if (!validation.success) {
+      console.error("🌐 taskService.updateTask validation failed", {
+        taskId,
+        updates,
+        validationErrors: validation.error
+      });
       throw new ValidationError(formatZodErrors(validation.error));
     }
 
+    console.log("🌐 taskService.updateTask validation passed", {
+      taskId,
+      validatedData: validation.data
+    });
+
     try {
+      console.log("🌐 taskService.updateTask calling callAPIWithETag", {
+        url: `/api/tasks/${taskId}`,
+        method: "PUT",
+        body: validation.data
+      });
+
       const task = await callAPIWithETag<Task>(`/api/tasks/${taskId}`, {
         method: "PUT",
         body: JSON.stringify(validation.data),
       });
 
+      console.log("🌐 taskService.updateTask callAPIWithETag response received", {
+        taskId,
+        responseTask: {
+          id: task.id,
+          status: task.status,
+          priority: task.priority,
+          assignee: task.assignee
+        }
+      });
+
       // Invalidate related caches
       // Note: We don't know the project_id here, so TanStack Query will handle invalidation
+      console.log("🌐 taskService.updateTask invalidating ETag cache");
       invalidateETagCache("/api/tasks/counts");
 
+      console.log("🌐 taskService.updateTask completed successfully", { taskId, returnedTask: task });
       return task;
     } catch (error) {
-      console.error(`Failed to update task ${taskId}:`, error);
+      console.error("🌐 taskService.updateTask ERROR:", error, { taskId, updates });
       throw error;
     }
   },
