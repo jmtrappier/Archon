@@ -1,25 +1,25 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Edit3, Eye, Pin, X } from "lucide-react";
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Loader2, MapPinned, Pin, Eye, Edit3, Save, X } from "lucide-react";
 import { Button } from "@/features/ui/primitives";
 import { Badge } from "@/features/ui/primitives/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/primitives/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/features/ui/primitives/select";
-import type { HierarchyViewMode } from "../hooks/useHierarchyData";
-import type { HierarchyTreeNode } from "../../services/hierarchyService";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/primitives/select";
+import { cn } from "@/lib/utils";
 import { dependencyService } from "../../dependencies/services/dependencyService";
 import type { Dependency } from "../../dependencies/types";
-import { cn } from "@/lib/utils";
-import { NodeDetailsModal } from "./NodeDetailsModal";
-import { useUpdateTask } from "../../tasks/hooks/useTaskQueries";
-import { useUpdateStory } from "../../stories/hooks/useStoryQueries";
 import { useUpdateEpic } from "../../epics/hooks/useEpicQueries";
+import type { HierarchyTreeNode } from "../../services/hierarchyService";
+import { invalidateETagCache } from "../../shared/apiWithEtag";
+import type { UpdateEpicRequest, UpdateStoryRequest, UpdateTaskRequest } from "../../shared/types/hierarchy";
+import { useUpdateStory } from "../../stories/hooks/useStoryQueries";
+import { useUpdateTask } from "../../tasks/hooks/useTaskQueries";
+import type { HierarchyViewMode } from "../hooks/useHierarchyData";
+import { hierarchyQueryKeys } from "../hooks/useHierarchyData";
+import type { HierarchyUpdatePayload } from "../utils/updateHierarchyCache";
+import { updateHierarchyQueryCache } from "../utils/updateHierarchyCache";
+import { NodeDetailsModal } from "./NodeDetailsModal";
+
 // import { toast } from "sonner"; // Temporarily disabled
 
 const TYPE_LABEL: Record<HierarchyTreeNode["type"], string> = {
@@ -28,14 +28,6 @@ const TYPE_LABEL: Record<HierarchyTreeNode["type"], string> = {
   story: "Story",
   task: "Task",
   subtask: "Subtask",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  todo: "Todo",
-  doing: "In Progress",
-  review: "In Review",
-  waiting: "Waiting",
-  done: "Done",
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -82,7 +74,6 @@ const mapNodeToDependencyType = (node: HierarchyTreeNode): "project" | "epic" | 
   return null;
 };
 
-
 interface HierarchyDetailsPanelProps {
   node?: HierarchyTreeNode;
   projectId: string;
@@ -125,23 +116,26 @@ const useNodeDependencies = (node: HierarchyTreeNode | undefined, projectId: str
 export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
   node,
   projectId,
-  viewMode,
-  onOpenKanban,
-  onOpenDetails,
+  viewMode: _viewMode,
+  onOpenKanban: _onOpenKanban,
+  onOpenDetails: _onOpenDetails,
 }) => {
-  const { data: dependencies = [], isLoading: isLoadingDependencies } = useNodeDependencies(node, projectId);
+  const { data: dependencies = [], isLoading: _isLoadingDependencies } = useNodeDependencies(node, projectId);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditingInline, setIsEditingInline] = useState(false);
+  const previousNodeIdRef = React.useRef<string | undefined>(undefined);
+  const storyParentEpicId = node?.type === "story" ? (node.parentId ?? "") : "";
+  const queryClient = useQueryClient();
   // Initialize editing fields based on current node
   const [editingFields, setEditingFields] = useState(() => ({
     status: node?.status || "todo",
     priority: node?.priority || "medium",
-    assignee: (node as any)?.assignee || "User",
+    assignee: node?.assignee ?? "User",
   }));
 
   // Update hooks for different node types
   const updateTaskMutation = useUpdateTask(projectId);
-  const updateStoryMutation = useUpdateStory("");
+  const updateStoryMutation = useUpdateStory(storyParentEpicId);
   const updateEpicMutation = useUpdateEpic(projectId);
 
   // Update editing fields when node changes, but only if not currently editing
@@ -150,68 +144,105 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
       setEditingFields({
         status: node.status || "todo",
         priority: node.priority || "medium",
-        assignee: (node as any)?.assignee || "User",
+        assignee: node.assignee ?? "User",
       });
     }
   }, [node, isEditingInline]);
 
-  const handleInlineUpdate = React.useCallback(async (field: string, value: string) => {
-    if (!node) return;
-
-    const updates: any = {
-      [field]: value,
-    };
-
-    try {
-      if (node.type === "task" || node.type === "subtask") {
-        await updateTaskMutation.mutateAsync({
-          taskId: node.id,
-          updates,
-        });
-        console.log(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`);
-      } else if (node.type === "story") {
-        await updateStoryMutation.mutateAsync({
-          storyId: node.id,
-          updates,
-        });
-        console.log(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`);
-      } else if (node.type === "epic") {
-        await updateEpicMutation.mutateAsync({
-          epicId: node.id,
-          updates,
-        });
-        console.log(`${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`);
-      }
-    } catch (error) {
-      console.error(`Failed to update ${field}:`, error);
-      console.error(`Failed to update ${field}`);
-      // Reset to original value on error
-      setEditingFields(prev => ({
-        ...prev,
-        [field]: node[field as keyof typeof node] || prev[field as keyof typeof prev],
-      }));
+  React.useEffect(() => {
+    const currentNodeId = node?.nodeId;
+    if (previousNodeIdRef.current !== currentNodeId) {
+      setIsEditingInline(false);
+      previousNodeIdRef.current = currentNodeId;
     }
-  }, [node, updateTaskMutation, updateStoryMutation, updateEpicMutation]);
+  }, [node?.nodeId]);
+
+  const invalidateHierarchyQueries = React.useCallback(() => {
+    invalidateETagCache(`/api/projects/${projectId}/hierarchy`);
+    invalidateETagCache(`/api/projects/${projectId}/hierarchy?include_tasks=true`);
+    queryClient.invalidateQueries({ queryKey: hierarchyQueryKeys.all });
+  }, [projectId, queryClient]);
+
+  const handleInlineUpdate = React.useCallback(
+    async (field: string, value: string) => {
+      if (!node) return;
+
+      const hierarchyUpdates: HierarchyUpdatePayload = {};
+      if (field === "status") {
+        hierarchyUpdates.status = value as HierarchyUpdatePayload["status"];
+      } else if (field === "priority") {
+        hierarchyUpdates.priority = value as HierarchyUpdatePayload["priority"];
+      } else if (field === "assignee") {
+        hierarchyUpdates.assignee = value;
+      } else if (field === "title") {
+        hierarchyUpdates.title = value;
+      } else if (field === "description") {
+        hierarchyUpdates.description = value;
+      }
+
+      try {
+        if (node.type === "task" || node.type === "subtask") {
+          await updateTaskMutation.mutateAsync({
+            taskId: node.id,
+            updates: { [field]: value } as UpdateTaskRequest,
+          });
+        } else if (node.type === "story") {
+          await updateStoryMutation.mutateAsync({
+            storyId: node.id,
+            updates: { [field]: value } as UpdateStoryRequest,
+          });
+        } else if (node.type === "epic") {
+          await updateEpicMutation.mutateAsync({
+            epicId: node.id,
+            updates: { [field]: value } as UpdateEpicRequest,
+          });
+        }
+
+        updateHierarchyQueryCache(queryClient, projectId, node, hierarchyUpdates);
+
+        invalidateHierarchyQueries();
+      } catch (error) {
+        console.error(`Failed to update ${field}:`, error);
+        // Reset to original value on error
+        setEditingFields((prev) => ({
+          ...prev,
+          [field]: node[field as keyof typeof node] || prev[field as keyof typeof prev],
+        }));
+      }
+    },
+    [
+      invalidateHierarchyQueries,
+      node,
+      projectId,
+      queryClient,
+      updateEpicMutation,
+      updateStoryMutation,
+      updateTaskMutation,
+    ],
+  );
 
   // Use ref to store timeout IDs for debouncing
   const timeoutRefs = React.useRef<Record<string, NodeJS.Timeout>>({});
 
   // Handle field changes with immediate UI update and debounced backend update
-  const handleFieldChange = React.useCallback((field: string, value: string) => {
-    // Immediately update the UI state
-    setEditingFields(prev => ({ ...prev, [field]: value }));
+  const handleFieldChange = React.useCallback(
+    (field: string, value: string) => {
+      // Immediately update the UI state
+      setEditingFields((prev) => ({ ...prev, [field]: value }));
 
-    // Clear any existing timeout for this field
-    if (timeoutRefs.current[field]) {
-      clearTimeout(timeoutRefs.current[field]);
-    }
+      // Clear any existing timeout for this field
+      if (timeoutRefs.current[field]) {
+        clearTimeout(timeoutRefs.current[field]);
+      }
 
-    // Debounce the backend update to prevent rapid-fire API calls
-    timeoutRefs.current[field] = setTimeout(() => {
-      handleInlineUpdate(field, value);
-      delete timeoutRefs.current[field];
-    }, 500);
-  }, [handleInlineUpdate]);
+      // Debounce the backend update to prevent rapid-fire API calls
+      timeoutRefs.current[field] = setTimeout(() => {
+        handleInlineUpdate(field, value);
+        delete timeoutRefs.current[field];
+      }, 500);
+    },
+    [handleInlineUpdate],
+  );
 
   // Cleanup timeouts on unmount
   React.useEffect(() => {
@@ -220,7 +251,7 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
     };
   }, []);
 
-  const dependencySummary = useMemo(() => {
+  const _dependencySummary = useMemo(() => {
     const summary = { blocks: 0, depends_on: 0, related_to: 0 };
     dependencies.forEach((dependency) => {
       summary[dependency.dependency_type] = (summary[dependency.dependency_type] || 0) + 1;
@@ -236,7 +267,7 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
     );
   }
 
-  const statusBadge = node.status ? STATUS_BADGE[node.status] ?? STATUS_BADGE.todo : undefined;
+  const statusBadge = node.status ? (STATUS_BADGE[node.status] ?? STATUS_BADGE.todo) : undefined;
   const priorityBadge = node.priority ? PRIORITY_BADGE[node.priority] : undefined;
 
   return (
@@ -248,22 +279,12 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
             <div className="flex items-center gap-2">
               <Badge className="uppercase text-[10px] tracking-wide text-slate-500">{TYPE_LABEL[node.type]}</Badge>
               {!isEditingInline && node.type !== "project" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditingInline(true)}
-                  className="h-6 w-6 p-0"
-                >
+                <Button variant="ghost" size="sm" onClick={() => setIsEditingInline(true)} className="h-6 w-6 p-0">
                   <Edit3 className="h-3 w-3" />
                 </Button>
               )}
               {isEditingInline && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditingInline(false)}
-                  className="h-6 w-6 p-0"
-                >
+                <Button variant="ghost" size="sm" onClick={() => setIsEditingInline(false)} className="h-6 w-6 p-0">
                   <X className="h-3 w-3" />
                 </Button>
               )}
@@ -272,20 +293,15 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             {/* Status field - editable inline */}
             {node.status && !isEditingInline && (
-              <Badge className={cn("capitalize", statusBadge ?? "bg-slate-100 text-slate-600")}>
-                {node.status}
-              </Badge>
+              <Badge className={cn("capitalize", statusBadge ?? "bg-slate-100 text-slate-600")}>{node.status}</Badge>
             )}
             {node.status && isEditingInline && (
-              <Select
-                value={editingFields.status}
-                onValueChange={(value) => handleFieldChange("status", value)}
-              >
+              <Select value={editingFields.status} onValueChange={(value) => handleFieldChange("status", value)}>
                 <SelectTrigger className="h-6 w-32 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUS_OPTIONS.map(option => (
+                  {STATUS_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -296,20 +312,22 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
 
             {/* Priority field - editable inline */}
             {node.priority && !isEditingInline && (
-              <Badge className={cn("capitalize", priorityBadge ?? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300")}>
+              <Badge
+                className={cn(
+                  "capitalize",
+                  priorityBadge ?? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+                )}
+              >
                 {node.priority}
               </Badge>
             )}
             {node.priority && isEditingInline && (
-              <Select
-                value={editingFields.priority}
-                onValueChange={(value) => handleFieldChange("priority", value)}
-              >
+              <Select value={editingFields.priority} onValueChange={(value) => handleFieldChange("priority", value)}>
                 <SelectTrigger className="h-6 w-28 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PRIORITY_OPTIONS.map(option => (
+                  {PRIORITY_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -319,21 +337,18 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
             )}
 
             {/* Assignee field - editable inline for tasks/subtasks */}
-            {(node.type === "task" || node.type === "subtask") && !isEditingInline && (node as any).assignee && (
+            {(node.type === "task" || node.type === "subtask") && !isEditingInline && node.assignee && (
               <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                {(node as any).assignee}
+                {node.assignee}
               </Badge>
             )}
             {(node.type === "task" || node.type === "subtask") && isEditingInline && (
-              <Select
-                value={editingFields.assignee}
-                onValueChange={(value) => handleFieldChange("assignee", value)}
-              >
+              <Select value={editingFields.assignee} onValueChange={(value) => handleFieldChange("assignee", value)}>
                 <SelectTrigger className="h-6 w-32 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ASSIGNEE_OPTIONS.map(option => (
+                  {ASSIGNEE_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>

@@ -19,6 +19,20 @@ logger = get_logger(__name__)
 
 
 class TaskService:
+    VALID_PRIORITIES = {"critical", "high", "medium", "low"}
+
+    def validate_priority(self, priority: str) -> tuple[bool, str]:
+        """Validate task priority string and return normalized value."""
+        if not isinstance(priority, str):
+            return False, "Priority must be a string"
+        normalized = priority.lower()
+        if normalized not in self.VALID_PRIORITIES:
+            return False, (
+                "Invalid priority value. Must be one of: "
+                + ", ".join(sorted(self.VALID_PRIORITIES))
+            )
+        return True, normalized
+
     """Service class for task operations"""
 
     VALID_STATUSES = ["todo", "doing", "review", "waiting", "done"]
@@ -53,6 +67,7 @@ class TaskService:
         sources: list[dict[str, Any]] = None,
         code_examples: list[dict[str, Any]] = None,
         story_id: str | None = None,
+        priority: str = "medium",
     ) -> tuple[bool, dict[str, Any]]:
         """
         Create a new task under a project with automatic reordering.
@@ -74,6 +89,13 @@ class TaskService:
                 return False, {"error": error_msg}
 
             task_status = "todo"
+
+            # Normalize and validate priority
+            priority_input = priority or "medium"
+            is_valid_priority, priority_result = self.validate_priority(priority_input)
+            if not is_valid_priority:
+                return False, {"error": priority_result}
+            priority_value = priority_result
 
             # REORDERING LOGIC: If inserting at a specific position, increment existing tasks
             if task_order > 0:
@@ -107,6 +129,7 @@ class TaskService:
                 "task_order": task_order,
                 "sources": sources or [],
                 "code_examples": code_examples or [],
+                "priority": priority_value,
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat(),
             }
@@ -132,6 +155,7 @@ class TaskService:
                         "status": task["status"],
                         "assignee": task["assignee"],
                         "task_order": task["task_order"],
+                        "priority": task.get("priority"),
                         "created_at": task["created_at"],
                     }
                 }
@@ -299,6 +323,7 @@ class TaskService:
                     "assignee": task.get("assignee", "User"),
                     "task_order": task.get("task_order", 0),
                     "feature": task.get("feature"),
+                    "priority": task.get("priority", "medium"),
                     "created_at": task["created_at"],
                     "updated_at": task["updated_at"],
                     "archived": task.get("archived", False),
@@ -416,6 +441,12 @@ class TaskService:
 
             if "feature" in update_fields:
                 update_data["feature"] = update_fields["feature"]
+
+            if "priority" in update_fields:
+                is_valid_priority, priority_result = self.validate_priority(update_fields["priority"])
+                if not is_valid_priority:
+                    return False, {"error": priority_result}
+                update_data["priority"] = priority_result
 
             if "story_id" in update_fields:
                 update_data["story_id"] = update_fields["story_id"]
@@ -554,6 +585,7 @@ class TaskService:
         assignee: str = "User",
         task_order: int = 0,
         feature: str | None = None,
+        priority: str = "medium",
         sources: list[dict[str, Any]] = None,
         code_examples: list[dict[str, Any]] = None,
     ) -> tuple[bool, dict[str, Any]]:
@@ -593,6 +625,12 @@ class TaskService:
             project_id = parent_task["project_id"]
             story_id = parent_task.get("story_id")
 
+            priority_input = priority or "medium"
+            is_valid_priority, priority_result = self.validate_priority(priority_input)
+            if not is_valid_priority:
+                return False, {"error": priority_result}
+            priority_value = priority_result
+
             subtask_data = {
                 "project_id": project_id,
                 "parent_task_id": parent_task_id,
@@ -601,6 +639,7 @@ class TaskService:
                 "status": "todo",
                 "assignee": assignee,
                 "task_order": task_order,
+                "priority": priority_value,
                 "sources": sources or [],
                 "code_examples": code_examples or [],
                 "created_at": datetime.now().isoformat(),
@@ -630,6 +669,7 @@ class TaskService:
                         "status": subtask["status"],
                         "assignee": subtask["assignee"],
                         "task_order": subtask["task_order"],
+                        "priority": subtask.get("priority"),
                         "created_at": subtask["created_at"],
                     }
                 }
@@ -676,6 +716,7 @@ class TaskService:
                     "assignee": subtask.get("assignee", "User"),
                     "task_order": subtask.get("task_order", 0),
                     "feature": subtask.get("feature"),
+                    "priority": subtask.get("priority", "medium"),
                     "created_at": subtask["created_at"],
                     "updated_at": subtask["updated_at"],
                     "archived": subtask.get("archived", False),

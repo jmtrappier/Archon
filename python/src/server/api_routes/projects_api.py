@@ -77,6 +77,7 @@ class CreateTaskRequest(BaseModel):
     feature: str | None = None
     story_id: str | None = None  # Support for hierarchy
     parent_task_id: str | None = None  # Support for subtasks
+    priority: str | None = "medium"
 
 
 class CreateEpicRequest(BaseModel):
@@ -1743,6 +1744,7 @@ async def create_task(request: CreateTaskRequest):
                 assignee=request.assignee or "User",
                 task_order=request.task_order or 0,
                 feature=request.feature,
+                priority=request.priority or "medium",
             )
 
             if not success:
@@ -1766,6 +1768,7 @@ async def create_task(request: CreateTaskRequest):
                 task_order=request.task_order or 0,
                 feature=request.feature,
                 story_id=request.story_id,  # Support for hierarchy
+                priority=request.priority or "medium",
             )
 
             if not success:
@@ -1989,6 +1992,7 @@ class UpdateTaskRequest(BaseModel):
     assignee: str | None = None
     task_order: int | None = None
     feature: str | None = None
+    priority: str | None = None
 
 
 class ReorderTasksRequest(BaseModel):
@@ -2052,6 +2056,8 @@ async def update_task(task_id: str, request: UpdateTaskRequest):
             update_fields["task_order"] = request.task_order
         if request.feature is not None:
             update_fields["feature"] = request.feature
+        if request.priority is not None:
+            update_fields["priority"] = request.priority
 
         # Use TaskService to update the task
         task_service = TaskService()

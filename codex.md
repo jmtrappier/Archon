@@ -1,447 +1,121 @@
-# codex.md - Instructions Unifiées Archon + BMAD
+# Codex Instructions — Source of Truth
 
-Ce fichier fournit les directives pour Codex lors du travail sur le projet Archon avec intégration de la méthodologie BMAD.
-
-## RÈGLE CRITIQUE ARCHON-FIRST
-**AVANT** toute autre action, pour TOUT scénario de gestion de tâches :
-
-1. **VÉRIFIER** la disponibilité du serveur MCP Archon
-2. **UTILISER** Archon comme système de gestion principal
-3. **NE PAS** créer ou mettre à jour des documents locaux pour la planification (stories, tâches, suivis) : toute création/modification doit passer par `archon:manage_task` / `archon:manage_project`
-4. **TodoWrite** uniquement pour suivi personnel APRÈS configuration Archon
-5. **RETENIR** systématiquement le nom et l'ID du projet pour éviter les erreurs entre sessions
-
-**VIOLATION** : Si vous utilisez TodoWrite en premier ou si vous stockez une story/plan hors MCP Archon, vous violez cette règle. Arrêtez et recommencez avec Archon.
-
-## Politique d'exécution Docker
-- **Serveurs & tests** : ne jamais lancer `npm run dev`, `uv run python -m src.server.main` ou tout autre service réseau directement sur l'hôte. Démarrer l'application, les API et les tests e2e exclusivement via les conteneurs Docker fournis (ex. `make dev-docker`, `docker compose --profile backend up -d`).
-- **Commandes locales autorisées** : seules les opérations sans ouverture de port (lint, build, génération statique) peuvent être exécutées hors conteneur si nécessaire.
-
-## Localisation des Informations Projet
-
-### Répertoire Principal de Documentation
-**IMPORTANT** : Toutes les informations relatives au projet se trouvent dans le dossier `/traxis` et ses sous-dossiers. Toutefois, la gestion opérationnelle (stories, statuts, ordonnancement) doit rester centralisée dans MCP Archon.
-
-- `/traxis/PRPs/` - Documents de planification et spécifications
-- `/traxis/architecture/` - Documentation architecture technique
-- `/traxis/brainstorming/` - Sessions de brainstorming et idées
-- `/traxis/migration/` - Scripts et plans de migration
-- `/traxis/tests/` - Plans de tests et validations
-- 🚫 **Ne jamais** stocker de nouvelles stories/tasks dans ce dépôt : utilisez systématiquement MCP Archon pour créer ou mettre à jour ces éléments.
-
-### Sources d'Information Critiques
-
-#### MCP Archon - Gestion Projet et Tâches
-- **État d'avancement** : Tasks, EPICs, Stories avec statuts
-- **Documentation technique** : Documents attachés aux projets
-- **Planification** : Roadmap et priorités
-- **Historique** : Versions et changements
-
-#### MCP Serena - Codebase et Mémoires
-- **Structure codebase** : Architecture et patterns de code
-- **Mémoires techniques** : Informations stockées sur le projet
-- **Analyse de code** : Patterns et conventions découverts
-
-#### Signaler Documentation Manquante
-Si une documentation technique importante manque dans Archon, **TOUJOURS** :
-1. Le signaler explicitement à l'utilisateur
-2. Suggérer de l'ajouter à Archon via `manage_document`
-3. Proposer de créer la documentation manquante
-
-## Identification du Projet Archon
-
-### Variables Critiques à Maintenir
-```
-PROJECT_NAME: "Archon - TRAXIS"
-PROJECT_ID: a37b53ff-e647-44a4-998b-e920582ed376
-GITHUB_REPO: "https://github.com/jmtrappier/Archon"
-BRANCH="traxis"
-```
-
-**IMPÉRATIF** : Ces informations doivent être connues et utilisées dans CHAQUE session.
-
-### Vérification d'Identité du Projet
-```bash
-# Toujours commencer par vérifier le projet actuel
-archon:find_projects(project_id="[PROJECT_ID]")
-
-# Ou rechercher par nom si ID inconnu
-archon:find_projects(query="Archon BMAD Integration")
-```
-
-## Workflow BMAD-Archon Intégré
-
-### Phase 1: Initialisation Projet
-```bash
-# 1. Créer ou identifier le projet Archon
-archon:manage_project(
-  action="create",
-  title="Archon - TRAXIS",
-  description="Fork d'Archon pour implémenter la hiérarchie PROJET > EPIC > STORY > TASK > SUBTASK",
-  github_repo="https://github.com/jmtrappier/Archon.git",
-  branch="traxis"
-)
-
-# 2. Sauvegarder PROJECT_ID pour usage futur
-# Noter l'ID retourné dans vos règles internes
-```
-
-### Phase 2: Gestion des Features via Tags
-**Règle de Tagging BMAD-Archon** :
-- Format tag : `EPIC-[N]-[NOM]` (ex: "EPIC-1-BDD", "EPIC-2-API")
-- Chaque STORY devient une task avec tag EPIC
-- Granularité : STORY = TASK Archon
-- Hiérarchie simulée via tags cohérents
-
-```bash
-# Création d'une task STORY avec tag EPIC
-archon:manage_task(
-  action="create",
-  project_id="[PROJECT_ID]",
-  title="[STORY_TITLE]",
-  description="[STORY_DESCRIPTION avec critères acceptation]",
-  feature="EPIC-1-BDD",  # TAG OBLIGATOIRE
-  task_order=80,  # Priorité haute pour Epic 1
-  status="todo"
-)
-```
-
-### Phase 3: Mise à Jour Obligatoire Archon
-**IMPÉRATIF** après chaque modification :
-
-```bash
-# Mise à jour statut task
-archon:manage_task(
-  action="update",
-  task_id="[TASK_ID]",
-  status="doing|review|done"
-)
-
-# Vérification état projet
-archon:find_tasks(
-  project_id="[PROJECT_ID]",
-  filter_by="status",
-  filter_value="doing"
-)
-```
-
-## Méthodologie BMAD Adaptée
-
-### Structure Hiérarchique Cible
-```
-PROJET: Archon BMAD Integration
-├── EPIC-1-BDD: Base de Données Hiérarchique
-│   ├── STORY: Migration schema existant
-│   ├── STORY: Tables hiérarchiques EPIC/STORY
-│   └── STORY: Interface API CRUD
-├── EPIC-2-API: Extension API REST
-│   └── [Stories à définir]
-└── EPIC-3-UI: Interface Utilisateur
-    └── [Stories à définir]
-```
-
-### Cycle de Développement BMAD-Archon
-
-#### 1. Début de Session
-```bash
-# OBLIGATOIRE : Vérifier projet et tâches
-archon:find_projects(project_id="[PROJECT_ID]")
-archon:find_tasks(
-  project_id="[PROJECT_ID]",
-  filter_by="status",
-  filter_value="todo",
-  include_closed=false
-)
-```
-
-#### 2. Recherche et Planification
-```bash
-# Recherche patterns architecturaux
-archon:rag_search_knowledge_base(
-  query="database hierarchical structure PostgreSQL",
-  match_count=5
-)
-
-# Exemples de code spécifiques
-archon:rag_search_code_examples(
-  query="PostgreSQL parent child relationships",
-  match_count=3
-)
-```
-
-#### 3. Définition des Stories (Epic 1 Focus)
-
-**Questions BMAD pour Epic 1-BDD** :
-- Comment migrer les données existantes sans perte ?
-- Quelle structure pour la compatibilité ascendante ?
-- Comment gérer les relations parent-enfant existantes ?
-
-**Stories Epic 1** :
-1. **STORY-1.1** : Analyse schema actuel et plan migration
-2. **STORY-1.2** : Création tables EPIC et STORY avec relations
-3. **STORY-1.3** : Migration données existantes vers nouvelle hiérarchie
-4. **STORY-1.4** : Tests intégrité référentielle
-5. **STORY-1.5** : API CRUD pour nouvelles entités
-
-#### 4. Exécution Task-Driven
-```bash
-# Avant chaque implémentation
-archon:manage_task(
-  action="update",
-  task_id="[CURRENT_TASK_ID]",
-  status="doing"
-)
-
-# Recherche spécifique à la tâche
-archon:rag_search_code_examples(
-  query="[specific implementation pattern]",
-  match_count=3
-)
-
-# Après implémentation
-archon:manage_task(
-  action="update",
-  task_id="[CURRENT_TASK_ID]",
-  status="review"  # Pour validation utilisateur
-)
-```
-
-## Principes de Développement Beta
-
-### Règles Fondamentales
-- **Déploiement local uniquement** - chaque utilisateur son instance
-- **Pas de compatibilité ascendante** - suppression immédiate du code déprécié
-- **Erreurs détaillées plutôt que échecs gracieux** - identifier et corriger rapidement
-- **Casser pour améliorer** - itération rapide en beta
-
-### Gestion des Erreurs
-
-#### Échec Rapide et Bruyant
-Ces erreurs doivent arrêter l'exécution immédiatement :
-- Échecs de démarrage des services
-- Configuration manquante
-- Échecs de connexion base de données
-- Erreurs d'authentification/autorisation
-- Corruption ou erreurs de validation des données
-
-#### Continuer avec Journalisation Détaillée
-Ces opérations doivent continuer mais signaler les échecs :
-- Traitement par lots
-- Tâches en arrière-plan
-- Événements WebSocket
-- Fonctionnalités optionnelles
-
-## Architecture du Projet
-
-### Services
-- **Frontend (port 3737)** : React + TypeScript + Vite + TailwindCSS
-- **Serveur Principal (port 8181)** : FastAPI avec polling HTTP
-- **Serveur MCP (port 8051)** : Serveur protocole MCP léger
-- **Service Agents (port 8052)** : Agents PydanticAI
-- **Base de Données** : Supabase (PostgreSQL + pgvector)
-
-### Architecture Frontend Verticale (/features)
-```
-src/features/
-├── ui/primitives/     # Composants Radix UI
-├── projects/
-│   ├── components/
-│   ├── hooks/
-│   ├── services/
-│   ├── types/
-│   ├── tasks/         # Sous-feature tasks
-│   └── documents/     # Sous-feature documents
-```
-
-## Commandes de Développement
-
-### Frontend (archon-ui-main/)
-> ⚠️ Utiliser ces commandes uniquement pour build/lint locaux. Pour exécuter ou tester l'application, passer par les conteneurs Docker.
-```bash
-npm run dev              # Serveur développement port 3737
-npm run build            # Build production
-npm run biome            # Vérifier répertoire features
-npm run biome:fix        # Auto-correction
-npm run test             # Tests en mode watch
-```
-
-### Backend (python/)
-> ⚠️ Réserver ces commandes aux opérations locales hors réseau (lint, scripts ponctuels). Les tests et le serveur s'exécutent depuis Docker.
-```bash
-uv sync --group all      # Installer dépendances
-uv run python -m src.server.main  # Serveur local 8181
-uv run pytest           # Tous les tests
-uv run ruff check --fix  # Auto-correction linting
-```
-
-### Workflows Rapides
-```bash
-make dev                 # Développement hybride (à lancer depuis l'environnement Docker)
-make dev-docker          # Mode Docker complet (préféré pour exécution/tests)
-make lint               # Linters frontend + backend
-make test               # Tous les tests (dans les containers)
-```
-
-## Documents de Commit
-
-### Règles de Documentation des Commits
-**IMPORTANT** : Les fichiers de commit doivent être générés UNIQUEMENT à la demande explicite de l'utilisateur.
-
-#### Format et Nommage
-- **Nom de fichier** : `traxis/YYYY-MM-DD_HHhMM-commit.md`
-- **Langue** : ANGLAIS UNIQUEMENT (même si le développement se fait en français)
-- **Emplacement** : `/home/jmtrappier/Archon/traxis/` directory
-
-#### Structure Requise du Document
-```markdown
-# Commit TRAXIS - September 15, 2025, 10h42
-
-## 🎯 [STORY/EPIC] - [Title] COMPLETED
-
-### Executive Summary
-Brief description of what was accomplished
+Ce fichier est **l’unique référence** pour Codex dans ce repo.  
+Toute directive contradictoire ailleurs (y compris `AGENTS.md`) est **supplantée** par ce document.
 
 ---
 
-## ✅ DEVELOPMENT COMPLETED
-
-### 📁 New Files Created
-- List of new files with purpose
-
-### 🔧 Modified Existing Files
-- Critical changes with line numbers where relevant
+## RÈGLE CRITIQUE : ARCHON-FIRST
+- Toute création, modification ou suivi de **projects, tasks, docs** doit passer par **MCP Archon**.  
+- Interdiction de stocker ou maintenir des fichiers locaux de planification (stories, tasks, docs) dans le dépôt.  
+- `/traxis` peut contenir des documents de support technique, jamais de planification.  
 
 ---
 
-## 🧪 TESTS AND QUALITY
+## MCP Obligatoires
+- **archon** → gestion projet/tâches/docs (*primary authority*).  
+- **serena** → mémoire projet / recherche codebase.  
+- **playwright** → tests visuels UI (même si les scripts passent).  
 
-### Test Results
-- Test counts and pass rates
-- Technical fixes applied
-
----
-
-## 🚀 DEPLOYMENT AND VALIDATION
-
-### Docker/Environment
-- Deployment status
-- Visual tests with Playwright if applicable
+### Politique réseau (Docker-only)
+- Ne jamais coder/configurer d’URL en `localhost` ou `127.0.0.1`.  
+- Les endpoints MCP et API **doivent** venir de variables d’environnement et cibler des **noms de services Docker**.  
+- Si Codex tourne hors conteneur, exposer via reverse-proxy/Traefik et utiliser `${MCP_URL_*}`.  
 
 ---
 
-## 📊 PROJECT STATUS BMAD-TRAXIS
+## Configuration Codex (MCP)
 
-### EPIC Status Overview
-- Current completion status
-- Next steps ready
-
----
-
-## 🔬 TECHNICAL ARCHITECTURE
-
-### Implementation Details
-- Patterns used
-- Service integrations
-
----
-
-## 🎯 NEXT STEPS
-
-### Ready for Next Development
-- What's ready to start
-- Dependencies satisfied
-
----
-
-**Commit made on [Date] at [Time]**
-**Developer: Codex AI IDE Agent**
-**Branch: traxis**
-**Project: Archon BMAD Integration ([PROJECT_ID])**
+```json
+{
+  "mcpServers": {
+    "archon":     { "transport": "sse", "url": "${MCP_URL_ARCHON}" },
+    "serena":     { "transport": "sse", "url": "${MCP_URL_SERENA}" },
+    "playwright": { "transport": "sse", "url": "${MCP_URL_PLAYWRIGHT}" }
+  }
+}
 ```
 
-#### Méthodologie de Création
-1. **Seulement à la demande** - Ne jamais créer spontanément
-2. **Résumé complet** - Toutes les modifications importantes documentées
-3. **Tests inclus** - Status des tests et corrections appliquées
-4. **Architecture** - Patterns et intégrations techniques
-5. **Statut projet** - Où en est le projet BMAD-TRAXIS complet
-6. **Prochaines étapes** - Ce qui est prêt à commencer
-7. **Détails techniques** - Numéros de ligne pour modifications critiques
-8. **Validation** - Tests visuels et API si effectués
+### Variables d’environnement
 
-## Outils MCP Disponibles
-
-### Gestion des Connaissances
-- `rag_search_knowledge_base` - Recherche dans la base de connaissances
-- `rag_search_code_examples` - Trouver extraits de code
-- `rag_get_available_sources` - Lister sources disponibles
-
-### Gestion de Projet
-- `find_projects` - Trouver projets (avec project_id pour spécifique)
-- `manage_project` - Gérer projets (actions: "create", "update", "delete")
-
-### Gestion des Tâches
-- `find_tasks` - Trouver tâches (avec task_id pour spécifique)
-- `manage_task` - Gérer tâches (actions: "create", "update", "delete")
-
-### Gestion Documents
-- `find_documents` - Trouver documents
-- `manage_document` - Gérer documents
-
-## Variables d'Environnement
-
-Requis dans `.env` :
 ```bash
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your-service-key-here
+# .env.example
+MCP_URL_ARCHON=http://archon-mcp:8051/sse
+MCP_URL_SERENA=http://serena-mcp:8061/sse
+MCP_URL_PLAYWRIGHT=http://playwright-mcp:8071/sse
 ```
-
-Optionnel :
-```bash
-LOGFIRE_TOKEN=your-logfire-token
-LOG_LEVEL=INFO
-ARCHON_SERVER_PORT=8181
-ARCHON_MCP_PORT=8051
-ARCHON_UI_PORT=3737
-```
-
-## Standards de Qualité
-
-### Frontend
-- **TypeScript** : Mode strict, pas de implicit any
-- **Biome** pour `/src/features/` : 120 caractères, guillemets doubles
-- **ESLint** pour code legacy
-- **Tests** : Vitest avec React Testing Library
-
-### Backend
-- **Python 3.12** avec longueur ligne 120 caractères
-- **Ruff** pour linting
-- **Mypy** pour vérification types
-- **Pytest** pour tests avec support async
-
-## Règles de Développement Solo
-
-### Session de Travail Type
-1. **Démarrage** : Vérifier projet et tâches Archon
-2. **Recherche** : Patterns et exemples pour la tâche courante
-3. **Implémentation** : Code basé sur recherche
-4. **Mise à jour** : Statut tâche dans Archon
-5. **Validation** : Tests et review
-
-### Critères de Qualité Task
-Chaque tâche doit respecter avant "done" :
-- [ ] Implémentation suit les bonnes pratiques recherchées
-- [ ] Code suit les guidelines du projet
-- [ ] Considérations sécurité adressées
-- [ ] Fonctionnalité de base testée
-- [ ] Mise à jour Archon effectuée
-
-### Notes Importantes
-- Fonctionnalité projets optionnelle - toggle dans Settings UI
-- Communication services via HTTP uniquement
-- Polling HTTP gère toutes les mises à jour
-- TanStack Query pour récupération données - PAS DE PROP DRILLING
-- Architecture verticale dans `/features`
 
 ---
-**RAPPEL CRITIQUE** : Toujours maintenir PROJECT_NAME et PROJECT_ID. Mise à jour obligatoire d'Archon après chaque modification. Focus Epic 1-BDD en priorité avec structure de tags cohérente.
+
+## Politique d’exécution Docker
+- Toute exécution et tout test passent **uniquement via Docker**.  
+- Jamais d’URL codée en dur (`localhost`/`127.0.0.1`).  
+- Utiliser les services Docker (`archon-mcp`, `serena-mcp`, `playwright-mcp`) et les variables `${MCP_URL_*}`.  
+
+---
+
+## Flux de travail Codex
+
+1. **Démarrage**  
+   - Vérifier l’existence d’un projet via `archon.project.list`.  
+   - Si aucun projet, créer via `archon.project.create`.  
+   - Mémoriser `PROJECT_ID`.  
+
+2. **Gestion**  
+   - `archon.task.*` pour stories/tasks.  
+   - `archon.doc.*` pour docs techniques.  
+   - Toujours `list → get(fields)` avant `update`.  
+   - **Jamais** de création/édition de fichiers locaux de planification.  
+
+3. **Recherche codebase**  
+   - Utiliser **Serena** (`serena.search`, `serena.symbols`).  
+
+4. **Validation UI**  
+   - Utiliser **Playwright** (`playwright.run`, `playwright.snapshot`).  
+
+5. **Contextes longs**  
+   - Si besoin, appeler `archon.context.summarize` pour résumer sans saturer le contexte.  
+
+---
+
+## Discipline agent
+- **Toujours** passer par Archon → Serena → Playwright.  
+- **Jamais** injecter de gros blocs de contexte ; utiliser `context.summarize`.  
+- Utiliser `fields`/`range` pour limiter les réponses.  
+- Pas d’ID inventés : `list/get` avant toute création ou mise à jour.  
+- Chaque action doit rapprocher du livrable, en étapes courtes et vérifiables.  
+
+---
+
+## Exemple Compose (réseau MCP)
+
+```yaml
+networks:
+  mcp:
+    name: mcp_net
+
+services:
+  archon-mcp:
+    image: your/archon-mcp:latest
+    networks: [mcp]
+    ports: ["8051:8051"]
+
+  serena-mcp:
+    image: your/serena-mcp:latest
+    networks: [mcp]
+    ports: ["8061:8061"]
+
+  playwright-mcp:
+    image: your/playwright-mcp:latest
+    networks: [mcp]
+    ports: ["8071:8071"]
+```
+
+---
+
+## Style de sortie (hérité BMAD)
+- Toujours structurer les réponses en étapes courtes.  
+- **Clarifier l’objectif** (1–2 phrases) avant de proposer des actions.  
+- **Lister les tool calls précis** nécessaires.  
+- **Proposer les Next Best Actions** (≤3) puis s’arrêter.  
+- Éviter la verbosité : résumer, pointer vers IDs, pas de copier-coller massif.  

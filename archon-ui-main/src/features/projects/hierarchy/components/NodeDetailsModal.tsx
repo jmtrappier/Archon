@@ -1,14 +1,32 @@
-import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { X, Save, Edit3, Eye } from "lucide-react";
-import { Button, Badge, Card, CardContent, CardHeader, CardTitle, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, Input, Label } from "@/features/ui/primitives";
-import type { HierarchyTreeNode } from "../../services/hierarchyService";
-import type { Priority, Assignee, HierarchyStatus } from "../../shared/types";
-import { useUpdateTask } from "../../tasks/hooks/useTaskQueries";
-import { useUpdateStory } from "../../stories/hooks/useStoryQueries";
+import { Edit3, Save, X } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/features/ui/primitives";
 import { useUpdateEpic } from "../../epics/hooks/useEpicQueries";
+import type { HierarchyTreeNode } from "../../services/hierarchyService";
+import { invalidateETagCache } from "../../shared/apiWithEtag";
+import type { Assignee, HierarchyStatus, Priority } from "../../shared/types";
+import type { UpdateEpicRequest, UpdateStoryRequest, UpdateTaskRequest } from "../../shared/types/hierarchy";
+import { useUpdateStory } from "../../stories/hooks/useStoryQueries";
+import { useUpdateTask } from "../../tasks/hooks/useTaskQueries";
 import { hierarchyQueryKeys } from "../hooks/useHierarchyData";
-import { cn } from "@/lib/utils";
+import type { HierarchyUpdatePayload } from "../utils/updateHierarchyCache";
+import { updateHierarchyQueryCache } from "../utils/updateHierarchyCache";
 
 const TYPE_LABEL: Record<HierarchyTreeNode["type"], string> = {
   project: "Projet",
@@ -41,6 +59,23 @@ interface NodeDetailsModalProps {
   mode?: "view" | "edit";
 }
 
+type NodeFormState = {
+  title: string;
+  description: string;
+  status: HierarchyStatus;
+  priority: Priority;
+  assignee: Assignee | "";
+};
+
+const ALLOWED_ASSIGNEES: Assignee[] = ["User", "Archon", "AI IDE Agent"];
+
+const normalizeAssignee = (value: string | undefined): Assignee | "" => {
+  if (!value) {
+    return "";
+  }
+  return ALLOWED_ASSIGNEES.includes(value as Assignee) ? (value as Assignee) : "";
+};
+
 export const NodeDetailsModal: React.FC<NodeDetailsModalProps> = ({
   node,
   projectId,
@@ -49,80 +84,144 @@ export const NodeDetailsModal: React.FC<NodeDetailsModalProps> = ({
   mode: initialMode = "view",
 }) => {
   const [mode, setMode] = useState<"view" | "edit">(initialMode);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<NodeFormState>({
     title: node.title || "",
     description: node.description || "",
-    status: node.status || "todo",
-    priority: node.priority || "medium",
-    assignee: node.assignee || "",
+    status: (node.status as HierarchyStatus) || "todo",
+    priority: (node.priority as Priority) || "medium",
+    assignee: normalizeAssignee(node.assignee as string | undefined),
   });
 
   const queryClient = useQueryClient();
+  const storyEpicId = node.type === "story" ? (node.parentId ?? "") : "";
+  const isTaskLike = node.type === "task" || node.type === "subtask";
+  const baseFieldId = useId();
+  const titleFieldId = `${baseFieldId}-title`;
+  const descriptionFieldId = `${baseFieldId}-description`;
+  const assigneeFieldId = `${baseFieldId}-assignee`;
 
   // Mutations for different node types
   const updateTaskMutation = useUpdateTask(projectId);
-  const updateStoryMutation = useUpdateStory("");
+  const updateStoryMutation = useUpdateStory(storyEpicId);
   const updateEpicMutation = useUpdateEpic(projectId);
 
   // Reset form data when node changes
   useEffect(() => {
+    setMode(initialMode);
     setFormData({
       title: node.title || "",
       description: node.description || "",
-      status: node.status || "todo",
-      priority: node.priority || "medium",
-      assignee: node.assignee || "",
+      status: (node.status as HierarchyStatus) || "todo",
+      priority: (node.priority as Priority) || "medium",
+      assignee: normalizeAssignee(node.assignee as string | undefined),
     });
-  }, [node]);
+  }, [initialMode, node]);
 
   // Helper to invalidate hierarchy cache
   const invalidateHierarchy = () => {
     queryClient.invalidateQueries({ queryKey: hierarchyQueryKeys.all });
-    queryClient.invalidateQueries({ queryKey: hierarchyQueryKeys.detail(projectId, false, true) });
-    queryClient.invalidateQueries({ queryKey: hierarchyQueryKeys.tree(projectId) });
+    invalidateETagCache(`/api/projects/${projectId}/hierarchy`);
+    invalidateETagCache(`/api/projects/${projectId}/hierarchy?include_tasks=true`);
   };
 
   const handleSave = async () => {
     if (!node) return;
 
-    const updates = {
-      title: formData.title,
-      description: formData.description,
-      status: formData.status,
-      priority: formData.priority,
-      assignee: formData.assignee,
-    };
+    const trimmedTitle = formData.title.trim();
+    const trimmedDescription = formData.description.trim();
+    const statusValue = mode === "edit" && node.type !== "epic" ? formData.status : undefined;
+    const priorityValue = mode === "edit" && node.type !== "epic" ? formData.priority : undefined;
+    const assigneeValue = isTaskLike && formData.assignee ? formData.assignee : undefined;
 
     try {
       switch (node.type) {
         case "task":
         case "subtask":
-          await updateTaskMutation.mutateAsync({
-            taskId: node.id,
-            updates,
-          });
+          {
+            const taskUpdates: Partial<UpdateTaskRequest> = {};
+            if (trimmedTitle && trimmedTitle !== node.title) {
+              taskUpdates.title = trimmedTitle;
+            }
+            if (trimmedDescription !== (node.description ?? "")) {
+              taskUpdates.description = trimmedDescription;
+            }
+            if (statusValue && statusValue !== node.status) {
+              taskUpdates.status = statusValue;
+            }
+            if (priorityValue && priorityValue !== node.priority) {
+              taskUpdates.priority = priorityValue;
+            }
+            if (assigneeValue && assigneeValue !== node.assignee) {
+              taskUpdates.assignee = assigneeValue;
+            }
+
+            if (Object.keys(taskUpdates).length === 0) {
+              setMode("view");
+              return;
+            }
+
+            await updateTaskMutation.mutateAsync({
+              taskId: node.id,
+              updates: taskUpdates as UpdateTaskRequest,
+            });
+            updateHierarchyQueryCache(queryClient, projectId, node, taskUpdates as HierarchyUpdatePayload);
+          }
           break;
         case "story":
-          await updateStoryMutation.mutateAsync({
-            storyId: node.id,
-            updates,
-          });
+          {
+            const storyUpdates: Partial<UpdateStoryRequest> = {};
+            if (trimmedTitle && trimmedTitle !== node.title) {
+              storyUpdates.title = trimmedTitle;
+            }
+            if (trimmedDescription !== (node.description ?? "")) {
+              storyUpdates.description = trimmedDescription;
+            }
+            if (statusValue && statusValue !== node.status) {
+              storyUpdates.status = statusValue;
+            }
+            if (priorityValue && priorityValue !== node.priority) {
+              storyUpdates.priority = priorityValue;
+            }
+
+            if (Object.keys(storyUpdates).length === 0) {
+              setMode("view");
+              return;
+            }
+
+            await updateStoryMutation.mutateAsync({
+              storyId: node.id,
+              updates: storyUpdates as UpdateStoryRequest,
+            });
+            updateHierarchyQueryCache(queryClient, projectId, node, storyUpdates as HierarchyUpdatePayload);
+          }
           break;
         case "epic":
           // Only update description and title for epics (API limitation)
-          await updateEpicMutation.mutateAsync({
-            epicId: node.id,
-            updates: {
-              title: formData.title,
-              description: formData.description,
-            },
-          });
+          {
+            const epicUpdates: Partial<UpdateEpicRequest> = {};
+            if (trimmedTitle && trimmedTitle !== node.title) {
+              epicUpdates.title = trimmedTitle;
+            }
+            if (trimmedDescription !== (node.description ?? "")) {
+              epicUpdates.description = trimmedDescription;
+            }
+
+            if (Object.keys(epicUpdates).length === 0) {
+              setMode("view");
+              return;
+            }
+
+            await updateEpicMutation.mutateAsync({
+              epicId: node.id,
+              updates: epicUpdates as UpdateEpicRequest,
+            });
+            updateHierarchyQueryCache(queryClient, projectId, node, epicUpdates as HierarchyUpdatePayload);
+          }
           break;
       }
 
       invalidateHierarchy();
       setMode("view");
-      console.log("✅ Node updated successfully:", updates);
     } catch (error) {
       console.error("❌ Error updating node:", error);
     }
@@ -145,43 +244,23 @@ export const NodeDetailsModal: React.FC<NodeDetailsModalProps> = ({
           </div>
           <div className="flex items-center gap-2">
             {mode === "view" && !isEpic && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMode("edit")}
-                className="flex items-center gap-2"
-              >
+              <Button variant="outline" size="sm" onClick={() => setMode("edit")} className="flex items-center gap-2">
                 <Edit3 className="h-4 w-4" />
                 Éditer
               </Button>
             )}
             {mode === "edit" && (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMode("view")}
-                  disabled={isUpdating}
-                >
+                <Button variant="outline" size="sm" onClick={() => setMode("view")} disabled={isUpdating}>
                   Annuler
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={isUpdating}
-                  className="flex items-center gap-2"
-                >
+                <Button size="sm" onClick={handleSave} disabled={isUpdating} className="flex items-center gap-2">
                   <Save className="h-4 w-4" />
                   {isUpdating ? "Sauvegarde..." : "Sauvegarder"}
                 </Button>
               </>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="p-2"
-            >
+            <Button variant="ghost" size="sm" onClick={onClose} className="p-2">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -190,34 +269,32 @@ export const NodeDetailsModal: React.FC<NodeDetailsModalProps> = ({
         <CardContent className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium">
+            <Label htmlFor={titleFieldId} className="text-sm font-medium">
               Titre
             </Label>
             {mode === "edit" ? (
               <Input
-                id="title"
+                id={titleFieldId}
                 value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
                 className="w-full"
                 disabled={isUpdating}
               />
             ) : (
-              <p className="text-sm p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
-                {formData.title}
-              </p>
+              <p className="text-sm p-3 bg-slate-50 dark:bg-slate-800 rounded-md">{formData.title}</p>
             )}
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium">
+            <Label htmlFor={descriptionFieldId} className="text-sm font-medium">
               Description
             </Label>
             {mode === "edit" ? (
               <Textarea
-                id="description"
+                id={descriptionFieldId}
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Ajouter une description..."
                 className="w-full min-h-[120px] resize-y"
                 disabled={isUpdating}
@@ -237,7 +314,7 @@ export const NodeDetailsModal: React.FC<NodeDetailsModalProps> = ({
             {mode === "edit" && !isEpic ? (
               <Select
                 value={formData.status}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as HierarchyStatus }))}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value as HierarchyStatus }))}
                 disabled={isUpdating}
               >
                 <SelectTrigger>
@@ -253,7 +330,7 @@ export const NodeDetailsModal: React.FC<NodeDetailsModalProps> = ({
               </Select>
             ) : (
               <p className="text-sm p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
-                {STATUS_OPTIONS.find(opt => opt.value === formData.status)?.label || formData.status}
+                {STATUS_OPTIONS.find((opt) => opt.value === formData.status)?.label || formData.status}
                 {isEpic && " (lecture seule)"}
               </p>
             )}
@@ -267,7 +344,7 @@ export const NodeDetailsModal: React.FC<NodeDetailsModalProps> = ({
             {mode === "edit" && !isEpic ? (
               <Select
                 value={formData.priority}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value as Priority }))}
+                onValueChange={(value) => setFormData((prev) => ({ ...prev, priority: value as Priority }))}
                 disabled={isUpdating}
               >
                 <SelectTrigger>
@@ -283,7 +360,7 @@ export const NodeDetailsModal: React.FC<NodeDetailsModalProps> = ({
               </Select>
             ) : (
               <p className="text-sm p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
-                {PRIORITY_OPTIONS.find(opt => opt.value === formData.priority)?.label || formData.priority}
+                {PRIORITY_OPTIONS.find((opt) => opt.value === formData.priority)?.label || formData.priority}
                 {isEpic && " (lecture seule)"}
               </p>
             )}
@@ -291,14 +368,14 @@ export const NodeDetailsModal: React.FC<NodeDetailsModalProps> = ({
 
           {/* Assignee */}
           <div className="space-y-2">
-            <Label htmlFor="assignee" className="text-sm font-medium">
+            <Label htmlFor={assigneeFieldId} className="text-sm font-medium">
               Assigné à
             </Label>
             {mode === "edit" && !isEpic ? (
               <Input
-                id="assignee"
+                id={assigneeFieldId}
                 value={formData.assignee}
-                onChange={(e) => setFormData(prev => ({ ...prev, assignee: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, assignee: e.target.value }))}
                 placeholder="Nom de l'assigné"
                 className="w-full"
                 disabled={isUpdating}
@@ -334,7 +411,8 @@ export const NodeDetailsModal: React.FC<NodeDetailsModalProps> = ({
           {isEpic && (
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>Note:</strong> L'édition des épics est limitée (titre et description seulement) en raison des limitations de l'API.
+                <strong>Note:</strong> L'édition des épics est limitée (titre et description seulement) en raison des
+                limitations de l'API.
               </p>
             </div>
           )}

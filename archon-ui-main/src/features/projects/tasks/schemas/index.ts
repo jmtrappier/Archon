@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Base validation schemas
-export const DatabaseTaskStatusSchema = z.enum(["todo", "doing", "review", "done"]);
+export const DatabaseTaskStatusSchema = z.enum(["todo", "doing", "review", "waiting", "done"]);
 export const TaskPrioritySchema = z.enum(["low", "medium", "high", "critical"]);
 
 // Assignee schema - simplified to predefined options
