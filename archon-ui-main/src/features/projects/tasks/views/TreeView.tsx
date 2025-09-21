@@ -176,7 +176,7 @@ export const TreeView: React.FC<TreeViewProps> = ({ projectId, onEpicClick, onSt
   const viewMode: HierarchyViewMode = filterState.viewMode;
 
   return (
-    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
+    <div className="flex flex-col gap-4 lg:pr-96">
       <div className="space-y-4">
         <HierarchyFilterBar metadata={metadata} filterHelpers={filterHelpers} />
         <div className="rounded-2xl border border-slate-200/60 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/60">
@@ -195,13 +195,15 @@ export const TreeView: React.FC<TreeViewProps> = ({ projectId, onEpicClick, onSt
         </div>
       </div>
 
-      <HierarchyDetailsPanel
-        node={selectedNode}
-        projectId={projectId}
-        viewMode={viewMode}
-        onOpenDetails={handleOpenDetails}
-        onOpenKanban={handleOpenKanban}
-      />
+      <div className="lg:fixed lg:top-4 lg:right-4 lg:w-80 lg:h-[calc(100vh-2rem)] lg:overflow-hidden">
+        <HierarchyDetailsPanel
+          node={selectedNode}
+          projectId={projectId}
+          viewMode={viewMode}
+          onOpenDetails={handleOpenDetails}
+          onOpenKanban={handleOpenKanban}
+        />
+      </div>
     </div>
   );
 };

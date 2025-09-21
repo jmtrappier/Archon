@@ -272,7 +272,7 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
 
   return (
     <>
-      <Card className="h-full border-slate-200/70 bg-white/80 shadow-md backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
+      <Card className="h-full overflow-hidden border-slate-200/70 bg-white/80 shadow-md backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">{node.title}</CardTitle>
@@ -370,7 +370,7 @@ export const HierarchyDetailsPanel: React.FC<HierarchyDetailsPanelProps> = ({
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 overflow-y-auto">
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Description</h4>
             <div className="mt-1 p-3 text-sm bg-slate-50 dark:bg-slate-800 rounded-md min-h-[60px] whitespace-pre-wrap">
