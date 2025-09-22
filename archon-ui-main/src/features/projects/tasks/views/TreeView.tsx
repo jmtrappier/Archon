@@ -176,8 +176,9 @@ export const TreeView: React.FC<TreeViewProps> = ({ projectId, onEpicClick, onSt
   const viewMode: HierarchyViewMode = filterState.viewMode;
 
   return (
-    <div className="flex flex-col gap-4 lg:pr-96">
-      <div className="space-y-4">
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* Main content area with TreeView */}
+      <div className="flex-1 min-w-0 space-y-4">
         <HierarchyFilterBar metadata={metadata} filterHelpers={filterHelpers} />
         <div className="rounded-2xl border border-slate-200/60 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/60">
           <HierarchyTree
@@ -195,14 +196,17 @@ export const TreeView: React.FC<TreeViewProps> = ({ projectId, onEpicClick, onSt
         </div>
       </div>
 
-      <div className="lg:fixed lg:top-4 lg:right-4 lg:w-80 lg:h-[calc(100vh-2rem)] lg:overflow-hidden">
-        <HierarchyDetailsPanel
-          node={selectedNode}
-          projectId={projectId}
-          viewMode={viewMode}
-          onOpenDetails={handleOpenDetails}
-          onOpenKanban={handleOpenKanban}
-        />
+      {/* Sidebar with sticky positioning */}
+      <div className="w-full lg:w-96 lg:flex-shrink-0">
+        <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)]">
+          <HierarchyDetailsPanel
+            node={selectedNode}
+            projectId={projectId}
+            viewMode={viewMode}
+            onOpenDetails={handleOpenDetails}
+            onOpenKanban={handleOpenKanban}
+          />
+        </div>
       </div>
     </div>
   );
