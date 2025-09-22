@@ -291,75 +291,92 @@ export function TreeViewWithDependencies({
                   </p>
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-slate-900 dark:text-white">
-                      Dependencies
-                    </h4>
+                {/* Conditional rendering based on view mode */}
+                {filterState.viewMode === 'dependencies' ? (
+                  // Dependencies view
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-medium text-slate-900 dark:text-white">
+                        Dependencies
+                      </h4>
+                      <button
+                        onClick={() => handleOpenDependencyModal(selectedNode)}
+                        className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {/* Incoming Dependencies */}
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        → Incoming ({dependencies.filter(dep => dep.to_id === selectedNode?.id).length})
+                      </div>
+                      {dependencies.filter(dep => dep.to_id === selectedNode?.id).length === 0 ? (
+                        <div className="text-xs text-slate-400 italic">
+                          No incoming dependencies
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {dependencies.filter(dep => dep.to_id === selectedNode?.id).map(dep => (
+                            <div key={dep.id} className="text-xs bg-slate-100 dark:bg-slate-800 p-2 rounded">
+                              <div className="font-medium">{dep.dependency_type}</div>
+                              <div className="text-slate-600 dark:text-slate-400">
+                                from {dep.from_type}: {flatNodes.find(n => n.id === dep.from_id)?.title || 'Unknown'}
+                              </div>
+                              {dep.description && (
+                                <div className="text-slate-500 text-xs mt-1">{dep.description}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Outgoing Dependencies */}
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                        ← Outgoing ({dependencies.filter(dep => dep.from_id === selectedNode?.id).length})
+                      </div>
+                      {dependencies.filter(dep => dep.from_id === selectedNode?.id).length === 0 ? (
+                        <div className="text-xs text-slate-400 italic">
+                          No outgoing dependencies
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {dependencies.filter(dep => dep.from_id === selectedNode?.id).map(dep => (
+                            <div key={dep.id} className="text-xs bg-slate-100 dark:bg-slate-800 p-2 rounded">
+                              <div className="font-medium">{dep.dependency_type}</div>
+                              <div className="text-slate-600 dark:text-slate-400">
+                                to {dep.to_type}: {dep.target_title}
+                              </div>
+                              {dep.description && (
+                                <div className="text-slate-500 text-xs mt-1">{dep.description}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  // Hierarchy view - Normal editing section
+                  <div>
                     <button
-                      onClick={() => handleOpenDependencyModal(selectedNode)}
-                      className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors"
+                      onClick={() => {
+                        // Handle element click based on type
+                        if (selectedNode.type === 'epic' && onEpicClick) {
+                          onEpicClick(selectedNode as Epic);
+                        } else if (selectedNode.type === 'story' && onStoryClick) {
+                          onStoryClick(selectedNode as Story);
+                        } else if (selectedNode.type === 'task' && onTaskClick) {
+                          onTaskClick(selectedNode as Task);
+                        }
+                      }}
+                      className="w-full text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition-colors"
                     >
-                      Add
+                      Voir les détails
                     </button>
                   </div>
-
-                  <div className="space-y-2">
-                    {/* Incoming Dependencies */}
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      → Incoming ({dependencies.filter(dep => dep.to_id === selectedNode?.id).length})
-                    </div>
-                    {dependencies.filter(dep => dep.to_id === selectedNode?.id).length === 0 ? (
-                      <div className="text-xs text-slate-400 italic">
-                        No incoming dependencies
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {dependencies.filter(dep => dep.to_id === selectedNode?.id).map(dep => (
-                          <div key={dep.id} className="text-xs bg-slate-100 dark:bg-slate-800 p-2 rounded">
-                            <div className="font-medium">{dep.dependency_type}</div>
-                            <div className="text-slate-600 dark:text-slate-400">
-                              from {dep.from_type}: {flatNodes.find(n => n.id === dep.from_id)?.title || 'Unknown'}
-                            </div>
-                            {dep.description && (
-                              <div className="text-slate-500 text-xs mt-1">{dep.description}</div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Outgoing Dependencies */}
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-3">
-                      ← Outgoing ({dependencies.filter(dep => dep.from_id === selectedNode?.id).length})
-                    </div>
-                    {dependencies.filter(dep => dep.from_id === selectedNode?.id).length === 0 ? (
-                      <div className="text-xs text-slate-400 italic">
-                        No outgoing dependencies
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {dependencies.filter(dep => dep.from_id === selectedNode?.id).map(dep => (
-                          <div key={dep.id} className="text-xs bg-slate-100 dark:bg-slate-800 p-2 rounded">
-                            <div className="font-medium">{dep.dependency_type}</div>
-                            <div className="text-slate-600 dark:text-slate-400">
-                              to {dep.to_type}: {dep.target_title}
-                            </div>
-                            {dep.description && (
-                              <div className="text-slate-500 text-xs mt-1">{dep.description}</div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
-                  <button className="w-full text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 px-3 rounded transition-colors dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300">
-                    Voir les détails
-                  </button>
-                </div>
+                )}
               </div>
             ) : (
               <div className="text-center text-slate-500 dark:text-slate-400 py-8">
