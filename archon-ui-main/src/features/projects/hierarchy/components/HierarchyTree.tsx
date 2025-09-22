@@ -127,7 +127,7 @@ export const HierarchyTree: React.FC<HierarchyTreeProps> = ({
   }
 
   const treeContent = (
-    <div role="tree" aria-multiselectable={false} className="space-y-1">
+    <div role="tree" aria-multiselectable={false} className="space-y-1 tree-scrollbar overflow-auto max-h-[calc(100vh-16rem)]">
       {renderTree(nodes, {
         expandedNodes,
         onToggle,

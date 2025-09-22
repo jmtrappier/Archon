@@ -65,6 +65,61 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  /* Global scrollbar styling for entire application */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+
+  html::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  html::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+    border: 1px solid hsl(var(--background));
+    transition: all 0.2s ease;
+  }
+
+  html::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  html::-webkit-scrollbar-corner {
+    background: hsl(var(--background));
+  }
+
+  /* Apply to all scrollable elements by default */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
 }
 @layer components {
   /* Grid pattern for background (actually used in MainLayout) */
@@ -114,46 +169,91 @@
   }
 }
 
-/* Custom scrollbar styles (used in multiple components) */
+/* Enhanced TreeView Scrollbar Styles - STORY 4.26 Implementation
+ * Discrete, harmonized with app design system (slate theme)
+ * Auto-hide functionality and smooth transitions
+ */
+
+/* Base custom scrollbar - More discrete than previous version */
 .custom-scrollbar {
+  /* Firefox */
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--blue-accent) / 0.30) transparent;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  transition: scrollbar-color 0.2s ease;
 }
 
+.custom-scrollbar:hover {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.5) transparent;
+}
+
+/* WebKit browsers - Following TreeView design specs */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
+  border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--blue-accent) / 0.30);
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
+  background-color: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+  transition: all 0.2s ease;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--blue-accent) / 0.50);
+  background-color: hsl(var(--muted-foreground) / 0.5);
+  transform: scaleX(1.2);
 }
 
-.dark .custom-scrollbar {
-  scrollbar-color: hsl(var(--blue-accent) / 0.45) transparent;
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--blue-accent) / 0.40);
+/* TreeView specific scrollbar - Auto-hide with glassmorphism harmony */
+.tree-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease;
 }
 
-.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--blue-accent) / 0.60);
+.tree-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Thin scrollbar styles (used in KanbanColumn and other components) - Tron-themed */
+.tree-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tree-scrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+/* Show on hover/focus - harmonized with slate theme */
+.tree-scrollbar:hover,
+.tree-scrollbar:focus-within {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+}
+
+.tree-scrollbar:hover::-webkit-scrollbar-thumb,
+.tree-scrollbar:focus-within::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.4);
+}
+
+.tree-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.6);
+}
+
+/* Enhanced thin scrollbar for details panels */
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--blue-accent) / 0.40) transparent;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  transition: scrollbar-color 0.2s ease;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -163,50 +263,55 @@
 
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
+  border-radius: 3px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    to bottom,
-    hsl(var(--blue-accent) / 0.60),
-    hsl(var(--blue-accent) / 0.30)
-  );
+  background-color: hsl(var(--muted-foreground) / 0.3);
   border-radius: 3px;
-  box-shadow: 0 0 3px hsl(var(--blue-accent) / 0.40);
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    to bottom,
-    hsl(var(--blue-accent) / 0.80),
-    hsl(var(--blue-accent) / 0.50)
-  );
-  box-shadow:
-    0 0 6px hsl(var(--blue-accent) / 0.60),
-    inset 0 0 3px hsl(var(--blue-accent) / 0.30);
+  background-color: hsl(var(--muted-foreground) / 0.5);
+  transform: scaleX(1.1);
 }
 
-.dark .scrollbar-thin {
-  scrollbar-color: hsl(var(--blue-accent) / 0.50) transparent;
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .custom-scrollbar::-webkit-scrollbar,
+  .tree-scrollbar::-webkit-scrollbar,
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  /* Always visible on mobile for better UX */
+  .tree-scrollbar {
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+
+  .tree-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+  }
 }
 
-.dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    to bottom,
-    hsl(var(--blue-accent) / 0.50),
-    hsl(var(--blue-accent) / 0.20)
-  );
-  box-shadow: 0 0 4px hsl(var(--blue-accent) / 0.50);
+/* Accessibility - Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .custom-scrollbar,
+  .custom-scrollbar::-webkit-scrollbar-thumb,
+  .tree-scrollbar,
+  .tree-scrollbar::-webkit-scrollbar-thumb,
+  .scrollbar-thin,
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    transition: none;
+  }
 }
 
-.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    to bottom,
-    hsl(var(--blue-accent) / 0.70),
-    hsl(var(--blue-accent) / 0.40)
-  );
-  box-shadow:
-    0 0 8px hsl(var(--blue-accent) / 0.70),
-    inset 0 0 3px hsl(var(--blue-accent) / 0.40);
+/* Focus indicators for keyboard navigation */
+.custom-scrollbar:focus-visible,
+.tree-scrollbar:focus-visible,
+.scrollbar-thin:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
 }
