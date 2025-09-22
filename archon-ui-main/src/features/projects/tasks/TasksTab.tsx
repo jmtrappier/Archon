@@ -19,6 +19,7 @@ import { useDeleteTask, useProjectTasks, useUpdateTask } from "./hooks";
 import type { Task } from "./types";
 import { getReorderTaskOrder, ORDER_INCREMENT, validateTaskOrder } from "./utils";
 import { BoardView, TableView, TreeView } from "./views";
+import { TreeViewWithDependencies } from "./views/TreeViewWithDependencies";
 
 interface TasksTabProps {
   projectId: string;
@@ -360,7 +361,7 @@ export const TasksTab = ({ projectId }: TasksTabProps) => {
         {/* Main content - Table, Board or Tree view */}
         <div className="relative h-[calc(100vh-220px)] overflow-auto">
           {viewMode === "tree" ? (
-            <TreeView
+            <TreeViewWithDependencies
               projectId={projectId}
               onTaskClick={openTaskView}
               onEpicClick={handleEpicEdit}
