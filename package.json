@@ -1,6 +1,36 @@
 {
+  "name": "traxis-e2e-tests",
+  "version": "1.0.0",
+  "description": "E2E test suite for TRAXIS Story 5.1 - Hierarchy testing",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:story-5.1": "./scripts/run-story-5-1-tests.sh",
+    "test:reports": "./scripts/view-test-reports.sh",
+    "test:hierarchy": "playwright test tests/e2e/hierarchy/",
+    "test:navigation": "playwright test tests/e2e/navigation/",
+    "test:dependencies": "playwright test tests/e2e/dependencies/",
+    "test:performance": "playwright test tests/e2e/performance/",
+    "test:mcp": "playwright test tests/integration/mcp/",
+    "cleanup:test-data": "./scripts/cleanup-test-data.sh",
+    "report:show": "playwright show-report test-results/html",
+    "report:open": "open test-results/traxis-test-report.html || xdg-open test-results/traxis-test-report.html",
+    "install:browsers": "playwright install"
+  },
   "dependencies": {
     "playwright": "^1.55.0",
     "puppeteer": "^24.22.0"
-  }
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  },
+  "keywords": [
+    "e2e",
+    "testing",
+    "traxis",
+    "hierarchy",
+    "playwright"
+  ],
+  "author": "TRAXIS Development Team",
+  "license": "MIT"
 }
