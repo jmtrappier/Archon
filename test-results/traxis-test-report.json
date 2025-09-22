@@ -1,0 +1,90 @@
+{
+  "summary": {
+    "total": 8,
+    "passed": 0,
+    "failed": 8,
+    "skipped": 0,
+    "duration": 91072,
+    "timestamp": "2025-09-22T20:27:17.312Z",
+    "story": "STORY 5.1 - Tests End-to-End Hiérarchie"
+  },
+  "categories": {
+    "Hierarchy CRUD": {
+      "total": 8,
+      "passed": 0,
+      "failed": 8,
+      "features": {
+        "EPIC Management": {
+          "tests": [
+            {
+              "title": "Create EPIC with all required fields",
+              "status": "failed",
+              "duration": 11487,
+              "error": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Add Epic\")')\u001b[22m\n"
+            },
+            {
+              "title": "Update EPIC fields",
+              "status": "failed",
+              "duration": 11418,
+              "error": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Test Epic E-01')\u001b[22m\n"
+            },
+            {
+              "title": "Delete EPIC with cascade",
+              "status": "failed",
+              "duration": 179,
+              "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m"
+            },
+            {
+              "title": "EPIC status transitions",
+              "status": "failed",
+              "duration": 11443,
+              "error": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Updated Epic E-01')\u001b[22m\n"
+            },
+            {
+              "title": "EPIC with multiple STORIEs",
+              "status": "failed",
+              "duration": 11830,
+              "error": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Epic with Stories')\u001b[22m\n"
+            },
+            {
+              "title": "EPIC progress calculation",
+              "status": "failed",
+              "duration": 5508,
+              "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m failed\n\nLocator:  locator('text=50% Complete')\nExpected: visible\nReceived: <element(s) not found>\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=50% Complete')\u001b[22m\n"
+            },
+            {
+              "title": "EPIC filtering and search",
+              "status": "failed",
+              "duration": 11368,
+              "error": "TimeoutError: page.fill: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder=\"Search epics...\"]')\u001b[22m\n"
+            },
+            {
+              "title": "EPIC drag and drop reordering",
+              "status": "failed",
+              "duration": 11517,
+              "error": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Kanban View\")')\u001b[22m\n"
+            }
+          ],
+          "total": 8,
+          "passed": 0,
+          "failed": 8
+        }
+      }
+    }
+  },
+  "acceptanceCriteria": {
+    "Complete hierarchy CRUD operations tested": false,
+    "Dependency management and cycle detection validated": false,
+    "Performance tests with 1000+ items pass": false,
+    "MCP integration with AI agents works correctly": false,
+    "Navigation flows validated": false,
+    "All regression tests pass": false
+  },
+  "performance": {
+    "tests": [],
+    "averageDuration": null
+  },
+  "recommendations": [
+    "❌ Hierarchy CRUD: 8 tests failed - requires immediate attention"
+  ]
+}

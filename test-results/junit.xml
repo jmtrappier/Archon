@@ -1,0 +1,318 @@
+<testsuites id="" name="" tests="8" failures="8" skipped="0" errors="0" time="87.700518">
+<testsuite name="hierarchy/epic.spec.ts" timestamp="2025-09-22T20:25:46.280Z" hostname="chromium" tests="8" failures="8" skipped="0" time="74.75" errors="0">
+<testcase name="EPIC Hierarchy Tests › Create EPIC with all required fields" classname="hierarchy/epic.spec.ts" time="11.487">
+<failure message="epic.spec.ts:27:7 Create EPIC with all required fields" type="FAILURE">
+<![CDATA[  [chromium] › hierarchy/epic.spec.ts:27:7 › EPIC Hierarchy Tests › Create EPIC with all required fields 
+
+    TimeoutError: page.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('button:has-text("Add Epic")')
+
+
+      33 |
+      34 |     // Click Add Epic button
+    > 35 |     await page.click('button:has-text("Add Epic")');
+         |                ^
+      36 |
+      37 |     // Fill in EPIC form
+      38 |     await page.fill('input[name="title"]', 'Test Epic E-01');
+        at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:35:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierar-4676e-IC-with-all-required-fields-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierar-4676e-IC-with-all-required-fields-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/hierarchy-epic-EPIC-Hierar-4676e-IC-with-all-required-fields-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-4676e-IC-with-all-required-fields-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-4676e-IC-with-all-required-fields-chromium/video.webm]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-4676e-IC-with-all-required-fields-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="EPIC Hierarchy Tests › Update EPIC fields" classname="hierarchy/epic.spec.ts" time="11.418">
+<failure message="epic.spec.ts:58:7 Update EPIC fields" type="FAILURE">
+<![CDATA[  [chromium] › hierarchy/epic.spec.ts:58:7 › EPIC Hierarchy Tests › Update EPIC fields ─────────────
+
+    TimeoutError: page.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('text=Test Epic E-01')
+
+
+      62 |
+      63 |     // Click on the first EPIC
+    > 64 |     await page.click('text=Test Epic E-01');
+         |                ^
+      65 |
+      66 |     // Click Edit button
+      67 |     await page.click('button:has-text("Edit")');
+        at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:64:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierarchy-Tests-Update-EPIC-fields-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierarchy-Tests-Update-EPIC-fields-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/hierarchy-epic-EPIC-Hierarchy-Tests-Update-EPIC-fields-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierarchy-Tests-Update-EPIC-fields-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierarchy-Tests-Update-EPIC-fields-chromium/video.webm]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierarchy-Tests-Update-EPIC-fields-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="EPIC Hierarchy Tests › Delete EPIC with cascade" classname="hierarchy/epic.spec.ts" time="0.179">
+<failure message="epic.spec.ts:85:7 Delete EPIC with cascade" type="FAILURE">
+<![CDATA[  [chromium] › hierarchy/epic.spec.ts:85:7 › EPIC Hierarchy Tests › Delete EPIC with cascade ───────
+
+    Error: expect(received).toBeTruthy()
+
+    Received: false
+
+       95 |       }
+       96 |     });
+    >  97 |     expect(epicResponse.ok()).toBeTruthy();
+          |                               ^
+       98 |     const epic = await epicResponse.json();
+       99 |
+      100 |     // Navigate to EPICs
+        at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:97:31
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierarchy-Tests-Delete-EPIC-with-cascade-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierarchy-Tests-Delete-EPIC-with-cascade-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierarchy-Tests-Delete-EPIC-with-cascade-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierarchy-Tests-Delete-EPIC-with-cascade-chromium/video.webm]]
+]]>
+</system-out>
+</testcase>
+<testcase name="EPIC Hierarchy Tests › EPIC status transitions" classname="hierarchy/epic.spec.ts" time="11.443">
+<failure message="epic.spec.ts:121:7 EPIC status transitions" type="FAILURE">
+<![CDATA[  [chromium] › hierarchy/epic.spec.ts:121:7 › EPIC Hierarchy Tests › EPIC status transitions ───────
+
+    TimeoutError: page.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('text=Updated Epic E-01')
+
+
+      125 |
+      126 |     // Click on an EPIC
+    > 127 |     await page.click('text=Updated Epic E-01');
+          |                ^
+      128 |
+      129 |     // Test status transitions
+      130 |     const statusTransitions = [
+        at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:127:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierarchy-Tests-EPIC-status-transitions-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierarchy-Tests-EPIC-status-transitions-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/hierarchy-epic-EPIC-Hierarchy-Tests-EPIC-status-transitions-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierarchy-Tests-EPIC-status-transitions-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierarchy-Tests-EPIC-status-transitions-chromium/video.webm]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierarchy-Tests-EPIC-status-transitions-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="EPIC Hierarchy Tests › EPIC with multiple STORIEs" classname="hierarchy/epic.spec.ts" time="11.83">
+<failure message="epic.spec.ts:152:7 EPIC with multiple STORIEs" type="FAILURE">
+<![CDATA[  [chromium] › hierarchy/epic.spec.ts:152:7 › EPIC Hierarchy Tests › EPIC with multiple STORIEs ────
+
+    TimeoutError: page.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('text=Epic with Stories')
+
+
+      181 |     await page.goto(`/projects/${projectId}`);
+      182 |     await page.click('text=EPICs');
+    > 183 |     await page.click('text=Epic with Stories');
+          |                ^
+      184 |
+      185 |     // Verify all STORIEs are visible
+      186 |     await expect(page.locator('text=Story S-02-01')).toBeVisible();
+        at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:183:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierar-23772--EPIC-with-multiple-STORIEs-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierar-23772--EPIC-with-multiple-STORIEs-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/hierarchy-epic-EPIC-Hierar-23772--EPIC-with-multiple-STORIEs-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-23772--EPIC-with-multiple-STORIEs-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-23772--EPIC-with-multiple-STORIEs-chromium/video.webm]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-23772--EPIC-with-multiple-STORIEs-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="EPIC Hierarchy Tests › EPIC progress calculation" classname="hierarchy/epic.spec.ts" time="5.508">
+<failure message="epic.spec.ts:194:7 EPIC progress calculation" type="FAILURE">
+<![CDATA[  [chromium] › hierarchy/epic.spec.ts:194:7 › EPIC Hierarchy Tests › EPIC progress calculation ─────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator:  locator('text=50% Complete')
+    Expected: visible
+    Received: <element(s) not found>
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('text=50% Complete')
+
+
+      225 |
+      226 |     // Verify progress calculation (2 done out of 4 = 50%)
+    > 227 |     await expect(page.locator('text=50% Complete')).toBeVisible();
+          |                                                     ^
+      228 |
+      229 |     // Verify progress bar
+      230 |     const progressBar = page.locator('[role="progressbar"]');
+        at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:227:53
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierar-5bdd6-s-EPIC-progress-calculation-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierar-5bdd6-s-EPIC-progress-calculation-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/hierarchy-epic-EPIC-Hierar-5bdd6-s-EPIC-progress-calculation-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-5bdd6-s-EPIC-progress-calculation-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-5bdd6-s-EPIC-progress-calculation-chromium/video.webm]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-5bdd6-s-EPIC-progress-calculation-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="EPIC Hierarchy Tests › EPIC filtering and search" classname="hierarchy/epic.spec.ts" time="11.368">
+<failure message="epic.spec.ts:234:7 EPIC filtering and search" type="FAILURE">
+<![CDATA[  [chromium] › hierarchy/epic.spec.ts:234:7 › EPIC Hierarchy Tests › EPIC filtering and search ─────
+
+    TimeoutError: page.fill: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('input[placeholder="Search epics..."]')
+
+
+      256 |
+      257 |     // Test search
+    > 258 |     await page.fill('input[placeholder="Search epics..."]', 'Backend');
+          |                ^
+      259 |     await expect(page.locator('text=Backend Development')).toBeVisible();
+      260 |     await expect(page.locator('text=Frontend Features')).not.toBeVisible();
+      261 |
+        at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:258:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierar-1e06d-s-EPIC-filtering-and-search-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierar-1e06d-s-EPIC-filtering-and-search-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/hierarchy-epic-EPIC-Hierar-1e06d-s-EPIC-filtering-and-search-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-1e06d-s-EPIC-filtering-and-search-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-1e06d-s-EPIC-filtering-and-search-chromium/video.webm]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-1e06d-s-EPIC-filtering-and-search-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+<testcase name="EPIC Hierarchy Tests › EPIC drag and drop reordering" classname="hierarchy/epic.spec.ts" time="11.517">
+<failure message="epic.spec.ts:281:7 EPIC drag and drop reordering" type="FAILURE">
+<![CDATA[  [chromium] › hierarchy/epic.spec.ts:281:7 › EPIC Hierarchy Tests › EPIC drag and drop reordering ─
+
+    TimeoutError: page.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('button:has-text("Kanban View")')
+
+
+      299 |     await page.goto(`/projects/${projectId}`);
+      300 |     await page.click('text=EPICs');
+    > 301 |     await page.click('button:has-text("Kanban View")');
+          |                ^
+      302 |
+      303 |     // Locate the EPICs
+      304 |     const epic1 = page.locator(`[data-epic-id="${epics[0].id}"]`);
+        at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:301:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierar-41c47-IC-drag-and-drop-reordering-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/hierarchy-epic-EPIC-Hierar-41c47-IC-drag-and-drop-reordering-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/hierarchy-epic-EPIC-Hierar-41c47-IC-drag-and-drop-reordering-chromium/error-context.md
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-41c47-IC-drag-and-drop-reordering-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-41c47-IC-drag-and-drop-reordering-chromium/video.webm]]
+
+[[ATTACHMENT|hierarchy-epic-EPIC-Hierar-41c47-IC-drag-and-drop-reordering-chromium/error-context.md]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

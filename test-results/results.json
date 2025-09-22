@@ -1,0 +1,757 @@
+{
+  "config": {
+    "configFile": "/home/jmtrappier/Archon/playwright.config.ts",
+    "rootDir": "/home/jmtrappier/Archon/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 3600000,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "test-results/html",
+          "open": "never",
+          "host": "localhost",
+          "port": 9323
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "test-results/junit.xml"
+        }
+      ],
+      [
+        "list",
+        null
+      ],
+      [
+        "/home/jmtrappier/Archon/tests/reporters/custom-reporter.ts",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/home/jmtrappier/Archon/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/jmtrappier/Archon/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/jmtrappier/Archon/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/home/jmtrappier/Archon/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/jmtrappier/Archon/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/home/jmtrappier/Archon/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/jmtrappier/Archon/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "/home/jmtrappier/Archon/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/home/jmtrappier/Archon/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "/home/jmtrappier/Archon/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "hierarchy/epic.spec.ts",
+      "file": "hierarchy/epic.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "EPIC Hierarchy Tests",
+          "file": "hierarchy/epic.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Create EPIC with all required fields",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 11487,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Add Epic\")')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Add Epic\")')\u001b[22m\n\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:35:16",
+                        "location": {
+                          "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                          "column": 16,
+                          "line": 35
+                        },
+                        "snippet": "  33 |\n  34 |     // Click Add Epic button\n> 35 |     await page.click('button:has-text(\"Add Epic\")');\n     |                ^\n  36 |\n  37 |     // Fill in EPIC form\n  38 |     await page.fill('input[name=\"title\"]', 'Test Epic E-01');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                            "column": 16,
+                            "line": 35
+                          },
+                          "message": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Add Epic\")')\u001b[22m\n\n\n  33 |\n  34 |     // Click Add Epic button\n> 35 |     await page.click('button:has-text(\"Add Epic\")');\n     |                ^\n  36 |\n  37 |     // Fill in EPIC form\n  38 |     await page.fill('input[name=\"title\"]', 'Test Epic E-01');\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:35:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-22T20:25:46.580Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-4676e-IC-with-all-required-fields-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-4676e-IC-with-all-required-fields-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-4676e-IC-with-all-required-fields-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                        "column": 16,
+                        "line": 35
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a9262acf9364b78f4887-7704b4de988d707107cd",
+              "file": "hierarchy/epic.spec.ts",
+              "line": 27,
+              "column": 7
+            },
+            {
+              "title": "Update EPIC fields",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 11418,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Test Epic E-01')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Test Epic E-01')\u001b[22m\n\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:64:16",
+                        "location": {
+                          "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                          "column": 16,
+                          "line": 64
+                        },
+                        "snippet": "  62 |\n  63 |     // Click on the first EPIC\n> 64 |     await page.click('text=Test Epic E-01');\n     |                ^\n  65 |\n  66 |     // Click Edit button\n  67 |     await page.click('button:has-text(\"Edit\")');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                            "column": 16,
+                            "line": 64
+                          },
+                          "message": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Test Epic E-01')\u001b[22m\n\n\n  62 |\n  63 |     // Click on the first EPIC\n> 64 |     await page.click('text=Test Epic E-01');\n     |                ^\n  65 |\n  66 |     // Click Edit button\n  67 |     await page.click('button:has-text(\"Edit\")');\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:64:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-22T20:25:58.483Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierarchy-Tests-Update-EPIC-fields-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierarchy-Tests-Update-EPIC-fields-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierarchy-Tests-Update-EPIC-fields-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                        "column": 16,
+                        "line": 64
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a9262acf9364b78f4887-0388a3f3cfe11d6b9b2a",
+              "file": "hierarchy/epic.spec.ts",
+              "line": 58,
+              "column": 7
+            },
+            {
+              "title": "Delete EPIC with cascade",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 179,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:97:31",
+                        "location": {
+                          "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                          "column": 31,
+                          "line": 97
+                        },
+                        "snippet": "   95 |       }\n   96 |     });\n>  97 |     expect(epicResponse.ok()).toBeTruthy();\n      |                               ^\n   98 |     const epic = await epicResponse.json();\n   99 |\n  100 |     // Navigate to EPICs"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                            "column": 31,
+                            "line": 97
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n\n   95 |       }\n   96 |     });\n>  97 |     expect(epicResponse.ok()).toBeTruthy();\n      |                               ^\n   98 |     const epic = await epicResponse.json();\n   99 |\n  100 |     // Navigate to EPICs\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:97:31"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-22T20:26:11.424Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierarchy-Tests-Delete-EPIC-with-cascade-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierarchy-Tests-Delete-EPIC-with-cascade-chromium/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                        "column": 31,
+                        "line": 97
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a9262acf9364b78f4887-7a51753d9334aa21db10",
+              "file": "hierarchy/epic.spec.ts",
+              "line": 85,
+              "column": 7
+            },
+            {
+              "title": "EPIC status transitions",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 11443,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Updated Epic E-01')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Updated Epic E-01')\u001b[22m\n\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:127:16",
+                        "location": {
+                          "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                          "column": 16,
+                          "line": 127
+                        },
+                        "snippet": "  125 |\n  126 |     // Click on an EPIC\n> 127 |     await page.click('text=Updated Epic E-01');\n      |                ^\n  128 |\n  129 |     // Test status transitions\n  130 |     const statusTransitions = ["
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                            "column": 16,
+                            "line": 127
+                          },
+                          "message": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Updated Epic E-01')\u001b[22m\n\n\n  125 |\n  126 |     // Click on an EPIC\n> 127 |     await page.click('text=Updated Epic E-01');\n      |                ^\n  128 |\n  129 |     // Test status transitions\n  130 |     const statusTransitions = [\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:127:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-22T20:26:11.997Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierarchy-Tests-EPIC-status-transitions-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierarchy-Tests-EPIC-status-transitions-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierarchy-Tests-EPIC-status-transitions-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                        "column": 16,
+                        "line": 127
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a9262acf9364b78f4887-4ad0030a9cde11ed1534",
+              "file": "hierarchy/epic.spec.ts",
+              "line": 121,
+              "column": 7
+            },
+            {
+              "title": "EPIC with multiple STORIEs",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 11830,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Epic with Stories')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Epic with Stories')\u001b[22m\n\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:183:16",
+                        "location": {
+                          "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                          "column": 16,
+                          "line": 183
+                        },
+                        "snippet": "  181 |     await page.goto(`/projects/${projectId}`);\n  182 |     await page.click('text=EPICs');\n> 183 |     await page.click('text=Epic with Stories');\n      |                ^\n  184 |\n  185 |     // Verify all STORIEs are visible\n  186 |     await expect(page.locator('text=Story S-02-01')).toBeVisible();"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                            "column": 16,
+                            "line": 183
+                          },
+                          "message": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Epic with Stories')\u001b[22m\n\n\n  181 |     await page.goto(`/projects/${projectId}`);\n  182 |     await page.click('text=EPICs');\n> 183 |     await page.click('text=Epic with Stories');\n      |                ^\n  184 |\n  185 |     // Verify all STORIEs are visible\n  186 |     await expect(page.locator('text=Story S-02-01')).toBeVisible();\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:183:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-22T20:26:23.829Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-23772--EPIC-with-multiple-STORIEs-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-23772--EPIC-with-multiple-STORIEs-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-23772--EPIC-with-multiple-STORIEs-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                        "column": 16,
+                        "line": 183
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a9262acf9364b78f4887-0ca9f478e7c2308d199f",
+              "file": "hierarchy/epic.spec.ts",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "EPIC progress calculation",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5508,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m failed\n\nLocator:  locator('text=50% Complete')\nExpected: visible\nReceived: <element(s) not found>\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=50% Complete')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m failed\n\nLocator:  locator('text=50% Complete')\nExpected: visible\nReceived: <element(s) not found>\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=50% Complete')\u001b[22m\n\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:227:53",
+                        "location": {
+                          "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                          "column": 53,
+                          "line": 227
+                        },
+                        "snippet": "  225 |\n  226 |     // Verify progress calculation (2 done out of 4 = 50%)\n> 227 |     await expect(page.locator('text=50% Complete')).toBeVisible();\n      |                                                     ^\n  228 |\n  229 |     // Verify progress bar\n  230 |     const progressBar = page.locator('[role=\"progressbar\"]');"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                            "column": 53,
+                            "line": 227
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m failed\n\nLocator:  locator('text=50% Complete')\nExpected: visible\nReceived: <element(s) not found>\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=50% Complete')\u001b[22m\n\n\n  225 |\n  226 |     // Verify progress calculation (2 done out of 4 = 50%)\n> 227 |     await expect(page.locator('text=50% Complete')).toBeVisible();\n      |                                                     ^\n  228 |\n  229 |     // Verify progress bar\n  230 |     const progressBar = page.locator('[role=\"progressbar\"]');\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:227:53"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-22T20:26:36.108Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-5bdd6-s-EPIC-progress-calculation-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-5bdd6-s-EPIC-progress-calculation-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-5bdd6-s-EPIC-progress-calculation-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                        "column": 53,
+                        "line": 227
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a9262acf9364b78f4887-eaf3abee0603f04c0016",
+              "file": "hierarchy/epic.spec.ts",
+              "line": 194,
+              "column": 7
+            },
+            {
+              "title": "EPIC filtering and search",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 11368,
+                      "error": {
+                        "message": "TimeoutError: page.fill: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder=\"Search epics...\"]')\u001b[22m\n",
+                        "stack": "TimeoutError: page.fill: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder=\"Search epics...\"]')\u001b[22m\n\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:258:16",
+                        "location": {
+                          "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                          "column": 16,
+                          "line": 258
+                        },
+                        "snippet": "  256 |\n  257 |     // Test search\n> 258 |     await page.fill('input[placeholder=\"Search epics...\"]', 'Backend');\n      |                ^\n  259 |     await expect(page.locator('text=Backend Development')).toBeVisible();\n  260 |     await expect(page.locator('text=Frontend Features')).not.toBeVisible();\n  261 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                            "column": 16,
+                            "line": 258
+                          },
+                          "message": "TimeoutError: page.fill: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[placeholder=\"Search epics...\"]')\u001b[22m\n\n\n  256 |\n  257 |     // Test search\n> 258 |     await page.fill('input[placeholder=\"Search epics...\"]', 'Backend');\n      |                ^\n  259 |     await expect(page.locator('text=Backend Development')).toBeVisible();\n  260 |     await expect(page.locator('text=Frontend Features')).not.toBeVisible();\n  261 |\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:258:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-22T20:26:43.137Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-1e06d-s-EPIC-filtering-and-search-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-1e06d-s-EPIC-filtering-and-search-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-1e06d-s-EPIC-filtering-and-search-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                        "column": 16,
+                        "line": 258
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a9262acf9364b78f4887-c9381637eaf92703c128",
+              "file": "hierarchy/epic.spec.ts",
+              "line": 234,
+              "column": 7
+            },
+            {
+              "title": "EPIC drag and drop reordering",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 11517,
+                      "error": {
+                        "message": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Kanban View\")')\u001b[22m\n",
+                        "stack": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Kanban View\")')\u001b[22m\n\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:301:16",
+                        "location": {
+                          "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                          "column": 16,
+                          "line": 301
+                        },
+                        "snippet": "  299 |     await page.goto(`/projects/${projectId}`);\n  300 |     await page.click('text=EPICs');\n> 301 |     await page.click('button:has-text(\"Kanban View\")');\n      |                ^\n  302 |\n  303 |     // Locate the EPICs\n  304 |     const epic1 = page.locator(`[data-epic-id=\"${epics[0].id}\"]`);"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                            "column": 16,
+                            "line": 301
+                          },
+                          "message": "TimeoutError: page.click: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Kanban View\")')\u001b[22m\n\n\n  299 |     await page.goto(`/projects/${projectId}`);\n  300 |     await page.click('text=EPICs');\n> 301 |     await page.click('button:has-text(\"Kanban View\")');\n      |                ^\n  302 |\n  303 |     // Locate the EPICs\n  304 |     const epic1 = page.locator(`[data-epic-id=\"${epics[0].id}\"]`);\n    at /home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts:301:16"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-22T20:26:54.904Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-41c47-IC-drag-and-drop-reordering-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-41c47-IC-drag-and-drop-reordering-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/jmtrappier/Archon/test-results/hierarchy-epic-EPIC-Hierar-41c47-IC-drag-and-drop-reordering-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/jmtrappier/Archon/tests/e2e/hierarchy/epic.spec.ts",
+                        "column": 16,
+                        "line": 301
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a9262acf9364b78f4887-b5e54e1d97083729fb30",
+              "file": "hierarchy/epic.spec.ts",
+              "line": 281,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-09-22T20:25:46.240Z",
+    "duration": 87700.518,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 8,
+    "flaky": 0
+  }
+}

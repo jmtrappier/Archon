@@ -1,0 +1,337 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - navigation [ref=e5]:
+      - link "Archon" [ref=e6] [cursor=pointer]:
+        - /url: /projects
+        - img "Archon" [ref=e7] [cursor=pointer]
+      - navigation [ref=e11]:
+        - link [ref=e12] [cursor=pointer]:
+          - /url: /
+          - img [ref=e13] [cursor=pointer]
+        - link "MCP Server Icon" [ref=e15] [cursor=pointer]:
+          - /url: /mcp
+          - img "MCP Server Icon" [ref=e16] [cursor=pointer]
+        - link [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e20] [cursor=pointer]
+    - generic [ref=e27]:
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - heading "Todo (9)" [level=3] [ref=e33]
+          - generic [ref=e35]:
+            - button "Drop zone for epic" [ref=e36] [cursor=pointer]:
+              - 'button "TODO 50 📊 ⋮ Epic 2 - Backend Services Complete backend service layer implementation with EpicService, StoryService, enhanced TaskService, and production environment setup following BMAD standards. Progress 0% Created: 9/16/2025 Updated: 9/22/2025" [ref=e37]':
+                - generic [ref=e40]:
+                  - generic [ref=e41]:
+                    - generic [ref=e42]:
+                      - generic [ref=e43]: TODO
+                      - generic [ref=e44]: "50"
+                    - generic [ref=e45]:
+                      - button [ref=e46] [cursor=pointer]:
+                        - img
+                      - button "📊" [ref=e48] [cursor=pointer]:
+                        - generic [ref=e49] [cursor=pointer]: 📊
+                      - button "⋮" [ref=e50] [cursor=pointer]:
+                        - generic [ref=e51] [cursor=pointer]: ⋮
+                  - heading "Epic 2 - Backend Services" [level=3] [ref=e52]
+                  - paragraph [ref=e54]: Complete backend service layer implementation with EpicService, StoryService, enhanced TaskService, and production environment setup following BMAD standards.
+                  - generic [ref=e56]:
+                    - generic [ref=e57]: Progress
+                    - generic [ref=e58]: 0%
+                  - generic [ref=e60]:
+                    - generic [ref=e61]: "Created: 9/16/2025"
+                    - generic [ref=e62]: "Updated: 9/22/2025"
+            - button "Drop zone for epic" [ref=e63] [cursor=pointer]:
+              - 'button "TODO 50 📊 ⋮ Test Epic from Container Testing via container Progress 0% Created: 9/16/2025 Updated: 9/16/2025" [ref=e64]':
+                - generic [ref=e67]:
+                  - generic [ref=e68]:
+                    - generic [ref=e69]:
+                      - generic [ref=e70]: TODO
+                      - generic [ref=e71]: "50"
+                    - generic [ref=e72]:
+                      - button [ref=e73] [cursor=pointer]:
+                        - img
+                      - button "📊" [ref=e75] [cursor=pointer]:
+                        - generic [ref=e76] [cursor=pointer]: 📊
+                      - button "⋮" [ref=e77] [cursor=pointer]:
+                        - generic [ref=e78] [cursor=pointer]: ⋮
+                  - heading "Test Epic from Container" [level=3] [ref=e79]
+                  - paragraph [ref=e81]: Testing via container
+                  - generic [ref=e83]:
+                    - generic [ref=e84]: Progress
+                    - generic [ref=e85]: 0%
+                  - generic [ref=e87]:
+                    - generic [ref=e88]: "Created: 9/16/2025"
+                    - generic [ref=e89]: "Updated: 9/16/2025"
+            - button "Drop zone for epic" [ref=e90] [cursor=pointer]:
+              - 'button "TODO 50 📊 ⋮ Test Epic Nouveau 2 Test avec code auto-généré pour projet existant Progress 0% Created: 9/15/2025 Updated: 9/15/2025" [ref=e91]':
+                - generic [ref=e94]:
+                  - generic [ref=e95]:
+                    - generic [ref=e96]:
+                      - generic [ref=e97]: TODO
+                      - generic [ref=e98]: "50"
+                    - generic [ref=e99]:
+                      - button [ref=e100] [cursor=pointer]:
+                        - img
+                      - button "📊" [ref=e102] [cursor=pointer]:
+                        - generic [ref=e103] [cursor=pointer]: 📊
+                      - button "⋮" [ref=e104] [cursor=pointer]:
+                        - generic [ref=e105] [cursor=pointer]: ⋮
+                  - heading "Test Epic Nouveau 2" [level=3] [ref=e106]
+                  - paragraph [ref=e108]: Test avec code auto-généré pour projet existant
+                  - generic [ref=e110]:
+                    - generic [ref=e111]: Progress
+                    - generic [ref=e112]: 0%
+                  - generic [ref=e114]:
+                    - generic [ref=e115]: "Created: 9/15/2025"
+                    - generic [ref=e116]: "Updated: 9/15/2025"
+            - button "Drop zone for epic" [ref=e117] [cursor=pointer]:
+              - 'button "TODO 75 📊 ⋮ EPIC Test Docker Test de création d''épique via Docker API Progress 0% Created: 9/15/2025 Updated: 9/15/2025" [ref=e118]':
+                - generic [ref=e121]:
+                  - generic [ref=e122]:
+                    - generic [ref=e123]:
+                      - generic [ref=e124]: TODO
+                      - generic [ref=e125]: "75"
+                    - generic [ref=e126]:
+                      - button [ref=e127] [cursor=pointer]:
+                        - img
+                      - button "📊" [ref=e129] [cursor=pointer]:
+                        - generic [ref=e130] [cursor=pointer]: 📊
+                      - button "⋮" [ref=e131] [cursor=pointer]:
+                        - generic [ref=e132] [cursor=pointer]: ⋮
+                  - heading "EPIC Test Docker" [level=3] [ref=e133]
+                  - paragraph [ref=e135]: Test de création d'épique via Docker API
+                  - generic [ref=e137]:
+                    - generic [ref=e138]: Progress
+                    - generic [ref=e139]: 0%
+                  - generic [ref=e141]:
+                    - generic [ref=e142]: "Created: 9/15/2025"
+                    - generic [ref=e143]: "Updated: 9/15/2025"
+            - button "Drop zone for epic" [ref=e144] [cursor=pointer]:
+              - 'button "TODO 75 📊 ⋮ EPIC-1-BDD: Base de Données Hiérarchique Implementation of hierarchical database structure with PROJECT > EPIC > STORY > TASK > SUBTASK relationships. Progress 0% Created: 9/15/2025 Updated: 9/18/2025" [ref=e145]':
+                - generic [ref=e148]:
+                  - generic [ref=e149]:
+                    - generic [ref=e150]:
+                      - generic [ref=e151]: TODO
+                      - generic [ref=e152]: "75"
+                    - generic [ref=e153]:
+                      - button [ref=e154] [cursor=pointer]:
+                        - img
+                      - button "📊" [ref=e156] [cursor=pointer]:
+                        - generic [ref=e157] [cursor=pointer]: 📊
+                      - button "⋮" [ref=e158] [cursor=pointer]:
+                        - generic [ref=e159] [cursor=pointer]: ⋮
+                  - 'heading "EPIC-1-BDD: Base de Données Hiérarchique" [level=3] [ref=e160]'
+                  - paragraph [ref=e162]: Implementation of hierarchical database structure with PROJECT > EPIC > STORY > TASK > SUBTASK relationships.
+                  - generic [ref=e164]:
+                    - generic [ref=e165]: Progress
+                    - generic [ref=e166]: 0%
+                  - generic [ref=e168]:
+                    - generic [ref=e169]: "Created: 9/15/2025"
+                    - generic [ref=e170]: "Updated: 9/18/2025"
+            - button "Drop zone for epic" [ref=e171] [cursor=pointer]:
+              - 'button "TODO 75 📊 ⋮ Test Epic Nouveau 3 Troisième test de séquence Progress 0% Created: 9/15/2025 Updated: 9/15/2025" [ref=e172]':
+                - generic [ref=e175]:
+                  - generic [ref=e176]:
+                    - generic [ref=e177]:
+                      - generic [ref=e178]: TODO
+                      - generic [ref=e179]: "75"
+                    - generic [ref=e180]:
+                      - button [ref=e181] [cursor=pointer]:
+                        - img
+                      - button "📊" [ref=e183] [cursor=pointer]:
+                        - generic [ref=e184] [cursor=pointer]: 📊
+                      - button "⋮" [ref=e185] [cursor=pointer]:
+                        - generic [ref=e186] [cursor=pointer]: ⋮
+                  - heading "Test Epic Nouveau 3" [level=3] [ref=e187]
+                  - paragraph [ref=e189]: Troisième test de séquence
+                  - generic [ref=e191]:
+                    - generic [ref=e192]: Progress
+                    - generic [ref=e193]: 0%
+                  - generic [ref=e195]:
+                    - generic [ref=e196]: "Created: 9/15/2025"
+                    - generic [ref=e197]: "Updated: 9/15/2025"
+            - 'button "Delete Subtask 1: Setup Edit Subtask 1: Setup Copy Task ID Subtask 1: Setup First subtask for testing hierarchy" [ref=e198]':
+              - generic [ref=e201]:
+                - generic [ref=e204]:
+                  - 'button "Delete Subtask 1: Setup" [ref=e205] [cursor=pointer]':
+                    - img [ref=e206] [cursor=pointer]
+                  - 'button "Edit Subtask 1: Setup" [ref=e209] [cursor=pointer]':
+                    - img [ref=e210] [cursor=pointer]
+                  - button "Copy Task ID" [ref=e213] [cursor=pointer]:
+                    - img [ref=e214] [cursor=pointer]
+                - 'heading "Subtask 1: Setup" [level=4] [ref=e217]'
+                - paragraph [ref=e219]: First subtask for testing hierarchy
+                - generic [ref=e220]:
+                  - 'combobox "Assignee: AI IDE Agent" [ref=e221] [cursor=pointer]':
+                    - generic [ref=e222] [cursor=pointer]:
+                      - img [ref=e224] [cursor=pointer]
+                      - generic [ref=e227] [cursor=pointer]: AI IDE Agent
+                    - img [ref=e228] [cursor=pointer]
+                  - 'combobox "Priority: Medium" [ref=e230] [cursor=pointer]':
+                    - generic [ref=e231] [cursor=pointer]:
+                      - img [ref=e232] [cursor=pointer]
+                      - generic [ref=e234] [cursor=pointer]: Medium
+                    - img [ref=e235] [cursor=pointer]
+            - button "Delete Test création task Edit Test création task Copy Task ID Test création task" [ref=e237]:
+              - generic [ref=e240]:
+                - generic [ref=e243]:
+                  - button "Delete Test création task" [ref=e244] [cursor=pointer]:
+                    - img [ref=e245] [cursor=pointer]
+                  - button "Edit Test création task" [ref=e248] [cursor=pointer]:
+                    - img [ref=e249] [cursor=pointer]
+                  - button "Copy Task ID" [ref=e252] [cursor=pointer]:
+                    - img [ref=e253] [cursor=pointer]
+                - heading "Test création task" [level=4] [ref=e256]
+                - generic [ref=e257]:
+                  - 'combobox "Assignee: User" [ref=e258] [cursor=pointer]':
+                    - generic [ref=e259] [cursor=pointer]:
+                      - img [ref=e261] [cursor=pointer]
+                      - generic [ref=e264] [cursor=pointer]: User
+                    - img [ref=e265] [cursor=pointer]
+                  - 'combobox "Priority: Medium" [ref=e267] [cursor=pointer]':
+                    - generic [ref=e268] [cursor=pointer]:
+                      - img [ref=e269] [cursor=pointer]
+                      - generic [ref=e271] [cursor=pointer]: Medium
+                    - img [ref=e272] [cursor=pointer]
+            - button "Delete qsdqsd Edit qsdqsd Copy Task ID qsdqsd" [ref=e274]:
+              - generic [ref=e277]:
+                - generic [ref=e280]:
+                  - button "Delete qsdqsd" [ref=e281] [cursor=pointer]:
+                    - img [ref=e282] [cursor=pointer]
+                  - button "Edit qsdqsd" [ref=e285] [cursor=pointer]:
+                    - img [ref=e286] [cursor=pointer]
+                  - button "Copy Task ID" [ref=e289] [cursor=pointer]:
+                    - img [ref=e290] [cursor=pointer]
+                - heading "qsdqsd" [level=4] [ref=e293]
+                - generic [ref=e294]:
+                  - 'combobox "Assignee: User" [ref=e295] [cursor=pointer]':
+                    - generic [ref=e296] [cursor=pointer]:
+                      - img [ref=e298] [cursor=pointer]
+                      - generic [ref=e301] [cursor=pointer]: User
+                    - img [ref=e302] [cursor=pointer]
+                  - 'combobox "Priority: Medium" [ref=e304] [cursor=pointer]':
+                    - generic [ref=e305] [cursor=pointer]:
+                      - img [ref=e306] [cursor=pointer]
+                      - generic [ref=e308] [cursor=pointer]: Medium
+                    - img [ref=e309] [cursor=pointer]
+        - generic [ref=e311]:
+          - heading "Doing (2)" [level=3] [ref=e313]
+          - generic [ref=e315]:
+            - button "Drop zone for epic" [ref=e316] [cursor=pointer]:
+              - 'button "DOING 75 📊 ⋮ Epic Test 1 Test epic for API validation Progress 0% Created: 9/15/2025 Updated: 9/15/2025" [ref=e317]':
+                - generic [ref=e320]:
+                  - generic [ref=e321]:
+                    - generic [ref=e322]:
+                      - generic [ref=e323]: DOING
+                      - generic [ref=e324]: "75"
+                    - generic [ref=e325]:
+                      - button [ref=e326] [cursor=pointer]:
+                        - img
+                      - button "📊" [ref=e328] [cursor=pointer]:
+                        - generic [ref=e329] [cursor=pointer]: 📊
+                      - button "⋮" [ref=e330] [cursor=pointer]:
+                        - generic [ref=e331] [cursor=pointer]: ⋮
+                  - heading "Epic Test 1" [level=3] [ref=e332]
+                  - paragraph [ref=e334]: Test epic for API validation
+                  - generic [ref=e336]:
+                    - generic [ref=e337]: Progress
+                    - generic [ref=e338]: 0%
+                  - generic [ref=e340]:
+                    - generic [ref=e341]: "Created: 9/15/2025"
+                    - generic [ref=e342]: "Updated: 9/15/2025"
+            - button "Delete Test Task for TreeView Edit Test Task for TreeView Copy Task ID Test Task for TreeView" [ref=e343]:
+              - generic [ref=e346]:
+                - generic [ref=e349]:
+                  - button "Delete Test Task for TreeView" [ref=e350] [cursor=pointer]:
+                    - img [ref=e351] [cursor=pointer]
+                  - button "Edit Test Task for TreeView" [ref=e354] [cursor=pointer]:
+                    - img [ref=e355] [cursor=pointer]
+                  - button "Copy Task ID" [ref=e358] [cursor=pointer]:
+                    - img [ref=e359] [cursor=pointer]
+                - heading "Test Task for TreeView" [level=4] [ref=e362]
+                - generic [ref=e363]:
+                  - 'combobox "Assignee: User" [ref=e364] [cursor=pointer]':
+                    - generic [ref=e365] [cursor=pointer]:
+                      - img [ref=e367] [cursor=pointer]
+                      - generic [ref=e370] [cursor=pointer]: User
+                    - img [ref=e371] [cursor=pointer]
+                  - 'combobox "Priority: Medium" [ref=e373] [cursor=pointer]':
+                    - generic [ref=e374] [cursor=pointer]:
+                      - img [ref=e375] [cursor=pointer]
+                      - generic [ref=e377] [cursor=pointer]: Medium
+                    - img [ref=e378] [cursor=pointer]
+        - generic [ref=e380]:
+          - heading "Review (0)" [level=3] [ref=e382]
+          - generic [ref=e385]: No items
+        - generic [ref=e386]:
+          - heading "Done (1)" [level=3] [ref=e388]
+          - button "Drop zone for epic" [ref=e391] [cursor=pointer]:
+            - 'button "DONE 50 📊 ⋮ Test Epic Creation from Kanban Successfully testing the new Epic creation functionality from the Kanban interface Progress 0% Created: 9/16/2025 Updated: 9/20/2025" [ref=e392]':
+              - generic [ref=e395]:
+                - generic [ref=e396]:
+                  - generic [ref=e397]:
+                    - generic [ref=e398]: DONE
+                    - generic [ref=e399]: "50"
+                  - generic [ref=e400]:
+                    - button [ref=e401] [cursor=pointer]:
+                      - img
+                    - button "📊" [ref=e403] [cursor=pointer]:
+                      - generic [ref=e404] [cursor=pointer]: 📊
+                    - button "⋮" [ref=e405] [cursor=pointer]:
+                      - generic [ref=e406] [cursor=pointer]: ⋮
+                - heading "Test Epic Creation from Kanban" [level=3] [ref=e407]
+                - paragraph [ref=e409]: Successfully testing the new Epic creation functionality from the Kanban interface
+                - generic [ref=e411]:
+                  - generic [ref=e412]: Progress
+                  - generic [ref=e413]: 0%
+                - generic [ref=e415]:
+                  - generic [ref=e416]: "Created: 9/16/2025"
+                  - generic [ref=e417]: "Updated: 9/20/2025"
+      - generic:
+        - generic:
+          - generic [ref=e418]:
+            - button "🎯 All" [ref=e419] [cursor=pointer]:
+              - generic [ref=e420] [cursor=pointer]: 🎯
+              - generic [ref=e421] [cursor=pointer]: All
+            - button "📋 EPICs" [ref=e424] [cursor=pointer]:
+              - generic [ref=e425] [cursor=pointer]: 📋
+              - generic [ref=e426] [cursor=pointer]: EPICs
+            - button "📖 Stories" [ref=e428] [cursor=pointer]:
+              - generic [ref=e429] [cursor=pointer]: 📖
+              - generic [ref=e430] [cursor=pointer]: Stories
+            - button "✅ Tasks" [ref=e432] [cursor=pointer]:
+              - generic [ref=e433] [cursor=pointer]: ✅
+              - generic [ref=e434] [cursor=pointer]: Tasks
+          - generic:
+            - button "Add Epic" [ref=e435] [cursor=pointer]:
+              - img [ref=e436] [cursor=pointer]
+              - generic [ref=e437] [cursor=pointer]: Add Epic
+            - button "Add Story" [ref=e439] [cursor=pointer]:
+              - img [ref=e440] [cursor=pointer]
+              - generic [ref=e441] [cursor=pointer]: Add Story
+            - button "Add Task" [ref=e443] [cursor=pointer]:
+              - img [ref=e444] [cursor=pointer]
+              - generic [ref=e445] [cursor=pointer]: Add Task
+          - generic [ref=e447]:
+            - button "Table" [ref=e448] [cursor=pointer]:
+              - img [ref=e449] [cursor=pointer]
+              - generic [ref=e451] [cursor=pointer]: Table
+            - button "Board" [ref=e453] [cursor=pointer]:
+              - img [ref=e454] [cursor=pointer]
+              - generic [ref=e459] [cursor=pointer]: Board
+            - button "Tree" [ref=e462] [cursor=pointer]:
+              - img [ref=e463] [cursor=pointer]
+              - generic [ref=e467] [cursor=pointer]: Tree
+    - generic [ref=e468]:
+      - button "Knowledge Assistant - Coming Soon" [disabled] [ref=e469]:
+        - img "Archon" [ref=e470]
+      - generic:
+        - generic: Coming Soon
+        - generic: Knowledge Assistant is under development
+  - region "Notifications (F8)":
+    - list
+```

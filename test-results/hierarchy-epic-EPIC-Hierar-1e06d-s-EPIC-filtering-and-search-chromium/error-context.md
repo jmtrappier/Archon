@@ -1,0 +1,72 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - navigation [ref=e5]:
+        - link "Archon" [ref=e6] [cursor=pointer]:
+          - /url: /projects
+          - img "Archon" [ref=e7] [cursor=pointer]
+        - navigation [ref=e11]:
+          - link [ref=e12] [cursor=pointer]:
+            - /url: /
+            - img [ref=e13] [cursor=pointer]
+          - link "MCP Server Icon" [ref=e15] [cursor=pointer]:
+            - /url: /mcp
+            - img "MCP Server Icon" [ref=e16] [cursor=pointer]
+          - link [ref=e19] [cursor=pointer]:
+            - /url: /settings
+            - img [ref=e20] [cursor=pointer]
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - link "Archon TRAXIS Test Project" [ref=e30] [cursor=pointer]:
+              - /url: /projects/36b27a71-9503-42ef-94b2-01c27e31f714
+            - img [ref=e31]
+            - generic [ref=e33]: Epic 2 - Backend Services
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - button "Back to Project Kanban" [ref=e38] [cursor=pointer]:
+                - img [ref=e39] [cursor=pointer]
+                - text: Back to Project Kanban
+              - heading "Epic 2 - Backend Services" [level=1] [ref=e41]
+              - paragraph [ref=e42]: Complete backend service layer implementation with EpicService, StoryService, enhanced TaskService, and production environment setup following BMAD standards.
+              - generic [ref=e43]:
+                - generic [ref=e44]: 0 Stories
+                - generic [ref=e45]:
+                  - generic [ref=e46]: "Progress:"
+                  - generic [ref=e48]: 0%
+            - button "Add Story" [ref=e49] [cursor=pointer]:
+              - img [ref=e50] [cursor=pointer]
+              - text: Add Story
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - heading "To Do (0)" [level=3] [ref=e54]
+            - generic [ref=e57]: No stories
+          - generic [ref=e58]:
+            - heading "In Progress (0)" [level=3] [ref=e60]
+            - generic [ref=e63]: No stories
+          - generic [ref=e64]:
+            - heading "Review (0)" [level=3] [ref=e66]
+            - generic [ref=e69]: No stories
+          - generic [ref=e70]:
+            - heading "Done (0)" [level=3] [ref=e72]
+            - generic [ref=e75]: No stories
+      - generic [ref=e76]:
+        - button "Knowledge Assistant - Coming Soon" [disabled] [ref=e77]:
+          - img "Archon" [ref=e78]
+        - generic:
+          - generic: Coming Soon
+          - generic: Knowledge Assistant is under development
+    - region "Notifications (F8)":
+      - list:
+        - listitem [ref=e80]:
+          - generic [ref=e81]:
+            - img [ref=e82]
+            - generic [ref=e87]: Failed to load epic details
+          - button "Close" [ref=e88] [cursor=pointer]:
+            - img [ref=e89] [cursor=pointer]
+            - generic [ref=e92] [cursor=pointer]: Close
+  - status [ref=e94]: Notification Failed to load epic details
+```

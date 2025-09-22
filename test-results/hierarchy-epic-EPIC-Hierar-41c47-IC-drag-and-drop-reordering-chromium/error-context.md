@@ -1,0 +1,169 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - navigation [ref=e5]:
+      - link "Archon" [ref=e6] [cursor=pointer]:
+        - /url: /projects
+        - img "Archon" [ref=e7] [cursor=pointer]
+      - navigation [ref=e11]:
+        - link [ref=e12] [cursor=pointer]:
+          - /url: /
+          - img [ref=e13] [cursor=pointer]
+        - link "MCP Server Icon" [ref=e15] [cursor=pointer]:
+          - /url: /mcp
+          - img "MCP Server Icon" [ref=e16] [cursor=pointer]
+        - link [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e20] [cursor=pointer]
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - link "Archon TRAXIS Test Project" [ref=e30] [cursor=pointer]:
+            - /url: /projects/36b27a71-9503-42ef-94b2-01c27e31f714
+          - img [ref=e31]
+          - generic [ref=e33]: Epic 2 - Backend Services
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - button "Back to Project Kanban" [ref=e38] [cursor=pointer]:
+              - img [ref=e39] [cursor=pointer]
+              - text: Back to Project Kanban
+            - heading "Epic 2 - Backend Services" [level=1] [ref=e41]
+            - paragraph [ref=e42]: Complete backend service layer implementation with EpicService, StoryService, enhanced TaskService, and production environment setup following BMAD standards.
+            - generic [ref=e43]:
+              - generic [ref=e44]: 9 Stories
+              - generic [ref=e45]:
+                - generic [ref=e46]: "Progress:"
+                - generic [ref=e48]: 0%
+          - button "Add Story" [ref=e49] [cursor=pointer]:
+            - img [ref=e50] [cursor=pointer]
+            - text: Add Story
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - heading "To Do (5)" [level=3] [ref=e54]
+          - generic [ref=e56]:
+            - button "Drop zone for story" [ref=e57] [cursor=pointer]:
+              - 'button "TODO 75 Test Story Priority Fix Testing the priority fix for story creation. This should now accept string priority values like \"high\" without validation errors. Progress 0% Created: 9/16/2025" [ref=e59]':
+                - generic [ref=e62]:
+                  - generic [ref=e63]:
+                    - generic [ref=e64]:
+                      - generic [ref=e65]: TODO
+                      - generic [ref=e66]: "75"
+                    - button [ref=e68] [cursor=pointer]:
+                      - img
+                  - heading "Test Story Priority Fix" [level=3] [ref=e70]
+                  - paragraph [ref=e72]: Testing the priority fix for story creation. This should now accept string priority values like "high" without validation errors.
+                  - generic [ref=e74]:
+                    - generic [ref=e75]: Progress
+                    - generic [ref=e76]: 0%
+                  - generic [ref=e79]: "Created: 9/16/2025"
+            - button "Drop zone for story" [ref=e80] [cursor=pointer]:
+              - 'button "TODO 50 dgsdfgsdfg Progress 0% Created: 9/16/2025" [ref=e82]':
+                - generic [ref=e85]:
+                  - generic [ref=e86]:
+                    - generic [ref=e87]:
+                      - generic [ref=e88]: TODO
+                      - generic [ref=e89]: "50"
+                    - button [ref=e91] [cursor=pointer]:
+                      - img
+                  - heading "dgsdfgsdfg" [level=3] [ref=e93]
+                  - generic [ref=e95]:
+                    - generic [ref=e96]: Progress
+                    - generic [ref=e97]: 0%
+                  - generic [ref=e100]: "Created: 9/16/2025"
+            - button "Drop zone for story" [ref=e101] [cursor=pointer]:
+              - 'button "TODO 50 test story Progress 0% Created: 9/17/2025" [ref=e103]':
+                - generic [ref=e106]:
+                  - generic [ref=e107]:
+                    - generic [ref=e108]:
+                      - generic [ref=e109]: TODO
+                      - generic [ref=e110]: "50"
+                    - button [ref=e112] [cursor=pointer]:
+                      - img
+                  - heading "test story" [level=3] [ref=e114]
+                  - generic [ref=e116]:
+                    - generic [ref=e117]: Progress
+                    - generic [ref=e118]: 0%
+                  - generic [ref=e121]: "Created: 9/17/2025"
+            - button "Drop zone for story" [ref=e122] [cursor=pointer]:
+              - 'button "TODO 50 test story Progress 0% Created: 9/17/2025" [ref=e124]':
+                - generic [ref=e127]:
+                  - generic [ref=e128]:
+                    - generic [ref=e129]:
+                      - generic [ref=e130]: TODO
+                      - generic [ref=e131]: "50"
+                    - button [ref=e133] [cursor=pointer]:
+                      - img
+                  - heading "test story" [level=3] [ref=e135]
+                  - generic [ref=e137]:
+                    - generic [ref=e138]: Progress
+                    - generic [ref=e139]: 0%
+                  - generic [ref=e142]: "Created: 9/17/2025"
+            - button "Drop zone for story" [ref=e143] [cursor=pointer]:
+              - 'button "TODO 50 Test TreeView Story This story is created to test the TreeView sticky sidebar functionality for Story 4.25 Progress 0% Created: 9/22/2025" [ref=e145]':
+                - generic [ref=e148]:
+                  - generic [ref=e149]:
+                    - generic [ref=e150]:
+                      - generic [ref=e151]: TODO
+                      - generic [ref=e152]: "50"
+                    - button [ref=e154] [cursor=pointer]:
+                      - img
+                  - heading "Test TreeView Story" [level=3] [ref=e156]
+                  - paragraph [ref=e158]: This story is created to test the TreeView sticky sidebar functionality for Story 4.25
+                  - generic [ref=e160]:
+                    - generic [ref=e161]: Progress
+                    - generic [ref=e162]: 0%
+                  - generic [ref=e165]: "Created: 9/22/2025"
+        - generic [ref=e166]:
+          - heading "In Progress (0)" [level=3] [ref=e168]
+          - generic [ref=e171]: No stories
+        - generic [ref=e172]:
+          - heading "Review (2)" [level=3] [ref=e174]
+          - generic [ref=e176]:
+            - button "Drop zone for story" [ref=e177] [cursor=pointer]:
+              - 'button "REVIEW 75 Test Story Priority Fix Testing the priority fix for story creation. This should now accept string priority values like \"high\" without validation errors. Progress 0% Created: 9/16/2025 Updated: 9/20/2025" [ref=e179]':
+                - generic [ref=e182]:
+                  - generic [ref=e183]:
+                    - generic [ref=e184]:
+                      - generic [ref=e185]: REVIEW
+                      - generic [ref=e186]: "75"
+                    - button [ref=e188] [cursor=pointer]:
+                      - img
+                  - heading "Test Story Priority Fix" [level=3] [ref=e190]
+                  - paragraph [ref=e192]: Testing the priority fix for story creation. This should now accept string priority values like "high" without validation errors.
+                  - generic [ref=e194]:
+                    - generic [ref=e195]: Progress
+                    - generic [ref=e196]: 0%
+                  - generic [ref=e198]:
+                    - generic [ref=e199]: "Created: 9/16/2025"
+                    - generic [ref=e200]: "Updated: 9/20/2025"
+            - button "Drop zone for story" [ref=e201] [cursor=pointer]:
+              - 'button "REVIEW 75 Test Story Priority Fix - Final Test Testing priority fix with correct Epic ID. This should now accept string priority values like high without validation errors. Progress 0% Created: 9/16/2025 Updated: 9/22/2025" [ref=e203]':
+                - generic [ref=e206]:
+                  - generic [ref=e207]:
+                    - generic [ref=e208]:
+                      - generic [ref=e209]: REVIEW
+                      - generic [ref=e210]: "75"
+                    - button [ref=e212] [cursor=pointer]:
+                      - img
+                  - heading "Test Story Priority Fix - Final Test" [level=3] [ref=e214]
+                  - paragraph [ref=e216]: Testing priority fix with correct Epic ID. This should now accept string priority values like high without validation errors.
+                  - generic [ref=e218]:
+                    - generic [ref=e219]: Progress
+                    - generic [ref=e220]: 0%
+                  - generic [ref=e222]:
+                    - generic [ref=e223]: "Created: 9/16/2025"
+                    - generic [ref=e224]: "Updated: 9/22/2025"
+        - generic [ref=e225]:
+          - heading "Done (0)" [level=3] [ref=e227]
+          - generic [ref=e230]: No stories
+    - generic [ref=e231]:
+      - button "Knowledge Assistant - Coming Soon" [disabled] [ref=e232]:
+        - img "Archon" [ref=e233]
+      - generic:
+        - generic: Coming Soon
+        - generic: Knowledge Assistant is under development
+  - region "Notifications (F8)":
+    - list
+```
