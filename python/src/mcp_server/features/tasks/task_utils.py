@@ -14,6 +14,38 @@ from src.mcp_server.utils.error_handling import MCPErrorFormatter
 
 
 DEFAULT_PAGE_SIZE = 10
+MAX_DESCRIPTION_LENGTH = 1000
+
+
+def optimize_task_response(item: dict) -> dict:
+    """
+    Optimize task response for MCP usage by reducing payload size.
+
+    Args:
+        item: Raw item dict from API
+
+    Returns:
+        Optimized item dict
+    """
+    # Convert arrays to counts for optimization
+    optimized = item.copy()
+
+    # Convert source arrays to counts
+    if "sources" in optimized and isinstance(optimized["sources"], list):
+        optimized["sources_count"] = len(optimized["sources"])
+        optimized.pop("sources", None)
+
+    # Convert code_examples arrays to counts
+    if "code_examples" in optimized and isinstance(optimized["code_examples"], list):
+        optimized["code_examples_count"] = len(optimized["code_examples"])
+        optimized.pop("code_examples", None)
+
+    # Convert acceptance_criteria to count if it's an array
+    if "acceptance_criteria" in optimized and isinstance(optimized["acceptance_criteria"], list):
+        optimized["acceptance_criteria_count"] = len(optimized["acceptance_criteria"])
+        optimized.pop("acceptance_criteria", None)
+
+    return optimized
 
 
 async def normalize_api_response(response_data: Any, data_key: str) -> list:

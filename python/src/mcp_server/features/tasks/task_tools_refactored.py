@@ -10,6 +10,8 @@ from mcp.server.fastmcp import Context, FastMCP
 # Import from modular components
 from .task_core import find_tasks, manage_task
 from .task_analytics import analyze_project_health, find_bottlenecks, find_stale_items
+from .epic_tools import find_epics, manage_epic
+from .story_tools import find_stories, manage_story
 from .task_utils import MCPErrorFormatter
 
 
@@ -92,6 +94,86 @@ def register_task_tools(mcp: FastMCP) -> None:
     ) -> str:
         """Find items that haven't been updated recently."""
         return await find_stale_items(ctx, days, status_filter, include_assignee)
+
+    # EPICs management tools
+    @mcp.tool()
+    async def find_epics_tool(
+        ctx: Context,
+        query: str | None = None,
+        epic_id: str | None = None,
+        filter_by: str | None = None,
+        filter_value: str | None = None,
+        project_id: str | None = None,
+        include_closed: bool = True,
+        page: int = 1,
+        per_page: int = 10,
+    ) -> str:
+        """Find and search epics (consolidated: list + search + get)."""
+        return await find_epics(
+            ctx, query, epic_id, filter_by, filter_value,
+            project_id, include_closed, page, per_page
+        )
+
+    @mcp.tool()
+    async def manage_epic_tool(
+        ctx: Context,
+        action: str,
+        epic_id: str | None = None,
+        project_id: str | None = None,
+        parent_epic_id: str | None = None,
+        title: str | None = None,
+        description: str | None = None,
+        status: str | None = None,
+        assignee: str | None = None,
+        epic_order: int | None = None,
+        feature: str | None = None,
+    ) -> str:
+        """Manage epics (consolidated: create/update/delete)."""
+        return await manage_epic(
+            ctx, action, epic_id, project_id, parent_epic_id,
+            title, description, status, assignee, epic_order, feature
+        )
+
+    # Stories management tools
+    @mcp.tool()
+    async def find_stories_tool(
+        ctx: Context,
+        query: str | None = None,
+        story_id: str | None = None,
+        filter_by: str | None = None,
+        filter_value: str | None = None,
+        project_id: str | None = None,
+        epic_id: str | None = None,
+        include_closed: bool = True,
+        page: int = 1,
+        per_page: int = 10,
+    ) -> str:
+        """Find and search stories (consolidated: list + search + get)."""
+        return await find_stories(
+            ctx, query, story_id, filter_by, filter_value,
+            project_id, epic_id, include_closed, page, per_page
+        )
+
+    @mcp.tool()
+    async def manage_story_tool(
+        ctx: Context,
+        action: str,
+        story_id: str | None = None,
+        project_id: str | None = None,
+        epic_id: str | None = None,
+        parent_story_id: str | None = None,
+        title: str | None = None,
+        description: str | None = None,
+        status: str | None = None,
+        assignee: str | None = None,
+        story_order: int | None = None,
+        feature: str | None = None,
+    ) -> str:
+        """Manage stories (consolidated: create/update/delete)."""
+        return await manage_story(
+            ctx, action, story_id, project_id, epic_id, parent_story_id,
+            title, description, status, assignee, story_order, feature
+        )
 
     # Test function for debugging
     @mcp.tool()
