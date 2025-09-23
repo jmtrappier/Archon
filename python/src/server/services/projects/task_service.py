@@ -166,7 +166,7 @@ class TaskService:
             logger.error(f"Error creating task: {e}")
             return False, {"error": f"Error creating task: {str(e)}"}
 
-    def list_tasks(
+    async def list_tasks(
         self,
         project_id: str = None,
         status: str = None,
@@ -275,8 +275,8 @@ class TaskService:
             logger.debug(f"Listing tasks with filters: {', '.join(filters_applied)}")
 
             # Execute query and get raw response
-            response = (
-                query.order("task_order", desc=False).order("created_at", desc=False).execute()
+            response = await (
+                query.order("task_order", desc=False).order("created_at", desc=False).aexecute()
             )
 
             # Debug: Log task status distribution and filter effectiveness

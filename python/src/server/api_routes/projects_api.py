@@ -289,7 +289,7 @@ async def projects_health():
         try:
             task_service = TaskService(supabase_client)
             # Try to list tasks with limit 1 to test table access
-            success, _ = task_service.list_tasks(include_closed=True)
+            success, _ = await task_service.list_tasks(include_closed=True)
             tasks_table_exists = success
             if success:
                 logfire.info("Tasks table detected successfully")
@@ -1551,7 +1551,7 @@ async def get_project_hierarchy(
                 if include_tasks:
                     task_service = TaskService()
                     for story in epic["stories"]:
-                        task_success, task_result = task_service.list_tasks(
+                        task_success, task_result = await task_service.list_tasks(
                             story_id=story["id"],
                             include_closed=True,
                             include_archived=include_archived
@@ -1673,7 +1673,7 @@ async def list_project_tasks(
 
         # Use TaskService to list tasks
         task_service = TaskService()
-        success, result = task_service.list_tasks(
+        success, result = await task_service.list_tasks(
             project_id=project_id,
             include_closed=True,  # Get all tasks, including done
             exclude_large_fields=exclude_large_fields,
@@ -1864,7 +1864,7 @@ async def list_tasks(
 
         # Use TaskService to list tasks
         task_service = TaskService()
-        success, result = task_service.list_tasks(
+        success, result = await task_service.list_tasks(
             project_id=project_id,
             status=status,
             epic_id=epic_id,  # Pass hierarchy filters

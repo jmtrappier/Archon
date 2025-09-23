@@ -7,48 +7,13 @@ import traceback
 from typing import Dict, Any
 import httpx
 
+# Import the proper modules from existing infrastructure
+from src.server.config.service_discovery import get_api_url
+from src.mcp_server.utils.timeout_config import get_default_timeout
+from src.mcp_server.utils.error_handling import MCPErrorFormatter
+
 
 DEFAULT_PAGE_SIZE = 10
-
-
-def get_api_url() -> str:
-    """Get the API base URL from environment"""
-    return os.getenv("TRAXIS_API_URL", "http://localhost:8181")
-
-
-def get_default_timeout() -> httpx.Timeout:
-    """Get default timeout configuration"""
-    return httpx.Timeout(30.0)
-
-
-class MCPErrorFormatter:
-    """Utility class for formatting MCP error responses"""
-
-    @staticmethod
-    def format_error(
-        error_type: str,
-        message: str,
-        details: Dict[str, Any] | None = None,
-        suggestion: str | None = None
-    ) -> str:
-        """Format an error response for MCP tools"""
-        import json
-
-        error_response = {
-            "success": False,
-            "error": {
-                "type": error_type,
-                "message": message
-            }
-        }
-
-        if details:
-            error_response["error"]["details"] = details
-
-        if suggestion:
-            error_response["error"]["suggestion"] = suggestion
-
-        return json.dumps(error_response)
 
 
 async def normalize_api_response(response_data: Any, data_key: str) -> list:
