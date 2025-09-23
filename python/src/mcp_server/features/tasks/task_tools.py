@@ -1703,3 +1703,929 @@ def register_task_tools(mcp: FastMCP):
         except Exception as e:
             logger.error(f"Error managing dependency ({action}): {e}", exc_info=True)
             return MCPErrorFormatter.from_exception(e, f"{action} dependency")
+
+    # ============================================================================
+    # STORY 3.6 - MCP QUERY INTELLIGENCE TOOLS
+    # ============================================================================
+
+    @mcp.tool()
+    async def analyze_project_health(
+        ctx: Context,
+        project_id: str | None = None,
+        scope: str = "current",
+        include_metrics: bool = True
+    ) -> str:
+        """
+        Analyze project health and provide insights on bottlenecks, risks, and progress.
+
+        Args:
+            project_id: Project UUID (optional)
+            scope: "current" | "epic" | "project" | "all"
+            include_metrics: Include detailed metrics in response
+
+        Returns:
+            JSON with health score, bottlenecks, risks, and metrics
+
+        Examples:
+            analyze_project_health()  # Current scope analysis
+            analyze_project_health(project_id="p-1", scope="project")  # Full project analysis
+        """
+        try:
+            api_url = get_api_url()
+            timeout = get_default_timeout()
+
+            health_data = {
+                "health_score": 0,
+                "bottlenecks": [],
+                "risks": [],
+                "metrics": {},
+                "recommendations": []
+            }
+
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                # Get project data if project_id provided
+                project_filter = f"?project_id={project_id}" if project_id else ""
+
+                # Fetch tasks to analyze
+                tasks_response = await client.get(urljoin(api_url, f"/api/tasks{project_filter}"))
+                if tasks_response.status_code != 200:
+                    return MCPErrorFormatter.format_error(
+                        "failed_to_fetch",
+                        "Could not fetch tasks for health analysis"
+                    )
+
+                tasks = tasks_response.json()
+
+                # Fetch epics if scope includes them
+                if scope in ["epic", "project", "all"]:
+                    epics_response = await client.get(urljoin(api_url, f"/api/epics{project_filter}"))
+                    if epics_response.status_code == 200:
+                        epics = epics_response.json()
+                    else:
+                        epics = []
+                else:
+                    epics = []
+
+                # Calculate health metrics
+                total_items = len(tasks) + len(epics)
+                if total_items == 0:
+                    health_data["health_score"] = 100
+                    health_data["metrics"] = {"total_items": 0}
+                    return json.dumps({"success": True, **health_data})
+
+                # Analyze task distribution
+                status_counts = {"todo": 0, "doing": 0, "review": 0, "waiting": 0, "done": 0}
+                blocked_items = []
+                stale_items = []
+
+                for task in tasks:
+                    status = task.get("status", "todo")
+                    if status in status_counts:
+                        status_counts[status] += 1
+
+                    # Check for blocked items (waiting status)
+                    if status == "waiting":
+                        blocked_items.append({
+                            "id": task["id"],
+                            "title": task["title"],
+                            "type": "task",
+                            "reason": "waiting_for_dependency"
+                        })
+
+                    # Check for stale items (no recent updates)
+                    if "updated_at" in task:
+                        from datetime import datetime, timedelta
+                        try:
+                            updated = datetime.fromisoformat(task["updated_at"].replace("Z", "+00:00"))
+                            if datetime.now(updated.tzinfo) - updated > timedelta(days=7):
+                                if status in ["todo", "doing"]:
+                                    stale_items.append({
+                                        "id": task["id"],
+                                        "title": task["title"],
+                                        "days_stale": (datetime.now(updated.tzinfo) - updated).days
+                                    })
+                        except (ValueError, AttributeError):
+                            pass
+
+                # Calculate health score (0-100)
+                done_ratio = status_counts["done"] / total_items if total_items > 0 else 0
+                doing_ratio = status_counts["doing"] / total_items if total_items > 0 else 0
+                blocked_ratio = len(blocked_items) / total_items if total_items > 0 else 0
+                stale_ratio = len(stale_items) / total_items if total_items > 0 else 0
+
+                health_score = int(
+                    (done_ratio * 30) +  # 30 points for completion
+                    (doing_ratio * 20) +  # 20 points for active work
+                    ((1 - blocked_ratio) * 25) +  # 25 points for no blocks
+                    ((1 - stale_ratio) * 25)  # 25 points for freshness
+                )
+
+                health_data["health_score"] = max(0, min(100, health_score))
+
+                # Add bottlenecks
+                if blocked_items:
+                    health_data["bottlenecks"].append({
+                        "type": "blocked_items",
+                        "count": len(blocked_items),
+                        "items": blocked_items[:5]  # Limit to 5 for response size
+                    })
+
+                if stale_items:
+                    health_data["bottlenecks"].append({
+                        "type": "stale_items",
+                        "count": len(stale_items),
+                        "items": stale_items[:5]
+                    })
+
+                # Add risks
+                if blocked_ratio > 0.2:
+                    health_data["risks"].append({
+                        "level": "high",
+                        "type": "high_block_rate",
+                        "message": f"{int(blocked_ratio * 100)}% of items are blocked"
+                    })
+
+                if stale_ratio > 0.3:
+                    health_data["risks"].append({
+                        "level": "medium",
+                        "type": "stale_work",
+                        "message": f"{int(stale_ratio * 100)}% of items haven't been updated recently"
+                    })
+
+                # Add metrics if requested
+                if include_metrics:
+                    health_data["metrics"] = {
+                        "total_items": total_items,
+                        "status_distribution": status_counts,
+                        "completion_rate": f"{int(done_ratio * 100)}%",
+                        "active_rate": f"{int(doing_ratio * 100)}%",
+                        "blocked_rate": f"{int(blocked_ratio * 100)}%",
+                        "stale_rate": f"{int(stale_ratio * 100)}%"
+                    }
+
+                # Add recommendations
+                if health_data["health_score"] < 50:
+                    health_data["recommendations"].append("Focus on unblocking items")
+                if stale_ratio > 0.2:
+                    health_data["recommendations"].append("Review and update stale items")
+                if doing_ratio < 0.1:
+                    health_data["recommendations"].append("Start more items to increase velocity")
+
+                return json.dumps({"success": True, **health_data})
+
+        except Exception as e:
+            logger.error(f"Error analyzing project health: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "analyze project health")
+
+    @mcp.tool()
+    async def find_bottlenecks(
+        ctx: Context,
+        epic_id: str | None = None,
+        story_id: str | None = None,
+        include_dependencies: bool = True,
+        limit: int = 10
+    ) -> str:
+        """
+        Find bottlenecks in the project that are blocking progress.
+
+        Args:
+            epic_id: Filter by specific epic
+            story_id: Filter by specific story
+            include_dependencies: Include dependency analysis
+            limit: Maximum number of bottlenecks to return
+
+        Returns:
+            JSON with bottlenecks sorted by impact
+
+        Examples:
+            find_bottlenecks()  # All bottlenecks
+            find_bottlenecks(epic_id="e-1", include_dependencies=True)
+        """
+        try:
+            api_url = get_api_url()
+            timeout = get_default_timeout()
+
+            bottlenecks = []
+
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                # Build query params
+                params = []
+                if epic_id:
+                    params.append(f"epic_id={epic_id}")
+                if story_id:
+                    params.append(f"story_id={story_id}")
+                query_str = "?" + "&".join(params) if params else ""
+
+                # Get tasks
+                tasks_response = await client.get(urljoin(api_url, f"/api/tasks{query_str}"))
+                if tasks_response.status_code != 200:
+                    return MCPErrorFormatter.format_error(
+                        "failed_to_fetch",
+                        "Could not fetch tasks for bottleneck analysis"
+                    )
+
+                tasks = tasks_response.json()
+
+                # Analyze for bottlenecks
+                waiting_tasks = []
+                overloaded_assignees = {}
+                dependency_blocks = []
+
+                for task in tasks:
+                    # Check for waiting/blocked tasks
+                    if task.get("status") == "waiting":
+                        waiting_tasks.append({
+                            "id": task["id"],
+                            "title": task["title"],
+                            "assignee": task.get("assignee"),
+                            "blocked_days": 0  # Would calculate from updated_at
+                        })
+
+                    # Track assignee workload
+                    assignee = task.get("assignee")
+                    if assignee and task.get("status") in ["todo", "doing"]:
+                        if assignee not in overloaded_assignees:
+                            overloaded_assignees[assignee] = []
+                        overloaded_assignees[assignee].append(task["id"])
+
+                # Check for dependency bottlenecks if requested
+                if include_dependencies:
+                    deps_response = await client.get(urljoin(api_url, "/api/dependencies"))
+                    if deps_response.status_code == 200:
+                        dependencies = deps_response.json()
+
+                        # Find circular dependencies or long chains
+                        for dep in dependencies:
+                            if dep.get("type") == "blocks":
+                                dependency_blocks.append({
+                                    "from": dep["from_id"],
+                                    "to": dep["to_id"],
+                                    "type": dep["type"]
+                                })
+
+                # Create bottleneck entries
+                if waiting_tasks:
+                    bottlenecks.append({
+                        "type": "blocked_tasks",
+                        "severity": "high",
+                        "count": len(waiting_tasks),
+                        "items": waiting_tasks[:5],
+                        "impact": f"{len(waiting_tasks)} tasks waiting",
+                        "resolution": "Review and unblock waiting tasks"
+                    })
+
+                # Check for overloaded assignees (more than 5 active items)
+                for assignee, task_ids in overloaded_assignees.items():
+                    if len(task_ids) > 5:
+                        bottlenecks.append({
+                            "type": "overloaded_assignee",
+                            "severity": "medium",
+                            "assignee": assignee,
+                            "task_count": len(task_ids),
+                            "impact": f"{assignee} has {len(task_ids)} active items",
+                            "resolution": f"Redistribute tasks from {assignee}"
+                        })
+
+                if dependency_blocks:
+                    bottlenecks.append({
+                        "type": "dependency_chains",
+                        "severity": "high",
+                        "count": len(dependency_blocks),
+                        "chains": dependency_blocks[:3],
+                        "impact": f"{len(dependency_blocks)} blocking dependencies",
+                        "resolution": "Review and optimize dependency chains"
+                    })
+
+                # Sort by severity
+                severity_order = {"high": 0, "medium": 1, "low": 2}
+                bottlenecks.sort(key=lambda x: severity_order.get(x.get("severity", "low"), 3))
+
+                # Limit results
+                bottlenecks = bottlenecks[:limit]
+
+                return json.dumps({
+                    "success": True,
+                    "bottlenecks": bottlenecks,
+                    "count": len(bottlenecks),
+                    "scope": {
+                        "epic_id": epic_id,
+                        "story_id": story_id
+                    }
+                })
+
+        except Exception as e:
+            logger.error(f"Error finding bottlenecks: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "find bottlenecks")
+
+    @mcp.tool()
+    async def find_orphaned_items(
+        ctx: Context,
+        scope: str = "all",
+        item_type: str | None = None
+    ) -> str:
+        """
+        Find orphaned items (tasks without stories, stories without epics, etc).
+
+        Args:
+            scope: "all" | "epic" | "story" | "task"
+            item_type: Filter by specific type
+
+        Returns:
+            JSON with orphaned items grouped by type
+
+        Examples:
+            find_orphaned_items()  # All orphaned items
+            find_orphaned_items(scope="story")  # Only orphaned stories
+        """
+        try:
+            api_url = get_api_url()
+            timeout = get_default_timeout()
+
+            orphans = {
+                "epics": [],
+                "stories": [],
+                "tasks": [],
+                "subtasks": []
+            }
+
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                # Get all hierarchy data based on scope
+                if scope in ["all", "task"]:
+                    tasks_response = await client.get(urljoin(api_url, "/api/tasks"))
+                    if tasks_response.status_code == 200:
+                        tasks = tasks_response.json()
+
+                        # Find orphaned tasks (no story_id and no parent_task_id)
+                        for task in tasks:
+                            if not task.get("story_id") and not task.get("parent_task_id"):
+                                orphans["tasks"].append({
+                                    "id": task["id"],
+                                    "title": task["title"],
+                                    "status": task.get("status", "unknown"),
+                                    "created_at": task.get("created_at")
+                                })
+
+                        # Find orphaned subtasks (parent_task_id doesn't exist)
+                        task_ids = {t["id"] for t in tasks}
+                        for task in tasks:
+                            if task.get("parent_task_id") and task["parent_task_id"] not in task_ids:
+                                orphans["subtasks"].append({
+                                    "id": task["id"],
+                                    "title": task["title"],
+                                    "missing_parent": task["parent_task_id"]
+                                })
+
+                if scope in ["all", "story"]:
+                    stories_response = await client.get(urljoin(api_url, "/api/stories"))
+                    if stories_response.status_code == 200:
+                        stories = stories_response.json()
+
+                        # Find orphaned stories (no epic_id)
+                        for story in stories:
+                            if not story.get("epic_id"):
+                                orphans["stories"].append({
+                                    "id": story["id"],
+                                    "title": story["title"],
+                                    "status": story.get("status", "unknown"),
+                                    "task_count": len(story.get("tasks", []))
+                                })
+
+                # Count totals
+                total_orphans = sum(len(items) for items in orphans.values())
+
+                # Filter empty categories
+                orphans = {k: v for k, v in orphans.items() if v}
+
+                return json.dumps({
+                    "success": True,
+                    "orphans": orphans,
+                    "total_count": total_orphans,
+                    "scope": scope,
+                    "recommendations": [
+                        "Link orphaned tasks to appropriate stories",
+                        "Create parent items for orphaned children",
+                        "Review and clean up disconnected items"
+                    ] if total_orphans > 0 else []
+                })
+
+        except Exception as e:
+            logger.error(f"Error finding orphaned items: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "find orphaned items")
+
+    @mcp.tool()
+    async def find_stale_items(
+        ctx: Context,
+        days: int = 7,
+        status_filter: list[str] | None = None,
+        include_assignee: bool = True
+    ) -> str:
+        """
+        Find items that haven't been updated recently.
+
+        Args:
+            days: Number of days to consider as stale (default: 7)
+            status_filter: Only check specific statuses (e.g., ["todo", "doing"])
+            include_assignee: Include assignee information
+
+        Returns:
+            JSON with stale items sorted by last update
+
+        Examples:
+            find_stale_items()  # Items not updated in 7 days
+            find_stale_items(days=14, status_filter=["doing"])  # Active items stale > 14 days
+        """
+        try:
+            api_url = get_api_url()
+            timeout = get_default_timeout()
+
+            from datetime import datetime, timedelta
+
+            stale_items = []
+            cutoff_date = datetime.now() - timedelta(days=days)
+
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                # Get all tasks
+                tasks_response = await client.get(urljoin(api_url, "/api/tasks"))
+                if tasks_response.status_code != 200:
+                    return MCPErrorFormatter.format_error(
+                        "failed_to_fetch",
+                        "Could not fetch tasks for stale analysis"
+                    )
+
+                tasks = tasks_response.json()
+
+                # Filter by status if specified
+                if status_filter:
+                    tasks = [t for t in tasks if t.get("status") in status_filter]
+
+                # Check for stale items
+                for task in tasks:
+                    if "updated_at" in task:
+                        try:
+                            # Handle ISO format with Z timezone
+                            updated_str = task["updated_at"].replace("Z", "+00:00")
+                            updated = datetime.fromisoformat(updated_str)
+
+                            # Remove timezone for comparison
+                            if updated.tzinfo:
+                                updated = updated.replace(tzinfo=None)
+
+                            if updated < cutoff_date:
+                                days_stale = (datetime.now() - updated).days
+
+                                item = {
+                                    "id": task["id"],
+                                    "title": task["title"],
+                                    "type": "task",
+                                    "status": task.get("status", "unknown"),
+                                    "days_stale": days_stale,
+                                    "last_updated": task["updated_at"]
+                                }
+
+                                if include_assignee:
+                                    item["assignee"] = task.get("assignee", "Unassigned")
+
+                                stale_items.append(item)
+                        except (ValueError, AttributeError) as e:
+                            logger.warning(f"Could not parse date for task {task.get('id')}: {e}")
+
+                # Get stories and epics if they exist
+                try:
+                    stories_response = await client.get(urljoin(api_url, "/api/stories"))
+                    if stories_response.status_code == 200:
+                        stories = stories_response.json()
+
+                        if status_filter:
+                            stories = [s for s in stories if s.get("status") in status_filter]
+
+                        for story in stories:
+                            if "updated_at" in story:
+                                try:
+                                    updated_str = story["updated_at"].replace("Z", "+00:00")
+                                    updated = datetime.fromisoformat(updated_str)
+
+                                    if updated.tzinfo:
+                                        updated = updated.replace(tzinfo=None)
+
+                                    if updated < cutoff_date:
+                                        days_stale = (datetime.now() - updated).days
+
+                                        stale_items.append({
+                                            "id": story["id"],
+                                            "title": story["title"],
+                                            "type": "story",
+                                            "status": story.get("status", "unknown"),
+                                            "days_stale": days_stale,
+                                            "last_updated": story["updated_at"]
+                                        })
+                                except (ValueError, AttributeError) as e:
+                                    logger.warning(f"Could not parse date for story {story.get('id')}: {e}")
+                except:
+                    pass  # Stories might not exist
+
+                # Sort by staleness (most stale first)
+                stale_items.sort(key=lambda x: x["days_stale"], reverse=True)
+
+                # Group by severity
+                critical_stale = [i for i in stale_items if i["days_stale"] > 30]
+                warning_stale = [i for i in stale_items if 14 < i["days_stale"] <= 30]
+                normal_stale = [i for i in stale_items if i["days_stale"] <= 14]
+
+                return json.dumps({
+                    "success": True,
+                    "stale_items": stale_items[:20],  # Limit to 20 items
+                    "total_count": len(stale_items),
+                    "summary": {
+                        "critical": len(critical_stale),
+                        "warning": len(warning_stale),
+                        "normal": len(normal_stale)
+                    },
+                    "filter": {
+                        "days": days,
+                        "statuses": status_filter or "all"
+                    },
+                    "recommendations": [
+                        f"Review {len(critical_stale)} critically stale items (>30 days)" if critical_stale else None,
+                        f"Update {len(warning_stale)} warning items (14-30 days)" if warning_stale else None,
+                        "Consider closing or reassigning stale items"
+                    ] if stale_items else []
+                })
+
+        except Exception as e:
+            logger.error(f"Error finding stale items: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "find stale items")
+
+    @mcp.tool()
+    async def find_conflicting_dependencies(
+        ctx: Context,
+        check_cycles: bool = True,
+        check_conflicts: bool = True
+    ) -> str:
+        """
+        Find conflicting or circular dependencies in the project.
+
+        Args:
+            check_cycles: Check for circular dependency chains
+            check_conflicts: Check for conflicting dependency types
+
+        Returns:
+            JSON with conflicts and suggested resolutions
+
+        Examples:
+            find_conflicting_dependencies()  # All conflicts
+            find_conflicting_dependencies(check_cycles=True, check_conflicts=False)
+        """
+        try:
+            api_url = get_api_url()
+            timeout = get_default_timeout()
+
+            conflicts = []
+            cycles = []
+
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                # Get all dependencies
+                deps_response = await client.get(urljoin(api_url, "/api/dependencies"))
+                if deps_response.status_code != 200:
+                    return json.dumps({
+                        "success": True,
+                        "conflicts": [],
+                        "cycles": [],
+                        "message": "No dependencies found"
+                    })
+
+                dependencies = deps_response.json()
+
+                if check_cycles:
+                    # Build adjacency list for cycle detection
+                    graph = {}
+                    for dep in dependencies:
+                        from_id = dep.get("from_id")
+                        to_id = dep.get("to_id")
+
+                        if from_id not in graph:
+                            graph[from_id] = []
+                        graph[from_id].append(to_id)
+
+                    # Simple cycle detection using DFS
+                    def find_cycle(node, visited, rec_stack, path):
+                        visited[node] = True
+                        rec_stack[node] = True
+                        path.append(node)
+
+                        if node in graph:
+                            for neighbor in graph[node]:
+                                if neighbor not in visited:
+                                    cycle = find_cycle(neighbor, visited, rec_stack, path.copy())
+                                    if cycle:
+                                        return cycle
+                                elif rec_stack.get(neighbor, False):
+                                    # Cycle found
+                                    cycle_start = path.index(neighbor)
+                                    return path[cycle_start:] + [neighbor]
+
+                        rec_stack[node] = False
+                        return None
+
+                    # Check for cycles from each node
+                    visited = {}
+                    for node in graph:
+                        if node not in visited:
+                            rec_stack = {}
+                            cycle = find_cycle(node, visited, rec_stack, [])
+                            if cycle:
+                                cycles.append({
+                                    "type": "circular_dependency",
+                                    "severity": "critical",
+                                    "cycle": cycle,
+                                    "message": f"Circular dependency detected: {' -> '.join(cycle)}",
+                                    "resolution": "Remove one of the dependencies in the cycle"
+                                })
+
+                if check_conflicts:
+                    # Check for conflicting dependency types
+                    # Group dependencies by from-to pair
+                    dep_pairs = {}
+                    for dep in dependencies:
+                        pair = (dep.get("from_id"), dep.get("to_id"))
+                        if pair not in dep_pairs:
+                            dep_pairs[pair] = []
+                        dep_pairs[pair].append(dep)
+
+                    # Find conflicts
+                    for pair, deps in dep_pairs.items():
+                        if len(deps) > 1:
+                            types = [d.get("type") for d in deps]
+                            if len(set(types)) > 1:
+                                conflicts.append({
+                                    "type": "conflicting_types",
+                                    "severity": "high",
+                                    "from": pair[0],
+                                    "to": pair[1],
+                                    "dependency_types": types,
+                                    "message": f"Multiple dependency types between {pair[0]} and {pair[1]}",
+                                    "resolution": "Consolidate to single dependency type"
+                                })
+
+                    # Check for contradictory dependencies (A blocks B and B blocks A)
+                    for dep in dependencies:
+                        if dep.get("type") == "blocks":
+                            reverse = next(
+                                (d for d in dependencies
+                                 if d.get("from_id") == dep.get("to_id")
+                                 and d.get("to_id") == dep.get("from_id")
+                                 and d.get("type") == "blocks"),
+                                None
+                            )
+                            if reverse:
+                                conflict_key = tuple(sorted([dep["from_id"], dep["to_id"]]))
+                                if not any(c.get("conflict_key") == conflict_key for c in conflicts):
+                                    conflicts.append({
+                                        "type": "mutual_blocking",
+                                        "severity": "critical",
+                                        "items": [dep["from_id"], dep["to_id"]],
+                                        "conflict_key": conflict_key,
+                                        "message": f"Mutual blocking between {dep['from_id']} and {dep['to_id']}",
+                                        "resolution": "Remove one blocking relationship"
+                                    })
+
+                # Remove conflict_key from response
+                for conflict in conflicts:
+                    conflict.pop("conflict_key", None)
+
+                total_issues = len(conflicts) + len(cycles)
+
+                return json.dumps({
+                    "success": True,
+                    "conflicts": conflicts,
+                    "cycles": cycles,
+                    "total_issues": total_issues,
+                    "severity_summary": {
+                        "critical": len([i for i in conflicts + cycles if i.get("severity") == "critical"]),
+                        "high": len([i for i in conflicts + cycles if i.get("severity") == "high"]),
+                        "medium": len([i for i in conflicts + cycles if i.get("severity") == "medium"])
+                    },
+                    "recommendations": [
+                        "Resolve critical cycles immediately",
+                        "Review and simplify dependency chains",
+                        "Document dependency rationale"
+                    ] if total_issues > 0 else []
+                })
+
+        except Exception as e:
+            logger.error(f"Error finding conflicting dependencies: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "find conflicting dependencies")
+
+    @mcp.tool()
+    async def get_critical_path(
+        ctx: Context,
+        target_id: str,
+        target_type: str = "epic",
+        include_parallel: bool = False
+    ) -> str:
+        """
+        Get the critical path to complete a target item.
+
+        Args:
+            target_id: ID of the target item to analyze
+            target_type: "epic" | "story" | "task"
+            include_parallel: Include parallel execution opportunities
+
+        Returns:
+            JSON with critical path, duration estimate, and bottlenecks
+
+        Examples:
+            get_critical_path(target_id="e-1", target_type="epic")
+            get_critical_path(target_id="s-1", target_type="story", include_parallel=True)
+        """
+        try:
+            api_url = get_api_url()
+            timeout = get_default_timeout()
+
+            critical_path = []
+            bottleneck_points = []
+
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                # Get the target item
+                if target_type == "epic":
+                    target_response = await client.get(urljoin(api_url, f"/api/epics/{target_id}"))
+                elif target_type == "story":
+                    target_response = await client.get(urljoin(api_url, f"/api/stories/{target_id}"))
+                elif target_type == "task":
+                    target_response = await client.get(urljoin(api_url, f"/api/tasks/{target_id}"))
+                else:
+                    return MCPErrorFormatter.format_error(
+                        "invalid_type",
+                        f"Invalid target type: {target_type}"
+                    )
+
+                if target_response.status_code != 200:
+                    return MCPErrorFormatter.format_error(
+                        "not_found",
+                        f"{target_type} {target_id} not found"
+                    )
+
+                target = target_response.json()
+
+                # Get all related items based on type
+                if target_type == "epic":
+                    # Get all stories in epic
+                    stories_response = await client.get(
+                        urljoin(api_url, f"/api/stories?epic_id={target_id}")
+                    )
+                    if stories_response.status_code == 200:
+                        stories = stories_response.json()
+
+                        # Get all tasks for these stories
+                        all_tasks = []
+                        for story in stories:
+                            tasks_response = await client.get(
+                                urljoin(api_url, f"/api/tasks?story_id={story['id']}")
+                            )
+                            if tasks_response.status_code == 200:
+                                all_tasks.extend(tasks_response.json())
+                    else:
+                        stories = []
+                        all_tasks = []
+
+                elif target_type == "story":
+                    # Get all tasks in story
+                    tasks_response = await client.get(
+                        urljoin(api_url, f"/api/tasks?story_id={target_id}")
+                    )
+                    all_tasks = tasks_response.json() if tasks_response.status_code == 200 else []
+                    stories = [target]
+
+                else:  # task
+                    all_tasks = [target]
+                    stories = []
+
+                # Get dependencies for all items
+                deps_response = await client.get(urljoin(api_url, "/api/dependencies"))
+                dependencies = deps_response.json() if deps_response.status_code == 200 else []
+
+                # Build dependency graph
+                dep_graph = {}
+                for dep in dependencies:
+                    if dep.get("type") in ["blocks", "precedes"]:
+                        from_id = dep["from_id"]
+                        to_id = dep["to_id"]
+
+                        if from_id not in dep_graph:
+                            dep_graph[from_id] = {"blocks": [], "blocked_by": []}
+                        if to_id not in dep_graph:
+                            dep_graph[to_id] = {"blocks": [], "blocked_by": []}
+
+                        dep_graph[from_id]["blocks"].append(to_id)
+                        dep_graph[to_id]["blocked_by"].append(from_id)
+
+                # Find critical path (longest path through dependencies)
+                # Start with tasks that have no blockers
+                start_tasks = []
+                for task in all_tasks:
+                    task_id = task["id"]
+                    if task_id not in dep_graph or not dep_graph[task_id]["blocked_by"]:
+                        if task.get("status") != "done":
+                            start_tasks.append(task)
+
+                # If no start tasks, use all non-done tasks
+                if not start_tasks:
+                    start_tasks = [t for t in all_tasks if t.get("status") != "done"]
+
+                # Build critical path
+                for task in start_tasks:
+                    path_item = {
+                        "id": task["id"],
+                        "title": task["title"],
+                        "type": "task",
+                        "status": task.get("status", "todo"),
+                        "assignee": task.get("assignee"),
+                        "estimated_hours": task.get("estimated_hours", 8),  # Default 8 hours
+                        "dependencies": []
+                    }
+
+                    # Add blocked items
+                    if task["id"] in dep_graph:
+                        path_item["dependencies"] = dep_graph[task["id"]]["blocks"]
+
+                    critical_path.append(path_item)
+
+                    # Check for bottlenecks
+                    if task.get("status") == "waiting":
+                        bottleneck_points.append({
+                            "id": task["id"],
+                            "title": task["title"],
+                            "reason": "blocked_task",
+                            "impact": "high"
+                        })
+                    elif len(dep_graph.get(task["id"], {}).get("blocks", [])) > 3:
+                        bottleneck_points.append({
+                            "id": task["id"],
+                            "title": task["title"],
+                            "reason": "blocking_many",
+                            "blocked_count": len(dep_graph[task["id"]]["blocks"]),
+                            "impact": "high"
+                        })
+
+                # Calculate total estimated duration
+                total_hours = sum(item.get("estimated_hours", 8) for item in critical_path)
+                total_days = total_hours / 8  # Assuming 8-hour workday
+
+                # Find parallel opportunities if requested
+                parallel_opportunities = []
+                if include_parallel:
+                    # Find tasks that can be done in parallel (no dependencies between them)
+                    for i, task1 in enumerate(critical_path):
+                        for task2 in critical_path[i+1:]:
+                            # Check if they can be parallel
+                            if (task1["id"] not in task2.get("dependencies", []) and
+                                task2["id"] not in task1.get("dependencies", [])):
+                                parallel_opportunities.append({
+                                    "tasks": [task1["id"], task2["id"]],
+                                    "potential_savings": min(
+                                        task1.get("estimated_hours", 8),
+                                        task2.get("estimated_hours", 8)
+                                    )
+                                })
+
+                # Limit parallel opportunities to top 5
+                parallel_opportunities = sorted(
+                    parallel_opportunities,
+                    key=lambda x: x["potential_savings"],
+                    reverse=True
+                )[:5]
+
+                result = {
+                    "success": True,
+                    "target": {
+                        "id": target_id,
+                        "type": target_type,
+                        "title": target.get("title", "Unknown")
+                    },
+                    "critical_path": critical_path[:10],  # Limit to 10 items
+                    "path_length": len(critical_path),
+                    "estimated_duration": {
+                        "hours": total_hours,
+                        "days": round(total_days, 1)
+                    },
+                    "bottleneck_points": bottleneck_points[:5],
+                    "optimization_opportunities": []
+                }
+
+                if include_parallel:
+                    result["parallel_opportunities"] = parallel_opportunities
+                    if parallel_opportunities:
+                        total_savings = sum(opp["potential_savings"] for opp in parallel_opportunities)
+                        result["optimization_opportunities"].append(
+                            f"Parallelize tasks to save up to {total_savings} hours"
+                        )
+
+                if bottleneck_points:
+                    result["optimization_opportunities"].append(
+                        f"Resolve {len(bottleneck_points)} bottlenecks to improve flow"
+                    )
+
+                return json.dumps(result)
+
+        except Exception as e:
+            logger.error(f"Error getting critical path: {e}", exc_info=True)
+            return MCPErrorFormatter.from_exception(e, "get critical path")
