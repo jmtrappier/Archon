@@ -1709,6 +1709,27 @@ def register_task_tools(mcp: FastMCP):
     # ============================================================================
 
     @mcp.tool()
+    async def test_basic_health(
+        ctx: Context,
+        project_id: str | None = None
+    ) -> str:
+        """Test function without any .get() calls to isolate the issue"""
+        try:
+            # Don't call any .get() methods at all
+            return json.dumps({
+                "success": True,
+                "message": "Basic test worked - no .get() calls made",
+                "project_id": project_id or "none"
+            })
+        except Exception as e:
+            import traceback
+            return json.dumps({
+                "success": False,
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            })
+
+    @mcp.tool()
     async def simple_analyze_health(
         ctx: Context,
         project_id: str | None = None
