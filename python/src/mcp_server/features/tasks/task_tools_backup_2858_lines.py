@@ -2190,6 +2190,10 @@ def register_task_tools(mcp: FastMCP):
                                     "type": dep["type"]
                                 })
 
+                    except Exception:
+                        # Silently ignore dependency fetch errors for now
+                        dependencies = []
+
                 # Create bottleneck entries
                 if waiting_tasks:
                     bottlenecks.append({

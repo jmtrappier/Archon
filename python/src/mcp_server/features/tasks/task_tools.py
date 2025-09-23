@@ -10,10 +10,10 @@ The original 2858-line file has been backed up as task_tools_backup_2858_lines.p
 and split into smaller, focused modules for better maintainability.
 """
 
-# Import the refactored registration function
+# Import the refactored registration function - version with cleaner structure
 from .task_tools_refactored import register_task_tools
 
 # Export the same interface as before
 __all__ = ["register_task_tools"]
 
-# This maintains backward compatibility while using the new modular structure
+# This uses the refactored modular version with proper function organization
