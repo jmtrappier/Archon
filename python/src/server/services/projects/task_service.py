@@ -275,8 +275,10 @@ class TaskService:
             logger.debug(f"Listing tasks with filters: {', '.join(filters_applied)}")
 
             # Execute query and get raw response
-            response = await (
-                query.order("task_order", desc=False).order("created_at", desc=False).aexecute()
+            import asyncio
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: query.order("task_order", desc=False).order("created_at", desc=False).execute()
             )
 
             # Debug: Log task status distribution and filter effectiveness
@@ -348,12 +350,13 @@ class TaskService:
                 for task in tasks:
                     # Check if task has story_id, then get story's epic_id
                     if task.get("story_id"):
-                        story_response = await (
-                            self.supabase_client.table("archon_stories")
+                        story_response = await asyncio.get_event_loop().run_in_executor(
+                            None,
+                            lambda: self.supabase_client.table("archon_stories")
                             .select("epic_id")
                             .eq("id", task["story_id"])
                             .single()
-                            .aexecute()
+                            .execute()
                         )
                         if story_response.data and story_response.data.get("epic_id") == epic_id:
                             filtered_tasks.append(task)
