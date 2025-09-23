@@ -348,12 +348,12 @@ class TaskService:
                 for task in tasks:
                     # Check if task has story_id, then get story's epic_id
                     if task.get("story_id"):
-                        story_response = (
+                        story_response = await (
                             self.supabase_client.table("archon_stories")
                             .select("epic_id")
                             .eq("id", task["story_id"])
                             .single()
-                            .execute()
+                            .aexecute()
                         )
                         if story_response.data and story_response.data.get("epic_id") == epic_id:
                             filtered_tasks.append(task)
