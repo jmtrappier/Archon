@@ -20,15 +20,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api_routes.agent_chat_api import router as agent_chat_router
 from .api_routes.bug_report_api import router as bug_report_router
+from .api_routes.documents_routes import router as documents_router
+from .api_routes.epics_routes import router as epics_router
 from .api_routes.internal_api import router as internal_router
 from .api_routes.knowledge_api import router as knowledge_router
 from .api_routes.mcp_api import router as mcp_router
 from .api_routes.monitoring_api import router as monitoring_router
 from .api_routes.progress_api import router as progress_router
 from .api_routes.projects_api import router as projects_router
-
-# Import modular API routers
 from .api_routes.settings_api import router as settings_router
+from .api_routes.stories_routes import router as stories_router
+from .api_routes.tasks_routes import router as tasks_router
 
 # Import Logfire configuration
 from .config.logfire_config import api_logger, setup_logfire
@@ -207,7 +209,11 @@ app.include_router(settings_router)
 app.include_router(mcp_router)
 # app.include_router(mcp_client_router)  # Removed - not part of new architecture
 app.include_router(knowledge_router)
-app.include_router(projects_router)
+app.include_router(projects_router)  # Core projects + MCP endpoints + admin
+app.include_router(epics_router)      # NEW: Epic management endpoints
+app.include_router(stories_router)    # NEW: Story management endpoints
+app.include_router(tasks_router)      # NEW: Task and subtask endpoints
+app.include_router(documents_router)  # NEW: Document and versioning endpoints
 app.include_router(progress_router)
 app.include_router(agent_chat_router)
 app.include_router(internal_router)
