@@ -200,34 +200,53 @@ MCP_INSTRUCTIONS = """
 2. **Research First**: Before implementing, use rag_search_knowledge_base and rag_search_code_examples
 3. **Task-Driven Development**: Never code without checking current tasks first
 
-## 📋 Core Workflow
+## 📋 Core Workflow - Unified Kanban Interface (Stories 4.8-4.9)
 
-### Task Management Cycle
-1. **Get current task**: `list_tasks(task_id="...")` 
-2. **Search/List tasks**: `list_tasks(query="auth", filter_by="status", filter_value="todo")`
-3. **Mark as doing**: `manage_task("update", task_id="...", status="doing")`
-4. **Research phase**:
+### Hierarchical Task Management Cycle
+1. **Get current context**: Check current TasksTab view filter (EPICs/Tasks/Stories/All)
+2. **Navigate unified interface**: All hierarchy levels visible in single Kanban board
+3. **Filter-aware operations**: Operations adapt to current filter context (EPICs/Tasks/All)
+4. **Mixed mode workflow**: EPICs and Tasks coexist in same board when filter="All"
+5. **Context-driven actions**: Creation buttons appear based on active filter state
+6. **Research phase**:
    - `rag_search_knowledge_base(query="...", match_count=5)`
    - `rag_search_code_examples(query="...", match_count=3)`
-5. **Implementation**: Code based on research findings
-6. **Mark for review**: `manage_task("update", task_id="...", status="review")`
-7. **Get next task**: `list_tasks(filter_by="status", filter_value="todo")`
+7. **Implementation**: Code based on research findings in unified interface context
+8. **Status updates**: `manage_task("update", task_id="...", status="review")` in filter-aware context
 
-### Consolidated Task Tools (Optimized ~2 tools from 5)
-- `list_tasks(query=None, task_id=None, filter_by=None, filter_value=None, per_page=10)`
-  - **Consolidated**: list + search + get in one tool
-  - **NEW**: Search with keyword query parameter
-  - **NEW**: task_id parameter for getting single task (full details)
-  - Filter by status, project, or assignee
-  - **Optimized**: Returns truncated descriptions and array counts (lists only)
-  - **Default**: 10 items per page (was 50)
+## 🎯 Unified Kanban/EPICs Interface Architecture
+
+### Current UI Post Stories 4.8-4.9:
+- **TasksTab**: Central unified interface for all hierarchy levels (EPICs, Stories, Tasks)
+- **Toggle System**: EPICs | Tasks | Stories | All filter options in single interface
+- **Mixed Mode**: EPICs and Tasks displayed together when filter = "All"
+- **Conditional Actions**: Add Epic/Task/Story buttons appear based on active filter
+- **Breadcrumb Navigation**: Seamless navigation between hierarchy levels
+- **Drag & Drop**: Cross-hierarchy operations within unified board
+
+### MCP Context Awareness:
+- When user mentions "Kanban" → refers to unified TasksTab interface
+- EPICs are NOT separate → fully integrated in main Kanban board
+- Filter context affects which items are visible/actionable
+- Creation workflows depend on current filter state
+- Mixed operations handle EPICs + Tasks together
+
+### Consolidated Task Tools (Filter-Aware)
+- `find_tasks(query=None, task_id=None, filter_by=None, filter_value=None, per_page=10)`
+  - **UNIFIED INTERFACE**: Works with TasksTab Kanban showing EPICs + Tasks + Stories
+  - **Filter Aware**: Results adapt to current view filter (EPICs/Tasks/Stories/All)
+  - **Mixed Mode**: Can return EPICs, Stories, and Tasks when filter="All"
+  - **Context Sensitive**: Respects current TasksTab filter selection
+  - **Hierarchical**: Understands EPIC → STORY → TASK relationships
 - `manage_task(action, task_id=None, project_id=None, ...)`
-  - **Consolidated**: create + update + delete in one tool
-  - action: "create" | "update" | "delete"
+  - **Hierarchy Aware**: Respects EPIC → STORY → TASK → SUBTASK hierarchy
+  - **Filter Context**: Creation considers current TasksTab filter state
+  - **Mixed Operations**: Can operate alongside EPICs in unified board
+  - **Unified Interface**: All actions reflect in single TasksTab view
   - Examples:
-    - `manage_task("create", project_id="p-1", title="Fix auth")`
-    - `manage_task("update", task_id="t-1", status="doing")`
-    - `manage_task("delete", task_id="t-1")`
+    - `manage_task("create", project_id="p-1", title="Fix auth")` - creates in current filter context
+    - `manage_task("update", task_id="t-1", status="doing")` - updates in unified board
+    - `manage_task("delete", task_id="t-1")` - removes from unified interface
 
 ## 🏗️ Project Management
 
@@ -262,18 +281,50 @@ MCP_INSTRUCTIONS = """
   - Actions: "create", "restore"
   - Field names: "docs", "features", "data", "prd"
 
-## 🎯 Best Practices
-1. **Atomic Tasks**: Create tasks that take 1-4 hours
-2. **Clear Descriptions**: Include acceptance criteria in task descriptions
-3. **Use Features**: Group related tasks with feature labels
-4. **Add Sources**: Link relevant documentation to tasks
-5. **Track Progress**: Update task status as you work
+## 🎯 Best Practices - Unified Interface Era
+
+1. **Unified Interface Awareness**: All operations consider TasksTab unified view context
+2. **Filter Context Sensitivity**: Always consider current filter when suggesting actions
+3. **Mixed Mode Support**: Handle EPICs + Tasks + Stories coexistence gracefully
+4. **Hierarchical Navigation**: Leverage breadcrumb navigation patterns (EPIC → STORY → TASK)
+5. **Context-Driven Guidance**: Adapt suggestions to current view state and filter
+6. **Atomic Tasks**: Create tasks that take 1-4 hours within hierarchy context
+7. **Clear Descriptions**: Include acceptance criteria and hierarchy relationships
+8. **Feature Grouping**: Use features to group related items across hierarchy levels
+9. **Progress Tracking**: Update status with awareness of unified board visibility
+
+## 📚 Example Workflows - Post Stories 4.8-4.9
+
+### Epic Management in Unified Interface:
+1. `find_epics(project_id="p-1")` → EPICs shown in main TasksTab Kanban
+2. Toggle filter to "EPICs" view → only EPICs visible in unified board
+3. `manage_epic("create", ...)` → new EPIC appears in unified Kanban board
+4. Drag EPIC between status columns in same interface as Tasks
+
+### Mixed Mode Operations:
+1. Set filter to "All" → EPICs + Stories + Tasks displayed together
+2. `find_tasks(project_id="p-1")` → returns all hierarchy levels in unified context
+3. Drag & drop between EPICs and Tasks in same Kanban board
+4. Context-aware creation based on filter state
+
+### Context-Aware Creation Workflows:
+1. Filter = "EPICs" → Add Epic button visible in TasksTab
+2. Filter = "Tasks" → Add Task button visible in TasksTab
+3. Filter = "Stories" → Add Story button visible in TasksTab
+4. Filter = "All" → All creation buttons available in unified interface
+
+### Hierarchical Navigation Patterns:
+1. Click EPIC in unified board → Navigate to EPIC detail with breadcrumbs
+2. "Back to Kanban" → Return to unified TasksTab interface
+3. Toggle between hierarchy levels without losing context
+4. Seamless EPIC ↔ STORY ↔ TASK navigation in single interface
 
 ## 📊 Optimization Updates
-- **Payload Optimization**: Tasks in lists return truncated descriptions (200 chars)
+- **Payload Optimization**: All hierarchy levels return truncated descriptions (200 chars)
 - **Array Counts**: Source/example arrays replaced with counts in list responses
-- **Smart Defaults**: Default page size reduced from 50 to 10 items
-- **Search Support**: New `query` parameter in list_tasks for keyword search
+- **Smart Defaults**: Default page size reduced from 50 to 10 items for all hierarchy tools
+- **Unified Search**: Search works across EPICs, Stories, and Tasks in mixed mode
+- **Filter Context**: All responses respect current TasksTab filter state
 """
 
 # Initialize the main FastMCP server with fixed configuration
