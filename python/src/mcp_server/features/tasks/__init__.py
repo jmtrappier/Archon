@@ -1,14 +1,14 @@
 """
 Task management tools for Archon MCP Server.
 
-This module provides separate tools for each task operation:
-- create_task: Create a new task
-- list_tasks: List tasks with filtering
-- get_task: Get task details
-- update_task: Update task properties
-- delete_task: Delete a task
+REFACTORED: This module now uses a modular structure with separate files:
+- task_core.py: Core CRUD operations (find_tasks, manage_task, etc.)
+- task_analytics.py: Analytics and health monitoring
+- task_utils.py: Shared utilities and error handling
+
+The old task_tools.py (2858 lines) has been split into smaller, focused modules.
 """
 
-from .task_tools import register_task_tools
+from .task_tools_refactored import register_task_tools
 
 __all__ = ["register_task_tools"]
