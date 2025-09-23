@@ -5,7 +5,12 @@ This file imports from the modular components and registers all tools.
 """
 
 import traceback
-from mcp.server.fastmcp import Context, FastMCP
+
+from mcp.server.fastmcp import Context, FastMCP  # type: ignore
+
+from .epic_tools import find_epics, manage_epic
+from .story_tools import find_stories, manage_story
+from .task_analytics import analyze_project_health, find_bottlenecks, find_stale_items
 
 # Import from modular components
 from .task_core import find_tasks, manage_task
@@ -38,8 +43,7 @@ def register_task_tools(mcp: FastMCP) -> None:
     ) -> str:
         """Find and search tasks (consolidated: list + search + get)."""
         return await find_tasks(
-            ctx, query, task_id, filter_by, filter_value,
-            project_id, include_closed, page, per_page
+            ctx, query, task_id, filter_by, filter_value, project_id, include_closed, page, per_page
         )
 
     @mcp.tool()
@@ -59,17 +63,24 @@ def register_task_tools(mcp: FastMCP) -> None:
     ) -> str:
         """Manage tasks (consolidated: create/update/delete)."""
         return await manage_task(
-            ctx, action, task_id, project_id, parent_task_id, story_id,
-            title, description, status, assignee, task_order, feature
+            ctx,
+            action,
+            task_id,
+            project_id,
+            parent_task_id,
+            story_id,
+            title,
+            description,
+            status,
+            assignee,
+            task_order,
+            feature,
         )
 
     # Analytics and health monitoring
     @mcp.tool()
     async def analyze_project_health_tool(
-        ctx: Context,
-        project_id: str | None = None,
-        scope: str = "current",
-        include_metrics: bool = True
+        ctx: Context, project_id: str | None = None, scope: str = "current", include_metrics: bool = True
     ) -> str:
         """Analyze project health and provide insights on bottlenecks, risks, and progress."""
         return await analyze_project_health(ctx, project_id, scope, include_metrics)
@@ -80,17 +91,14 @@ def register_task_tools(mcp: FastMCP) -> None:
         epic_id: str | None = None,
         story_id: str | None = None,
         include_dependencies: bool = True,
-        limit: int = 10
+        limit: int = 10,
     ) -> str:
         """Find bottlenecks in the project that are blocking progress."""
         return await find_bottlenecks(ctx, epic_id, story_id, include_dependencies, limit)
 
     @mcp.tool()
     async def find_stale_items_tool(
-        ctx: Context,
-        days: int = 7,
-        status_filter: list[str] | None = None,
-        include_assignee: bool = True
+        ctx: Context, days: int = 7, status_filter: list[str] | None = None, include_assignee: bool = True
     ) -> str:
         """Find items that haven't been updated recently."""
         return await find_stale_items(ctx, days, status_filter, include_assignee)
@@ -110,8 +118,7 @@ def register_task_tools(mcp: FastMCP) -> None:
     ) -> str:
         """Find and search epics (consolidated: list + search + get)."""
         return await find_epics(
-            ctx, query, epic_id, filter_by, filter_value,
-            project_id, include_closed, page, per_page
+            ctx, query, epic_id, filter_by, filter_value, project_id, include_closed, page, per_page
         )
 
     @mcp.tool()
@@ -130,8 +137,7 @@ def register_task_tools(mcp: FastMCP) -> None:
     ) -> str:
         """Manage epics (consolidated: create/update/delete)."""
         return await manage_epic(
-            ctx, action, epic_id, project_id, parent_epic_id,
-            title, description, status, assignee, epic_order, feature
+            ctx, action, epic_id, project_id, parent_epic_id, title, description, status, assignee, epic_order, feature
         )
 
     # Stories management tools
@@ -150,8 +156,7 @@ def register_task_tools(mcp: FastMCP) -> None:
     ) -> str:
         """Find and search stories (consolidated: list + search + get)."""
         return await find_stories(
-            ctx, query, story_id, filter_by, filter_value,
-            project_id, epic_id, include_closed, page, per_page
+            ctx, query, story_id, filter_by, filter_value, project_id, epic_id, include_closed, page, per_page
         )
 
     @mcp.tool()
@@ -171,8 +176,18 @@ def register_task_tools(mcp: FastMCP) -> None:
     ) -> str:
         """Manage stories (consolidated: create/update/delete)."""
         return await manage_story(
-            ctx, action, story_id, project_id, epic_id, parent_story_id,
-            title, description, status, assignee, story_order, feature
+            ctx,
+            action,
+            story_id,
+            project_id,
+            epic_id,
+            parent_story_id,
+            title,
+            description,
+            status,
+            assignee,
+            story_order,
+            feature,
         )
 
     # Test function for debugging
@@ -183,11 +198,11 @@ def register_task_tools(mcp: FastMCP) -> None:
             return MCPErrorFormatter.format_error(
                 "test_success",
                 "Modular structure is working correctly",
-                {"modules_loaded": ["task_core", "task_analytics", "task_utils"]}
+                {"modules_loaded": ["task_core", "task_analytics", "task_utils"]},
             ).replace('"success": false', '"success": true')  # Convert to success
         except Exception as e:
             return MCPErrorFormatter.format_error(
                 "test_failed",
                 f"Modular structure test failed: {str(e)}",
-                {"exception_type": type(e).__name__, "traceback": traceback.format_exc()}
+                {"exception_type": type(e).__name__, "traceback": traceback.format_exc()},
             )

@@ -19,6 +19,10 @@ logger = get_logger(__name__)
 
 
 class TaskService:
+    async def _execute_query(self, query_func):
+        """Helper to execute Supabase queries asynchronously"""
+        import asyncio
+        return await asyncio.get_event_loop().run_in_executor(None, query_func)
     VALID_PRIORITIES = {"critical", "high", "medium", "low"}
 
     def validate_priority(self, priority: str) -> tuple[bool, str]:
@@ -140,7 +144,7 @@ class TaskService:
             if story_id:
                 task_data["story_id"] = story_id
 
-            response = self.supabase_client.table("archon_tasks").insert(task_data).execute()
+            response = await self.supabase_client.table("archon_tasks").insert(task_data).execute()
 
             if response.data:
                 task = response.data[0]
@@ -350,9 +354,8 @@ class TaskService:
                 for task in tasks:
                     # Check if task has story_id, then get story's epic_id
                     if task.get("story_id"):
-                        story_response = await asyncio.get_event_loop().run_in_executor(
-                            None,
-                            lambda: self.supabase_client.table("archon_stories")
+                        story_response = await (
+                            self.supabase_client.table("archon_stories")
                             .select("epic_id")
                             .eq("id", task["story_id"])
                             .single()
@@ -385,7 +388,7 @@ class TaskService:
             logger.error(f"Error listing tasks: {e}")
             return False, {"error": f"Error listing tasks: {str(e)}"}
 
-    def get_task(self, task_id: str) -> tuple[bool, dict[str, Any]]:
+    async def get_task(self, task_id: str) -> tuple[bool, dict[str, Any]]:
         """
         Get a specific task by ID.
 
@@ -393,8 +396,8 @@ class TaskService:
             Tuple of (success, result_dict)
         """
         try:
-            response = (
-                self.supabase_client.table("archon_tasks").select("*").eq("id", task_id).execute()
+            response = await self._execute_query(
+                lambda: self.supabase_client.table("archon_tasks").select("*").eq("id", task_id).execute()
             )
 
             if response.data:
@@ -465,7 +468,7 @@ class TaskService:
 
             # Update task
             logger.info(f"🔧 TaskService.update_task calling Supabase update | task_id={task_id} | update_data={update_data}")
-            response = (
+            response = await (
                 self.supabase_client.table("archon_tasks")
                 .update(update_data)
                 .eq("id", task_id)
@@ -516,7 +519,7 @@ class TaskService:
             }
 
             # Archive the main task
-            response = (
+            response = await (
                 self.supabase_client.table("archon_tasks")
                 .update(archive_data)
                 .eq("id", task_id)
@@ -533,12 +536,12 @@ class TaskService:
             logger.error(f"Error archiving task: {e}")
             return False, {"error": f"Error archiving task: {str(e)}"}
 
-    def get_all_project_task_counts(self) -> tuple[bool, dict[str, dict[str, int]]]:
+    async def get_all_project_task_counts(self) -> tuple[bool, dict[str, dict[str, int]]]:
         """
         Get task counts for all projects in a single optimized query.
-        
+
         Returns task counts grouped by project_id and status.
-        
+
         Returns:
             Tuple of (success, counts_dict) where counts_dict is:
             {"project-id": {"todo": 5, "doing": 2, "review": 3, "done": 10}}
@@ -547,7 +550,7 @@ class TaskService:
             logger.debug("Fetching task counts for all projects in batch")
 
             # Query all non-archived tasks grouped by project_id and status
-            response = (
+            response = await (
                 self.supabase_client.table("archon_tasks")
                 .select("project_id, status")
                 .or_("archived.is.null,archived.is.false")
@@ -664,7 +667,7 @@ class TaskService:
             if feature:
                 subtask_data["feature"] = feature
 
-            response = self.supabase_client.table("archon_tasks").insert(subtask_data).execute()
+            response = await self.supabase_client.table("archon_tasks").insert(subtask_data).execute()
 
             if response.data:
                 subtask = response.data[0]
@@ -692,7 +695,7 @@ class TaskService:
             logger.error(f"Error creating subtask: {e}")
             return False, {"error": f"Error creating subtask: {str(e)}"}
 
-    def get_subtasks_by_parent(
+    async def get_subtasks_by_parent(
         self,
         parent_task_id: str,
         include_archived: bool = False
@@ -713,7 +716,7 @@ class TaskService:
             if not include_archived:
                 query = query.or_("archived.is.null,archived.is.false")
 
-            response = query.order("task_order", desc=False).execute()
+            response = await query.order("task_order", desc=False).execute()
 
             subtasks = []
             for subtask in response.data:
@@ -745,7 +748,7 @@ class TaskService:
             logger.error(f"Error getting subtasks for parent {parent_task_id}: {e}")
             return False, {"error": f"Error getting subtasks: {str(e)}"}
 
-    def get_task_subtasks_recursive(
+    async def get_task_subtasks_recursive(
         self,
         task_id: str
     ) -> tuple[bool, dict[str, Any]]:
@@ -757,7 +760,7 @@ class TaskService:
         """
         try:
             # Use the recursive database function created in the migration
-            response = (
+            response = await (
                 self.supabase_client.rpc(
                     "get_task_subtasks_recursive",
                     {"task_uuid": task_id}
@@ -790,7 +793,7 @@ class TaskService:
             logger.error(f"Error getting recursive subtasks for task {task_id}: {e}")
             return False, {"error": f"Error getting recursive subtasks: {str(e)}"}
 
-    def get_task_hierarchy_path(
+    async def get_task_hierarchy_path(
         self,
         task_id: str
     ) -> tuple[bool, dict[str, Any]]:
@@ -802,7 +805,7 @@ class TaskService:
         """
         try:
             # Use the hierarchy path database function created in the migration
-            response = (
+            response = await (
                 self.supabase_client.rpc(
                     "get_task_hierarchy_path",
                     {"task_uuid": task_id}
@@ -953,7 +956,7 @@ class TaskService:
             # Order by task_order
             query = query.order("task_order", desc=False)
 
-            tasks_response = query.execute()
+            tasks_response = await query.execute()
 
             if tasks_response.data is None:
                 return True, {
@@ -1268,7 +1271,7 @@ class TaskService:
                 task_query = task_query.eq("archived", False)
 
             task_query = task_query.order("task_order", desc=False)
-            tasks_response = task_query.execute()
+            tasks_response = await task_query.execute()
 
             if not tasks_response.data:
                 return True, {"tasks": [], "total_count": 0}
@@ -1380,7 +1383,7 @@ class TaskService:
                     update_data[key] = value
 
             # Update the task
-            response = (
+            response = await (
                 self.supabase_client.table("archon_tasks")
                 .update(update_data)
                 .eq("id", task_id)
@@ -1415,7 +1418,7 @@ class TaskService:
             return False, {"error": "task_ids list cannot be empty"}
 
         try:
-            response = (
+            response = await (
                 self.supabase_client.table("archon_tasks")
                 .select("id")
                 .eq("story_id", story_id)
@@ -1474,7 +1477,7 @@ class TaskService:
             return False, {"error": "subtask_ids list cannot be empty"}
 
         try:
-            response = (
+            response = await (
                 self.supabase_client.table("archon_tasks")
                 .select("id")
                 .eq("parent_task_id", parent_task_id)
