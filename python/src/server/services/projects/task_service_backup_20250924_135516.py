@@ -104,13 +104,13 @@ class TaskService:
             # REORDERING LOGIC: If inserting at a specific position, increment existing tasks
             if task_order > 0:
                 # Get all tasks in the same project and status with task_order >= new task's order
-                existing_tasks_response = await self._execute_query(
-                    lambda: self.supabase_client.table("archon_tasks")
+                existing_tasks_response = await (
+                    self.supabase_client.table("archon_tasks")
                     .select("id, task_order")
                     .eq("project_id", project_id)
                     .eq("status", task_status)
                     .gte("task_order", task_order)
-                    .execute()
+                    .aexecute()
                 )
 
                 if existing_tasks_response.data:
@@ -119,12 +119,10 @@ class TaskService:
                     # Increment task_order for all affected tasks
                     for existing_task in existing_tasks_response.data:
                         new_order = existing_task["task_order"] + 1
-                        await self._execute_query(
-                            lambda: self.supabase_client.table("archon_tasks").update({
-                                "task_order": new_order,
-                                "updated_at": datetime.now().isoformat(),
-                            }).eq("id", existing_task["id"]).execute()
-                        )
+                        await self.supabase_client.table("archon_tasks").update({
+                            "task_order": new_order,
+                            "updated_at": datetime.now().isoformat(),
+                        }).eq("id", existing_task["id"]).aexecute()
 
             task_data = {
                 "project_id": project_id,
@@ -673,9 +671,7 @@ class TaskService:
             if feature:
                 subtask_data["feature"] = feature
 
-            response = await self._execute_query(
-                lambda: self.supabase_client.table("archon_tasks").insert(subtask_data).execute()
-            )
+            response = await self.supabase_client.table("archon_tasks").insert(subtask_data).aexecute()
 
             if response.data:
                 subtask = response.data[0]
