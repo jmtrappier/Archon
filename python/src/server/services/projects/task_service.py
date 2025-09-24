@@ -550,11 +550,13 @@ class TaskService:
             logger.debug("Fetching task counts for all projects in batch")
 
             # Query all non-archived tasks grouped by project_id and status
-            response = await (
-                self.supabase_client.table("archon_tasks")
-                .select("project_id, status")
-                .or_("archived.is.null,archived.is.false")
-                .execute()
+            response = await self._execute_query(
+                lambda: (
+                    self.supabase_client.table("archon_tasks")
+                    .select("project_id, status")
+                    .or_("archived.is.null,archived.is.false")
+                    .execute()
+                )
             )
 
             if not response.data:
