@@ -104,13 +104,13 @@ class TaskService:
             # REORDERING LOGIC: If inserting at a specific position, increment existing tasks
             if task_order > 0:
                 # Get all tasks in the same project and status with task_order >= new task's order
-                existing_tasks_response = (
+                existing_tasks_response = await (
                     self.supabase_client.table("archon_tasks")
                     .select("id, task_order")
                     .eq("project_id", project_id)
                     .eq("status", task_status)
                     .gte("task_order", task_order)
-                    .execute()
+                    .aexecute()
                 )
 
                 if existing_tasks_response.data:
@@ -119,10 +119,10 @@ class TaskService:
                     # Increment task_order for all affected tasks
                     for existing_task in existing_tasks_response.data:
                         new_order = existing_task["task_order"] + 1
-                        self.supabase_client.table("archon_tasks").update({
+                        await self.supabase_client.table("archon_tasks").update({
                             "task_order": new_order,
                             "updated_at": datetime.now().isoformat(),
-                        }).eq("id", existing_task["id"]).execute()
+                        }).eq("id", existing_task["id"]).aexecute()
 
             task_data = {
                 "project_id": project_id,
@@ -144,7 +144,7 @@ class TaskService:
             if story_id:
                 task_data["story_id"] = story_id
 
-            response = await self.supabase_client.table("archon_tasks").insert(task_data).execute()
+            response = await self.supabase_client.table("archon_tasks").insert(task_data).aexecute()
 
             if response.data:
                 task = response.data[0]
@@ -359,7 +359,7 @@ class TaskService:
                             .select("epic_id")
                             .eq("id", task["story_id"])
                             .single()
-                            .execute()
+                            .aexecute()
                         )
                         if story_response.data and story_response.data.get("epic_id") == epic_id:
                             filtered_tasks.append(task)
@@ -472,7 +472,7 @@ class TaskService:
                 self.supabase_client.table("archon_tasks")
                 .update(update_data)
                 .eq("id", task_id)
-                .execute()
+                .aexecute()
             )
 
             logger.info(f"🔧 TaskService.update_task Supabase response | task_id={task_id} | response_data_count={len(response.data) if response.data else 0}")
@@ -501,7 +501,7 @@ class TaskService:
         try:
             # First, check if task exists and is not already archived
             task_response = await (
-                self.supabase_client.table("archon_tasks").select("*").eq("id", task_id).execute()
+                self.supabase_client.table("archon_tasks").select("*").eq("id", task_id).aexecute()
             )
             if not task_response.data:
                 return False, {"error": f"Task with ID {task_id} not found"}
@@ -523,7 +523,7 @@ class TaskService:
                 self.supabase_client.table("archon_tasks")
                 .update(archive_data)
                 .eq("id", task_id)
-                .execute()
+                .aexecute()
             )
 
             if response.data:
@@ -619,7 +619,7 @@ class TaskService:
                 self.supabase_client.table("archon_tasks")
                 .select("project_id, story_id, archived")
                 .eq("id", parent_task_id)
-                .execute()
+                .aexecute()
             )
 
             if not parent_response.data:
@@ -669,7 +669,7 @@ class TaskService:
             if feature:
                 subtask_data["feature"] = feature
 
-            response = await self.supabase_client.table("archon_tasks").insert(subtask_data).execute()
+            response = await self.supabase_client.table("archon_tasks").insert(subtask_data).aexecute()
 
             if response.data:
                 subtask = response.data[0]
@@ -718,7 +718,7 @@ class TaskService:
             if not include_archived:
                 query = query.or_("archived.is.null,archived.is.false")
 
-            response = await query.order("task_order", desc=False).execute()
+            response = await query.order("task_order", desc=False).aexecute()
 
             subtasks = []
             for subtask in response.data:
@@ -766,7 +766,7 @@ class TaskService:
                 self.supabase_client.rpc(
                     "get_task_subtasks_recursive",
                     {"task_uuid": task_id}
-                ).execute()
+                ).aexecute()
             )
 
             if response.data is not None:
@@ -811,7 +811,7 @@ class TaskService:
                 self.supabase_client.rpc(
                     "get_task_hierarchy_path",
                     {"task_uuid": task_id}
-                ).execute()
+                ).aexecute()
             )
 
             if response.data is not None:
@@ -867,7 +867,7 @@ class TaskService:
                 self.supabase_client.table("archon_tasks")
                 .update(archive_data)
                 .eq("id", task_id)
-                .execute()
+                .aexecute()
             )
 
             if main_response.data:
@@ -879,7 +879,7 @@ class TaskService:
                     self.supabase_client.table("archon_tasks")
                     .update(archive_data)
                     .eq("id", subtask["id"])
-                    .execute()
+                    .aexecute()
                 )
 
                 if subtask_response.data:
@@ -932,7 +932,7 @@ class TaskService:
                 .select("id, title, epic_id")
                 .eq("id", story_id)
                 .single()
-                .execute()
+                .aexecute()
             )
 
             if not story_response.data:
@@ -958,7 +958,7 @@ class TaskService:
             # Order by task_order
             query = query.order("task_order", desc=False)
 
-            tasks_response = await query.execute()
+            tasks_response = await query.aexecute()
 
             if tasks_response.data is None:
                 return True, {
@@ -1019,7 +1019,7 @@ class TaskService:
                 .select("id, title, story_id, project_id")
                 .eq("id", task_id)
                 .single()
-                .execute()
+                .aexecute()
             )
 
             if not parent_task_response.data:
@@ -1160,7 +1160,7 @@ class TaskService:
                     .select("story_id, project_id")
                     .eq("id", parent_task_id)
                     .single()
-                    .execute()
+                    .aexecute()
                 )
 
                 if parent_response.data:
@@ -1273,7 +1273,7 @@ class TaskService:
                 task_query = task_query.eq("archived", False)
 
             task_query = task_query.order("task_order", desc=False)
-            tasks_response = await task_query.execute()
+            tasks_response = await task_query.aexecute()
 
             if not tasks_response.data:
                 return True, {"tasks": [], "total_count": 0}
@@ -1291,7 +1291,7 @@ class TaskService:
                         .select("id, title, epic_id")
                         .eq("id", task["story_id"])
                         .single()
-                        .execute()
+                        .aexecute()
                     )
 
                     if story_response.data:
@@ -1305,7 +1305,7 @@ class TaskService:
                                 .select("id, title, project_id")
                                 .eq("id", story["epic_id"])
                                 .single()
-                                .execute()
+                                .aexecute()
                             )
 
                             if epic_response.data:
@@ -1389,7 +1389,7 @@ class TaskService:
                 self.supabase_client.table("archon_tasks")
                 .update(update_data)
                 .eq("id", task_id)
-                .execute()
+                .aexecute()
             )
 
             if response.data:
@@ -1425,7 +1425,7 @@ class TaskService:
                 .select("id")
                 .eq("story_id", story_id)
                 .eq("parent_task_id", None)
-                .execute()
+                .aexecute()
             )
 
             existing_task_ids = [task["id"] for task in (response.data or []) if task.get("id")]
@@ -1449,7 +1449,7 @@ class TaskService:
                         "task_order": index,
                         "updated_at": reorder_timestamp,
                     }
-                ).eq("id", task_id).execute()
+                ).eq("id", task_id).aexecute()
 
             updated_response = await (
                 self.supabase_client.table("archon_tasks")
@@ -1457,7 +1457,7 @@ class TaskService:
                 .eq("story_id", story_id)
                 .eq("parent_task_id", None)
                 .order("task_order", desc=False)
-                .execute()
+                .aexecute()
             )
 
             tasks = updated_response.data or []
@@ -1483,7 +1483,7 @@ class TaskService:
                 self.supabase_client.table("archon_tasks")
                 .select("id")
                 .eq("parent_task_id", parent_task_id)
-                .execute()
+                .aexecute()
             )
 
             existing_subtask_ids = [task["id"] for task in (response.data or []) if task.get("id")]
@@ -1507,14 +1507,14 @@ class TaskService:
                         "task_order": index,
                         "updated_at": reorder_timestamp,
                     }
-                ).eq("id", task_id).execute()
+                ).eq("id", task_id).aexecute()
 
             updated_response = await (
                 self.supabase_client.table("archon_tasks")
                 .select("*")
                 .eq("parent_task_id", parent_task_id)
                 .order("task_order", desc=False)
-                .execute()
+                .aexecute()
             )
 
             subtasks = updated_response.data or []
@@ -1541,7 +1541,7 @@ class TaskService:
                 .select("id, story_id, parent_task_id, project_id, epic_id")
                 .eq("id", task_id)
                 .single()
-                .execute()
+                .aexecute()
             )
 
             task = task_response.data
@@ -1559,7 +1559,7 @@ class TaskService:
                 .select("id, epic_id, project_id")
                 .eq("id", target_story_id)
                 .single()
-                .execute()
+                .aexecute()
             )
 
             if not story_response.data:
@@ -1574,7 +1574,7 @@ class TaskService:
                 .eq("parent_task_id", None)
                 .order("task_order", desc=True)
                 .limit(1)
-                .execute()
+                .aexecute()
             )
 
             if next_order_response.data:
@@ -1618,7 +1618,7 @@ class TaskService:
                     .eq("story_id", target_story_id)
                     .eq("parent_task_id", None)
                     .order("task_order", desc=False)
-                    .execute()
+                    .aexecute()
                 )
 
                 task_ids = [row["id"] for row in (tasks_resp.data or []) if row.get("id")]
@@ -1668,7 +1668,7 @@ class TaskService:
                 .select("id, story_id, parent_task_id, project_id, epic_id")
                 .eq("id", task_id)
                 .single()
-                .execute()
+                .aexecute()
             )
 
             subtask = subtask_response.data
@@ -1680,7 +1680,7 @@ class TaskService:
                 .select("id, story_id, project_id, epic_id")
                 .eq("id", target_parent_id)
                 .single()
-                .execute()
+                .aexecute()
             )
 
             parent_task = parent_response.data
@@ -1695,7 +1695,7 @@ class TaskService:
                 .eq("parent_task_id", target_parent_id)
                 .order("task_order", desc=True)
                 .limit(1)
-                .execute()
+                .aexecute()
             )
 
             if next_order_response.data:
@@ -1726,7 +1726,7 @@ class TaskService:
                     .select("id")
                     .eq("parent_task_id", target_parent_id)
                     .order("task_order", desc=False)
-                    .execute()
+                    .aexecute()
                 )
 
                 subtask_ids = [row["id"] for row in (subtasks_resp.data or []) if row.get("id")]

@@ -82,6 +82,7 @@ class CreateTaskRequest(BaseModel):
 
 
 class CreateEpicRequest(BaseModel):
+    project_id: str  # Required field missing from model
     title: str
     description: str | None = None
     status: str | None = "todo"
@@ -100,6 +101,7 @@ class UpdateEpicRequest(BaseModel):
 
 
 class CreateStoryRequest(BaseModel):
+    epic_id: str  # Required field missing from model
     title: str
     description: str | None = None
     status: str | None = "todo"
@@ -853,7 +855,7 @@ async def fix_waiting_status():
 # ==================== MCP DIRECT ENDPOINTS ====================
 
 
-@router.post("/api/epics")
+@router.post("/epics")
 async def create_epic_mcp(request: CreateEpicRequest):
     """Create a new epic directly via MCP (requires project_id in request)."""
     try:
@@ -894,7 +896,7 @@ async def create_epic_mcp(request: CreateEpicRequest):
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
-@router.post("/api/stories")
+@router.post("/stories")
 async def create_story_mcp(request: CreateStoryRequest):
     """Create a new story directly via MCP (requires epic_id in request)."""
     try:
@@ -948,7 +950,7 @@ async def create_story_mcp(request: CreateStoryRequest):
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
-@router.post("/api/tasks")
+@router.post("/tasks")
 async def create_task_mcp(request: CreateTaskRequest):
     """Create a new task directly via MCP (requires project_id in request, optional story_id/parent_task_id)."""
     try:
@@ -963,14 +965,13 @@ async def create_task_mcp(request: CreateTaskRequest):
         task_service = TaskService()
         success, result = await task_service.create_task(
             project_id=request.project_id,
-            story_id=request.story_id,
-            parent_task_id=request.parent_task_id,
             title=request.title,
             description=request.description or "",
-            status=request.status or "todo",
-            assignee=request.assignee,
-            priority=request.priority or "medium",
+            assignee=request.assignee or "User",
             task_order=request.task_order or 0,
+            feature=request.feature,
+            story_id=request.story_id,
+            priority=request.priority or "medium",
         )
 
         if not success:
