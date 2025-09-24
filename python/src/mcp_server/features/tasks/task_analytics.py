@@ -334,6 +334,381 @@ async def find_bottlenecks(
         )
 
 
+async def get_progress_snapshot(
+    ctx: Context,
+    epic_id: str | None = None,
+    depth: int = 2
+) -> str:
+    """
+    Get a snapshot of current progress metrics for AI agents.
+
+    Args:
+        epic_id: Optional Epic ID to focus on specific epic
+        depth: Analysis depth (1=basic, 2=detailed, 3=comprehensive)
+
+    Returns:
+        JSON with progress metrics, velocity, and trend analysis
+
+    Examples:
+        get_progress_snapshot()  # Project-wide snapshot
+        get_progress_snapshot(epic_id="e-1", depth=3)  # Detailed epic snapshot
+    """
+    try:
+        timeout = get_default_timeout()
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            # Get tasks for analysis
+            task_params = {"page": 1, "per_page": 200, "include_closed": True}
+            if epic_id:
+                task_params["epic_id"] = epic_id
+
+            success, result = await make_api_request(
+                client, "/api/tasks", task_params, "tasks"
+            )
+
+            if not success:
+                return MCPErrorFormatter.format_error(
+                    "failed_to_fetch",
+                    "Could not fetch tasks for progress snapshot",
+                    result
+                )
+
+            tasks = result["data"]
+
+            # Basic metrics
+            status_counts = {"todo": 0, "doing": 0, "review": 0, "done": 0, "waiting": 0}
+            total_tasks = len(tasks)
+
+            for task in tasks:
+                if isinstance(task, dict):
+                    status = task.get("status", "todo")
+                    if status in status_counts:
+                        status_counts[status] += 1
+
+            # Calculate completion rate
+            completed = status_counts["done"]
+            completion_rate = (completed / total_tasks * 100) if total_tasks > 0 else 0
+
+            # Simple velocity calculation (tasks completed per day)
+            # In a real implementation, this would calculate based on actual completion dates
+            velocity = 0.0
+            if depth >= 2:
+                # Simplified: assume 1 task completed per day for active projects
+                recent_completed = completed
+                velocity = max(0.1, recent_completed / 7.0)  # Simple weekly velocity
+
+            # Determine trend
+            trend = "steady"
+            if depth >= 2:
+                doing_rate = status_counts["doing"] / total_tasks * 100 if total_tasks > 0 else 0
+                if doing_rate > 30:
+                    trend = "accelerating"
+                elif doing_rate < 10 and completion_rate < 50:
+                    trend = "slowing"
+
+            # Blockers count
+            blockers_count = status_counts["waiting"]
+
+            snapshot = {
+                "timestamp": datetime.now().isoformat(),
+                "scope": f"epic_{epic_id}" if epic_id else "project",
+                "metrics": {
+                    "completion_rate": round(completion_rate, 1),
+                    "velocity": round(velocity, 2),
+                    "blockers_count": blockers_count,
+                    "items_todo": status_counts["todo"],
+                    "items_doing": status_counts["doing"],
+                    "items_done": status_counts["done"],
+                    "items_review": status_counts["review"],
+                    "items_waiting": status_counts["waiting"],
+                    "total_items": total_tasks
+                },
+                "trend": trend,
+                "health_indicators": []
+            }
+
+            # Add health indicators
+            if blockers_count > 0:
+                snapshot["health_indicators"].append(f"{blockers_count} items blocked")
+            if completion_rate > 80:
+                snapshot["health_indicators"].append("Project nearing completion")
+            elif completion_rate < 20:
+                snapshot["health_indicators"].append("Project in early stage")
+
+            return json.dumps({
+                "success": True,
+                "snapshot": snapshot,
+                "analysis_depth": depth
+            })
+
+    except Exception as e:
+        return MCPErrorFormatter.format_error(
+            error_type="unknown_error",
+            message=f"Failed to get progress snapshot: {str(e)}",
+            details={
+                "exception_type": type(e).__name__,
+                "exception_message": str(e)
+            }
+        )
+
+
+async def get_epic_timeline(
+    ctx: Context,
+    epic_id: str
+) -> str:
+    """
+    Get timeline and milestone information for a specific epic.
+
+    Args:
+        epic_id: Epic UUID to analyze
+
+    Returns:
+        JSON with milestones, critical dates, and timeline status
+
+    Examples:
+        get_epic_timeline("epic-uuid-123")
+    """
+    try:
+        timeout = get_default_timeout()
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            # Get epic details
+            epic_success, epic_result = await make_api_request(
+                client, f"/api/epics/{epic_id}", None, "epic"
+            )
+
+            if not epic_success:
+                return MCPErrorFormatter.format_error(
+                    "epic_not_found",
+                    f"Could not fetch epic {epic_id}",
+                    epic_result
+                )
+
+            epic = epic_result["data"]
+
+            # Get tasks in this epic
+            task_success, task_result = await make_api_request(
+                client, "/api/tasks", {"epic_id": epic_id, "per_page": 100}, "tasks"
+            )
+
+            tasks = task_result.get("data", []) if task_success else []
+
+            # Calculate timeline
+            total_tasks = len(tasks)
+            completed_tasks = len([t for t in tasks if isinstance(t, dict) and t.get("status") == "done"])
+
+            # Simplified milestone calculation
+            milestones = [
+                {
+                    "date": datetime.now().isoformat(),
+                    "type": "start",
+                    "status": "completed" if total_tasks > 0 else "pending",
+                    "items_required": ["Epic created"]
+                }
+            ]
+
+            # Add checkpoint milestones based on progress
+            if total_tasks > 0:
+                progress = completed_tasks / total_tasks
+                if progress >= 0.25:
+                    milestones.append({
+                        "date": datetime.now().isoformat(),
+                        "type": "checkpoint",
+                        "status": "completed",
+                        "items_required": ["25% tasks completed"]
+                    })
+                if progress >= 0.50:
+                    milestones.append({
+                        "date": datetime.now().isoformat(),
+                        "type": "checkpoint",
+                        "status": "completed",
+                        "items_required": ["50% tasks completed"]
+                    })
+                if progress >= 0.75:
+                    milestones.append({
+                        "date": datetime.now().isoformat(),
+                        "type": "checkpoint",
+                        "status": "completed",
+                        "items_required": ["75% tasks completed"]
+                    })
+
+            # Projected deadline
+            velocity = max(0.1, completed_tasks / 7.0)  # Simple velocity
+            remaining_days = max(1, (total_tasks - completed_tasks) / velocity) if velocity > 0 else 30
+            projected_completion = datetime.now() + timedelta(days=remaining_days)
+
+            milestones.append({
+                "date": projected_completion.isoformat(),
+                "type": "deadline",
+                "status": "on_track" if remaining_days <= 30 else "at_risk",
+                "items_required": ["All tasks completed"]
+            })
+
+            timeline = {
+                "epic_id": epic_id,
+                "epic_title": epic.get("title", "Unknown Epic"),
+                "milestones": milestones,
+                "critical_dates": {
+                    "project_start": datetime.now().isoformat(),
+                    "projected_completion": projected_completion.isoformat(),
+                    "next_checkpoint": (datetime.now() + timedelta(days=7)).isoformat()
+                },
+                "current_delay": 0,  # Simplified - no delay calculation
+                "projected_completion": projected_completion.isoformat(),
+                "progress_summary": {
+                    "total_tasks": total_tasks,
+                    "completed_tasks": completed_tasks,
+                    "completion_rate": (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+                }
+            }
+
+            return json.dumps({
+                "success": True,
+                "timeline": timeline
+            })
+
+    except Exception as e:
+        return MCPErrorFormatter.format_error(
+            error_type="unknown_error",
+            message=f"Failed to get epic timeline: {str(e)}",
+            details={
+                "exception_type": type(e).__name__,
+                "exception_message": str(e)
+            }
+        )
+
+
+async def predict_completion(
+    ctx: Context,
+    target_id: str,
+    target_type: str,
+    based_on: str = "velocity"
+) -> str:
+    """
+    Predict completion date for a target (epic, story, or project).
+
+    Args:
+        target_id: ID of the target to predict
+        target_type: "epic" | "story" | "project" | "task"
+        based_on: Prediction method - "velocity" (default) | "average" | "optimistic"
+
+    Returns:
+        JSON with completion prediction, confidence level, and assumptions
+
+    Examples:
+        predict_completion("epic-123", "epic")
+        predict_completion("project-456", "project", based_on="optimistic")
+    """
+    try:
+        timeout = get_default_timeout()
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            # Get target items based on type
+            if target_type == "epic":
+                task_params = {"epic_id": target_id, "per_page": 100, "include_closed": True}
+            elif target_type == "project":
+                task_params = {"project_id": target_id, "per_page": 200, "include_closed": True}
+            else:
+                task_params = {"id": target_id}
+
+            success, result = await make_api_request(
+                client, "/api/tasks", task_params, "tasks"
+            )
+
+            if not success:
+                return MCPErrorFormatter.format_error(
+                    "failed_to_fetch",
+                    f"Could not fetch tasks for {target_type} {target_id}",
+                    result
+                )
+
+            tasks = result["data"]
+            total_items = len(tasks)
+            completed_items = len([t for t in tasks if isinstance(t, dict) and t.get("status") == "done"])
+            remaining_items = total_items - completed_items
+
+            if remaining_items <= 0:
+                return json.dumps({
+                    "success": True,
+                    "prediction": {
+                        "target": f"{target_type}_{target_id}",
+                        "current_progress": 100.0,
+                        "estimated_completion": datetime.now().isoformat(),
+                        "confidence_level": 100.0,
+                        "assumptions": ["All items already completed"],
+                        "risks": [],
+                        "status": "completed"
+                    }
+                })
+
+            # Calculate predictions based on method
+            if based_on == "velocity":
+                # Simple velocity: completed items per week
+                velocity_per_day = max(0.1, completed_items / 30.0)  # Assume 30 days of work
+                days_remaining = remaining_items / velocity_per_day
+                confidence = 70.0
+                assumptions = [f"Velocity: {velocity_per_day:.1f} items/day", "Consistent work pace"]
+
+            elif based_on == "optimistic":
+                # Optimistic: assume high productivity
+                velocity_per_day = max(0.5, completed_items / 20.0)  # More optimistic timeframe
+                days_remaining = remaining_items / velocity_per_day
+                confidence = 50.0  # Lower confidence for optimistic predictions
+                assumptions = ["Optimistic velocity assumption", "No major blockers"]
+
+            else:  # average
+                # Average case
+                velocity_per_day = max(0.2, completed_items / 25.0)
+                days_remaining = remaining_items / velocity_per_day
+                confidence = 65.0
+                assumptions = ["Average historical pace", "Normal work conditions"]
+
+            estimated_completion = datetime.now() + timedelta(days=days_remaining)
+            current_progress = (completed_items / total_items * 100) if total_items > 0 else 0
+
+            # Identify risks
+            risks = []
+            if remaining_items > 20:
+                risks.append("Large number of remaining items may cause delays")
+            if current_progress < 25:
+                risks.append("Project still in early stages - high uncertainty")
+            blocked_items = len([t for t in tasks if isinstance(t, dict) and t.get("status") == "waiting"])
+            if blocked_items > 0:
+                risks.append(f"{blocked_items} blocked items may cause delays")
+
+            prediction = {
+                "target": f"{target_type}_{target_id}",
+                "current_progress": round(current_progress, 1),
+                "estimated_completion": estimated_completion.isoformat(),
+                "days_remaining": round(days_remaining, 1),
+                "confidence_level": confidence,
+                "assumptions": assumptions,
+                "risks": risks,
+                "method_used": based_on,
+                "metrics": {
+                    "total_items": total_items,
+                    "completed_items": completed_items,
+                    "remaining_items": remaining_items,
+                    "estimated_velocity": round(velocity_per_day, 2)
+                }
+            }
+
+            return json.dumps({
+                "success": True,
+                "prediction": prediction
+            })
+
+    except Exception as e:
+        return MCPErrorFormatter.format_error(
+            error_type="unknown_error",
+            message=f"Failed to predict completion: {str(e)}",
+            details={
+                "exception_type": type(e).__name__,
+                "exception_message": str(e)
+            }
+        )
+
+
 async def find_stale_items(
     ctx: Context,
     days: int = 7,

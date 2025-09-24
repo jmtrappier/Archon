@@ -29,6 +29,9 @@ All project instructions are referenced here:
 - **MCP Archon**: project progress state (*Archon - TRAXIS*) — tasks, EPICs, stories, roadmap, linked docs.  
 - **MCP Serena**: codebase and technical memory — structure, patterns, conventions, code analysis.  
 
+### TEST ONLY
+- **MCP Traxis**: This MCP is only for testing purpose, it is the tool we are developing. DO NOT USE FOR PRODUCTION !!!
+
 If key documentation is missing in Archon:  
 1. Report it explicitly.  
 2. Suggest adding it to Archon via `manage_document`.  

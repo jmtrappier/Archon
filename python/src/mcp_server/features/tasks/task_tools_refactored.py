@@ -10,11 +10,25 @@ from mcp.server.fastmcp import Context, FastMCP  # type: ignore
 
 from .epic_tools import find_epics, manage_epic
 from .story_tools import find_stories, manage_story
-from .task_analytics import analyze_project_health, find_bottlenecks, find_stale_items
+from .task_analytics import (
+    analyze_project_health,
+    find_bottlenecks,
+    find_stale_items,
+    get_progress_snapshot,
+    get_epic_timeline,
+    predict_completion
+)
 
 # Import from modular components
 from .task_core import find_tasks, manage_task
-from .task_analytics import analyze_project_health, find_bottlenecks, find_stale_items
+from .task_analytics import (
+    analyze_project_health,
+    find_bottlenecks,
+    find_stale_items,
+    get_progress_snapshot,
+    get_epic_timeline,
+    predict_completion
+)
 from .epic_tools import find_epics, manage_epic
 from .story_tools import find_stories, manage_story
 from .task_utils import MCPErrorFormatter
@@ -189,6 +203,61 @@ def register_task_tools(mcp: FastMCP) -> None:
             story_order,
             feature,
         )
+
+    # Progress Reporting Tools (STORY 3.7.6)
+    @mcp.tool()
+    async def get_progress_snapshot_tool(
+        ctx: Context,
+        epic_id: str | None = None,
+        depth: int = 2
+    ) -> str:
+        """
+        Get a snapshot of current progress metrics for AI agents.
+
+        Args:
+            epic_id: Optional Epic ID to focus on specific epic
+            depth: Analysis depth (1=basic, 2=detailed, 3=comprehensive)
+
+        Returns:
+            JSON with progress metrics, velocity, and trend analysis
+        """
+        return await get_progress_snapshot(ctx, epic_id, depth)
+
+    @mcp.tool()
+    async def get_epic_timeline_tool(
+        ctx: Context,
+        epic_id: str
+    ) -> str:
+        """
+        Get timeline and milestone information for a specific epic.
+
+        Args:
+            epic_id: Epic UUID to analyze
+
+        Returns:
+            JSON with milestones, critical dates, and timeline status
+        """
+        return await get_epic_timeline(ctx, epic_id)
+
+    @mcp.tool()
+    async def predict_completion_tool(
+        ctx: Context,
+        target_id: str,
+        target_type: str,
+        based_on: str = "velocity"
+    ) -> str:
+        """
+        Predict completion date for a target (epic, story, or project).
+
+        Args:
+            target_id: ID of the target to predict
+            target_type: "epic" | "story" | "project" | "task"
+            based_on: Prediction method - "velocity" (default) | "average" | "optimistic"
+
+        Returns:
+            JSON with completion prediction, confidence level, and assumptions
+        """
+        return await predict_completion(ctx, target_id, target_type, based_on)
 
     # Test function for debugging
     @mcp.tool()

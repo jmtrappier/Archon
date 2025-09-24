@@ -500,7 +500,7 @@ class TaskService:
         """
         try:
             # First, check if task exists and is not already archived
-            task_response = await (
+            task_response = (
                 self.supabase_client.table("archon_tasks").select("*").eq("id", task_id).execute()
             )
             if not task_response.data:
@@ -615,7 +615,7 @@ class TaskService:
         """
         try:
             # Get parent task to inherit project_id and story_id
-            parent_response = await (
+            parent_response = (
                 self.supabase_client.table("archon_tasks")
                 .select("project_id, story_id, archived")
                 .eq("id", parent_task_id)
@@ -863,7 +863,7 @@ class TaskService:
             archived_tasks = []
 
             # Archive the main task
-            main_response = await (
+            main_response = (
                 self.supabase_client.table("archon_tasks")
                 .update(archive_data)
                 .eq("id", task_id)
@@ -875,7 +875,7 @@ class TaskService:
 
             # Archive all subtasks
             for subtask in subtasks_result.get("subtasks", []):
-                subtask_response = await (
+                subtask_response = (
                     self.supabase_client.table("archon_tasks")
                     .update(archive_data)
                     .eq("id", subtask["id"])
@@ -1444,14 +1444,14 @@ class TaskService:
             reorder_timestamp = datetime.now().isoformat()
 
             for index, task_id in enumerate(final_order, start=1):
-                await self.supabase_client.table("archon_tasks").update(
+                self.supabase_client.table("archon_tasks").update(
                     {
                         "task_order": index,
                         "updated_at": reorder_timestamp,
                     }
                 ).eq("id", task_id).execute()
 
-            updated_response = await (
+            updated_response = (
                 self.supabase_client.table("archon_tasks")
                 .select("*")
                 .eq("story_id", story_id)
@@ -1502,14 +1502,14 @@ class TaskService:
             reorder_timestamp = datetime.now().isoformat()
 
             for index, task_id in enumerate(final_order, start=1):
-                await self.supabase_client.table("archon_tasks").update(
+                self.supabase_client.table("archon_tasks").update(
                     {
                         "task_order": index,
                         "updated_at": reorder_timestamp,
                     }
                 ).eq("id", task_id).execute()
 
-            updated_response = await (
+            updated_response = (
                 self.supabase_client.table("archon_tasks")
                 .select("*")
                 .eq("parent_task_id", parent_task_id)
