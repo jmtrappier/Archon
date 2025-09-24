@@ -1,11 +1,11 @@
 """
 Projects API - Refactored core module
-Contains: Core project endpoints + MCP direct endpoints + Admin endpoints
+Contains: Core project endpoints + Admin endpoints
 
 Handles:
 - Project management (CRUD operations)
-- Task management with hierarchical structure
-- Streaming project creation with DocumentAgent integration
+- Project health monitoring
+- Project features and hierarchy
 - HTTP polling for progress updates
 """
 
@@ -68,69 +68,6 @@ class UpdateProjectRequest(BaseModel):
     pinned: bool | None = None  # Whether this project is pinned to top
 
 
-class CreateTaskRequest(BaseModel):
-    project_id: str
-    title: str
-    description: str | None = None
-    status: str | None = "todo"
-    assignee: str | None = "User"
-    task_order: int | None = 0
-    feature: str | None = None
-    story_id: str | None = None  # Support for hierarchy
-    parent_task_id: str | None = None  # Support for subtasks
-    priority: str | None = "medium"
-
-
-class CreateEpicRequest(BaseModel):
-    project_id: str  # Required field missing from model
-    title: str
-    description: str | None = None
-    status: str | None = "todo"
-    priority: str | None = "medium"
-    # mvp_flag: bool | None = False  # Not in TRAXIS schema
-    business_value: dict[str, Any] | None = None
-
-
-class UpdateEpicRequest(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    status: str | None = None
-    priority: str | None = None
-    # mvp_flag: bool | None = None  # Not in TRAXIS schema
-    business_value: dict[str, Any] | None = None
-
-
-class CreateStoryRequest(BaseModel):
-    epic_id: str  # Required field missing from model
-    title: str
-    description: str | None = None
-    status: str | None = "todo"
-    priority: str | None = "medium"
-    story_points: int | None = None
-    acceptance_criteria: dict[str, Any] | None = None
-    # mvp_flag: bool | None = False  # Not in TRAXIS schema
-
-
-class UpdateStoryRequest(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    status: str | None = None
-    priority: str | None = None
-    story_points: int | None = None
-    acceptance_criteria: dict[str, Any] | None = None
-    # mvp_flag: bool | None = None  # Not in TRAXIS schema
-
-
-class ReorderStoriesRequest(BaseModel):
-    story_ids: list[str]
-
-
-class MoveStoryRequest(BaseModel):
-    target_epic_id: str
-    target_position: int | None = None
-    moved_by: str | None = None
-
-
 @router.get("/projects")
 async def list_projects(
     response: Response,
@@ -139,7 +76,7 @@ async def list_projects(
 ):
     """
     List all projects.
-    
+
     Args:
         include_content: If True (default), returns full project content.
                         If False, returns lightweight metadata with statistics.
@@ -265,8 +202,6 @@ async def create_project(request: CreateProjectRequest):
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
-
-
 @router.get("/projects/health")
 async def projects_health():
     """Health check for projects API and database schema validation."""
@@ -338,7 +273,7 @@ async def get_all_task_counts(
     """
     Get task counts for all projects in a single batch query.
     Optimized endpoint to avoid N+1 query problem.
-    
+
     Returns counts grouped by project_id with todo, doing, and done counts.
     Review status is included in doing count to match frontend logic.
     """
@@ -604,9 +539,6 @@ async def get_project_features(project_id: str):
         raise HTTPException(status_code=500, detail={"error": str(e)})
 
 
-# ==================== EPIC MANAGEMENT ENDPOINTS ====================
-
-
 @router.get("/projects/{project_id}/hierarchy")
 async def get_project_hierarchy(
     project_id: str,
@@ -850,144 +782,3 @@ async def fix_waiting_status():
                 "sql_command": "ALTER TYPE task_status ADD VALUE 'waiting' AFTER 'review';"
             }
         )
-
-
-# ==================== MCP DIRECT ENDPOINTS ====================
-
-
-@router.post("/epics")
-async def create_epic_mcp(request: CreateEpicRequest):
-    """Create a new epic directly via MCP (requires project_id in request)."""
-    try:
-        logfire.info(
-            f"Creating epic via MCP | project_id={request.project_id} | title={request.title}"
-        )
-
-        if not request.project_id:
-            raise HTTPException(status_code=400, detail="project_id is required")
-
-        # Use EpicService to create epic
-        epic_service = EpicService()
-        success, result = await epic_service.create_epic(
-            project_id=request.project_id,
-            title=request.title,
-            description=request.description or "",
-            status=request.status or "todo",
-            priority=request.priority or "medium",
-            business_value=request.business_value,
-        )
-
-        if not success:
-            if "not found" in result.get("error", "").lower():
-                raise HTTPException(status_code=404, detail=result.get("error"))
-            else:
-                raise HTTPException(status_code=400, detail=result)
-
-        logfire.info(
-            f"Epic created successfully via MCP | project_id={request.project_id} | epic_id={result['epic']['id']}"
-        )
-
-        return {"message": "Epic created successfully", "epic": result["epic"]}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logfire.error(f"Failed to create epic via MCP | error={str(e)} | project_id={getattr(request, 'project_id', 'unknown')}")
-        raise HTTPException(status_code=500, detail={"error": str(e)})
-
-
-@router.post("/stories")
-async def create_story_mcp(request: CreateStoryRequest):
-    """Create a new story directly via MCP (requires epic_id in request)."""
-    try:
-        logfire.info(
-            f"Creating story via MCP | epic_id={request.epic_id} | title={request.title}"
-        )
-
-        if not request.epic_id:
-            raise HTTPException(status_code=400, detail="epic_id is required")
-
-        # Convert priority string to integer for service layer
-        def convert_priority_to_int(priority_str: str | None) -> int:
-            """Convert priority string to integer expected by service layer."""
-            priority_map = {
-                "low": 25,
-                "medium": 50,
-                "high": 75,
-                "critical": 100
-            }
-            return priority_map.get(priority_str or "medium", 50)
-
-        # Use StoryService to create story
-        story_service = StoryService()
-        result = await story_service.create_story(
-            epic_id=request.epic_id,
-            title=request.title,
-            description=request.description or "",
-            status=request.status or "todo",
-            priority=convert_priority_to_int(request.priority),
-            story_points=request.story_points,
-            acceptance_criteria=request.acceptance_criteria,
-        )
-
-        # Check if result indicates an error
-        if "error" in result:
-            if "not found" in result.get("error", "").lower():
-                raise HTTPException(status_code=404, detail=result.get("error"))
-            else:
-                raise HTTPException(status_code=400, detail=result.get("error"))
-
-        logfire.info(
-            f"Story created successfully via MCP | epic_id={request.epic_id} | story_id={result.get('id', 'unknown')}"
-        )
-
-        return {"message": "Story created successfully", "story": result}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logfire.error(f"Failed to create story via MCP | error={str(e)} | epic_id={getattr(request, 'epic_id', 'unknown')}")
-        raise HTTPException(status_code=500, detail={"error": str(e)})
-
-
-@router.post("/tasks")
-async def create_task_mcp(request: CreateTaskRequest):
-    """Create a new task directly via MCP (requires project_id in request, optional story_id/parent_task_id)."""
-    try:
-        logfire.info(
-            f"Creating task via MCP | project_id={request.project_id} | title={request.title}"
-        )
-
-        if not request.project_id:
-            raise HTTPException(status_code=400, detail="project_id is required")
-
-        # Use TaskService to create task
-        task_service = TaskService()
-        success, result = await task_service.create_task(
-            project_id=request.project_id,
-            title=request.title,
-            description=request.description or "",
-            assignee=request.assignee or "User",
-            task_order=request.task_order or 0,
-            feature=request.feature,
-            story_id=request.story_id,
-            priority=request.priority or "medium",
-        )
-
-        if not success:
-            if "not found" in result.get("error", "").lower():
-                raise HTTPException(status_code=404, detail=result.get("error"))
-            else:
-                raise HTTPException(status_code=400, detail=result)
-
-        logfire.info(
-            f"Task created successfully via MCP | project_id={request.project_id} | task_id={result['task']['id']}"
-        )
-
-        return {"message": "Task created successfully", "task": result["task"]}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logfire.error(f"Failed to create task via MCP | error={str(e)} | project_id={getattr(request, 'project_id', 'unknown')}")
-        raise HTTPException(status_code=500, detail={"error": str(e)})
